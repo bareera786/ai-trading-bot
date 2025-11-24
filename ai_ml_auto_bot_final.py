@@ -4567,10 +4567,16 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 # ==================== CACHE CONTROL ====================
 @app.after_request
 def add_cache_control(response):
-    """Add cache control headers to prevent browser caching of dashboard."""
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    """Add aggressive cache control headers to prevent browser caching of dashboard."""
+    # Aggressive cache control to prevent any browser caching
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private, no-transform'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    # Additional headers to prevent caching
+    response.headers['Cache-Control'] = response.headers['Cache-Control'] + ', s-maxage=0'
+    response.headers['Vary'] = 'Accept-Encoding, User-Agent'
     return response
 
 # ==================== DATABASE CONFIGURATION ====================
@@ -17367,7 +17373,12 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('dashboard'))
+            # Create redirect response with cache control
+            response = redirect(next_page) if next_page else redirect(url_for('dashboard'))
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private, no-transform'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
         
         flash('Invalid username or password')
         return redirect(url_for('login'))
@@ -17381,7 +17392,14 @@ def logout():
     session.clear()  # Ensure session is fully cleared
     for key in list(session.keys()):
         session.pop(key)
-    return redirect(url_for('login'))
+    
+    # Create redirect response with explicit cache control
+    response = redirect(url_for('login'))
+    # Add aggressive cache control to logout redirect
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private, no-transform'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():

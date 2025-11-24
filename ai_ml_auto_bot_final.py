@@ -21634,8 +21634,8 @@ def initialize_ultimate_system():
     print("=" * 80)
     print("🎉 ULTIMATE AI TRADING BOT FULLY INITIALIZED AND READY!")
     print("💾 Professional Persistence: ACTIVE")
-    print("📍 Dashboard available at: http://localhost:5001")
-    print("📍 Health check at: http://localhost:5001/health")
+    print("📍 Dashboard available at: http://localhost:5000")
+    print("📍 Health check at: http://localhost:5000/health")
     print("=" * 80)
 
 # ==================== STRATEGY PERFORMANCE INTEGRATION ENDPOINTS ====================

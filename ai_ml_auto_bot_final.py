@@ -22258,6 +22258,7 @@ HTML_TEMPLATE = r'''
             margin-bottom: var(--spacing-xl);
             padding-bottom: var(--spacing-lg);
             border-bottom: 1px solid var(--border-color);
+            min-height: 40px;
         }
 
         .section-title {
@@ -22267,6 +22268,7 @@ HTML_TEMPLATE = r'''
             display: flex;
             align-items: center;
             gap: var(--spacing-sm);
+            margin: 0;
         }
 
         .section-icon {
@@ -22591,6 +22593,7 @@ HTML_TEMPLATE = r'''
                 flex-direction: column;
                 align-items: flex-start;
                 gap: var(--spacing-md);
+                min-height: auto;
             }
 
             .data-table-container {

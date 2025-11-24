@@ -17410,17 +17410,8 @@ def login():
 @login_required
 def logout():
     logout_user()
-    session.clear()  # Ensure session is fully cleared
-    for key in list(session.keys()):
-        session.pop(key)
-    
-    # Create redirect response with explicit cache control
-    response = redirect(url_for('login'))
-    # Add aggressive cache control to logout redirect
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private, no-transform'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
+    # Instead of JSON, redirect to login page
+    return redirect(url_for('login'))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -22614,6 +22605,43 @@ HTML_TEMPLATE = r'''
         .fade-in {
             animation: fadeIn 0.3s ease-out;
         }
+
+        /* Debug CSS for sidebar visibility */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            width: 280px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            z-index: 1000;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        @media (min-width: 1024px) {
+            .sidebar {
+                position: relative;
+                transform: translateX(0);
+            }
+        }
+
+        .main-content {
+            margin-left: 0;
+            padding: var(--spacing-xl);
+            transition: margin-left 0.3s ease;
+        }
+
+        @media (min-width: 1024px) {
+            .main-content {
+                margin-left: 280px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -22720,9 +22748,7 @@ HTML_TEMPLATE = r'''
         <main class="main-content">
             <header class="content-header">
                 <div class="content-header-left">
-                    <button class="mobile-menu-toggle" id="mobile-menu-toggle">
-                        <span style="font-size: 20px;">☰</span>
-                    </button>
+                    <button class="mobile-menu-toggle">☰ Menu</button>
                     <div>
                         <h1 id="page-title">Dashboard</h1>
                         <p id="page-subtitle">Overview of your trading bot performance</p>
@@ -23989,1299 +24015,100 @@ HTML_TEMPLATE = r'''
     </div>
 
     <script>
-        // Navigation functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const navItems = document.querySelectorAll('.nav-item');
-            const pageSections = document.querySelectorAll('.page-section');
-            const pageTitle = document.getElementById('page-title');
-            const pageSubtitle = document.getElementById('page-subtitle');
-            const sidebar = document.querySelector('.sidebar');
-            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
-
-            const pageInfo = {
-                'dashboard': { title: 'Dashboard', subtitle: 'Overview of your trading bot performance' },
-                'market-data': { title: 'Market Data', subtitle: 'Real-time market data and AI signals' },
-                'symbols': { title: 'Symbols', subtitle: 'Manage trading symbols and models' },
-                'spot': { title: 'Spot Trading', subtitle: 'Spot trading management and positions' },
-                'futures': { title: 'Futures', subtitle: 'Futures trading management' },
-                'strategies': { title: 'Strategies', subtitle: 'Trading strategy management and performance' },
-                'crt-signals': { title: 'CRT Signals', subtitle: 'CRT signal analysis and predictions' },
-                'trade-history': { title: 'Trade History', subtitle: 'Historical trading performance' },
-                'statistics': { title: 'Statistics', subtitle: 'Trading statistics and analytics' },
-                'qfm-analytics': { title: 'QFM Analytics', subtitle: 'Quantitative Financial Modeling metrics' },
-                'backtest-lab': { title: 'Backtest Lab', subtitle: 'Strategy backtesting and optimization' },
-                'ml-telemetry': { title: 'ML Telemetry', subtitle: 'Machine learning model metrics' },
-                'safety': { title: 'Safety', subtitle: 'Risk management and safety systems' },
-                'health': { title: 'Health', subtitle: 'System health and diagnostics' },
-                'api-keys': { title: 'API Keys', subtitle: 'Exchange API key management' },
-                'journal': { title: 'Journal', subtitle: 'Trading journal and notes' },
-                'persistence': { title: 'Persistence', subtitle: 'Data backup and persistence' },
-                'user-management': { title: 'User Management', subtitle: 'Manage user accounts and permissions' }
-            };
-
-            navItems.forEach(item => {
-                item.addEventListener('click', function(e) {
-                    e.preventDefault();
-
-                    // Remove active class from all nav items
-                    navItems.forEach(nav => nav.classList.remove('active'));
-
-                    // Add active class to clicked item
-                    this.classList.add('active');
-
-                    // Hide all page sections
-                    pageSections.forEach(section => section.classList.remove('active'));
-
-                    // Show selected page section
-                    const pageId = this.getAttribute('data-page');
-                    const targetSection = document.getElementById(pageId);
-                    if (targetSection) {
-                        targetSection.classList.add('active');
-
-                        // Update page title and subtitle
-                        if (pageInfo[pageId]) {
-                            pageTitle.textContent = pageInfo[pageId].title;
-                            pageSubtitle.textContent = pageInfo[pageId].subtitle;
-                        }
-
-                        // Refresh data for the page
-                        if (pageId === 'user-management') {
-                            setTimeout(refreshUsers, 100);
-                        }
-                    }
-                });
-            });
-
-            // Mobile menu toggle functionality
-            if (mobileMenuToggle && sidebar) {
-                mobileMenuToggle.addEventListener('click', function() {
-                    sidebar.classList.toggle('open');
-                });
-
-                // Close sidebar when clicking outside on mobile
-                document.addEventListener('click', function(e) {
-                    if (window.innerWidth <= 1024 && 
-                        !sidebar.contains(e.target) && 
-                        !mobileMenuToggle.contains(e.target) &&
-                        sidebar.classList.contains('open')) {
-                        sidebar.classList.remove('open');
-                    }
-                });
-            }
-
-            // Auto-refresh functionality (enhanced)
-            let dashboardRefreshInterval;
-            let isRefreshing = false;
-            
-            function startDashboardRefresh() {
-                // Clear any existing interval
-                if (dashboardRefreshInterval) {
-                    clearInterval(dashboardRefreshInterval);
-                }
-                
-                // Start new refresh cycle (every 30 seconds)
-                dashboardRefreshInterval = setInterval(refreshDashboardData, 30000);
-                
-                // Initial refresh
-                refreshDashboardData();
-            }
-            
-            async function refreshDashboardData() {
-                if (isRefreshing) return; // Prevent overlapping requests
-                isRefreshing = true;
-                
-                try {
-                    // Refresh different types of data based on current page
-                    const activeSection = document.querySelector('.page-section.active');
-                    if (!activeSection) return;
-                    
-                    const pageId = activeSection.id;
-                    
-                    switch(pageId) {
-                        case 'dashboard':
-                            await refreshDashboardCards();
-                            await refreshRecentActivity();
-                            break;
-                        case 'market-data':
-                            await refreshMarketData();
-                            break;
-                        case 'strategies':
-                            await refreshStrategies();
-                            break;
-                        case 'qfm-analytics':
-                            await refreshQFMData();
-                            break;
-                        case 'user-management':
-                            await refreshUsers();
-                            break;
-                        case 'spot':
-                            await refreshSpotData();
-                            break;
-                        case 'futures':
-                            await refreshFuturesData();
-                            break;
-                    }
-                    
-                    // Update last refresh timestamp
-                    updateLastRefreshTime();
-                    
-                } catch (error) {
-                    console.error('Dashboard refresh error:', error);
-                } finally {
-                    isRefreshing = false;
-                }
-            }
-            
-            async function refreshDashboardCards() {
-                try {
-                    const response = await fetch('/api/status', {
-                        credentials: 'same-origin'
-                    });
-                    const data = await response.json();
-                    
-                    if (data.error) return;
-                    
-                    // Update portfolio value
-                    const portfolioValueElement = document.querySelector('#dashboard .dashboard-card:nth-child(1) .card-value');
-                    if (portfolioValueElement && data.portfolio) {
-                        const totalValue = (data.portfolio.total_balance || 0) + (data.portfolio.unrealized_pnl || 0);
-                        portfolioValueElement.textContent = `$${totalValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-                    }
-                    
-                    // Update active trades count
-                    const activeTradesElement = document.querySelector('#dashboard .dashboard-card:nth-child(2) .card-value');
-                    if (activeTradesElement && data.portfolio) {
-                        const openPositions = Object.keys(data.portfolio.open_positions || {}).length;
-                        activeTradesElement.textContent = openPositions;
-                    }
-                    
-                    // Update win rate
-                    const winRateElement = document.querySelector('#dashboard .dashboard-card:nth-child(3) .card-value');
-                    if (winRateElement && data.performance) {
-                        const winRate = data.performance.win_rate || 0;
-                        winRateElement.textContent = `${(winRate * 100).toFixed(1)}%`;
-                    }
-                    
-                    // Update system status
-                    const systemStatusElement = document.querySelector('#dashboard .dashboard-card:nth-child(4) .card-value');
-                    if (systemStatusElement && data.system_status) {
-                        const isOnline = data.system_status.trading_enabled && data.system_status.models_loaded;
-                        const statusIndicator = systemStatusElement.querySelector('.status-indicator');
-                        if (statusIndicator) {
-                            statusIndicator.className = `status-indicator ${isOnline ? 'status-success' : 'status-warning'}`;
-                            statusIndicator.textContent = isOnline ? 'ONLINE' : 'OFFLINE';
-                        }
-                    }
-                    
-                    // Load user-specific data
-                    await loadUserDashboardData();
-                    
-                } catch (error) {
-                    console.error('Error refreshing dashboard cards:', error);
-                }
-            }
-            
-            async function loadUserDashboardData() {
-                try {
-                    // Get current user ID (we'll need to add this endpoint)
-                    const userResponse = await fetch('/api/current_user', {
-                        credentials: 'same-origin'
-                    });
-                    
-                    if (!userResponse.ok) return;
-                    
-                    const userData = await userResponse.json();
-                    const userId = userData.id;
-                    
-                    if (!userId) return;
-                    
-                    // Load user portfolio data
-                    const portfolioResponse = await fetch(`/api/portfolio/user/${userId}`, {
-                        credentials: 'same-origin'
-                    });
-                    
-                    if (portfolioResponse.ok) {
-                        const portfolioData = await portfolioResponse.json();
-                        updateUserPortfolioWidgets(portfolioData);
-                    }
-                    
-                    // Load user trades
-                    const tradesResponse = await fetch('/api/trades?limit=10', {
-                        credentials: 'same-origin'
-                    });
-                    
-                    if (tradesResponse.ok) {
-                        const tradesData = await tradesResponse.json();
-                        updateUserTradesTable(tradesData.trades || []);
-                    }
-                    
-                } catch (error) {
-                    console.error('Error loading user dashboard data:', error);
-                }
-            }
-            
-            function updateUserPortfolioWidgets(portfolioData) {
-                // Update user portfolio value
-                const portfolioValueElement = document.getElementById('user-portfolio-value');
-                if (portfolioValueElement) {
-                    const totalValue = portfolioData.summary?.total_value || 0;
-                    portfolioValueElement.textContent = `$${totalValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-                }
-                
-                // Update portfolio status
-                const portfolioStatusElement = document.getElementById('user-portfolio-status');
-                if (portfolioStatusElement) {
-                    const positionCount = portfolioData.summary?.total_positions || 0;
-                    portfolioStatusElement.textContent = `${positionCount} active position${positionCount !== 1 ? 's' : ''}`;
-                }
-                
-                // Update user performance
-                const totalPnlElement = document.getElementById('user-total-pnl');
-                if (totalPnlElement) {
-                    const totalPnl = portfolioData.summary?.total_pnl || 0;
-                    const isPositive = totalPnl >= 0;
-                    totalPnlElement.textContent = `${isPositive ? '+' : ''}$${totalPnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-                    totalPnlElement.style.color = isPositive ? 'var(--success)' : 'var(--danger)';
-                }
-                
-                // Update trade count
-                const tradeCountElement = document.getElementById('user-trade-count');
-                if (tradeCountElement) {
-                    // This would need to be fetched separately or calculated
-                    tradeCountElement.textContent = 'Loading...';
-                }
-                
-                // Update risk level (simplified)
-                const riskLevelElement = document.getElementById('user-risk-level');
-                if (riskLevelElement) {
-                    const positionCount = portfolioData.summary?.total_positions || 0;
-                    let riskLevel = 'LOW';
-                    let riskClass = 'status-success';
-                    
-                    if (positionCount > 5) {
-                        riskLevel = 'MEDIUM';
-                        riskClass = 'status-warning';
-                    }
-                    if (positionCount > 10) {
-                        riskLevel = 'HIGH';
-                        riskClass = 'status-danger';
-                    }
-                    
-                    riskLevelElement.textContent = riskLevel;
-                    riskLevelElement.className = `status-indicator ${riskClass}`;
-                }
-                
-                // Update risk details
-                const riskDetailsElement = document.getElementById('user-risk-details');
-                if (riskDetailsElement) {
-                    const positionCount = portfolioData.summary?.total_positions || 0;
-                    riskDetailsElement.textContent = `${positionCount} position${positionCount !== 1 ? 's' : ''} open`;
-                }
-            }
-            
-            function updateUserTradesTable(trades) {
-                const tbody = document.getElementById('user-recent-trades');
-                if (!tbody) return;
-                
-                if (!trades || trades.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No recent trades</td></tr>';
-                    return;
-                }
-                
-                tbody.innerHTML = '';
-                
-                trades.slice(0, 10).forEach(trade => {
-                    const row = document.createElement('tr');
-                    const timestamp = new Date((trade.timestamp || 0) * 1000);
-                    const dateString = timestamp.toLocaleDateString('en-US');
-                    
-                    const pnl = trade.pnl || 0;
-                    const pnlClass = pnl >= 0 ? 'text-success' : 'text-danger';
-                    const pnlSign = pnl >= 0 ? '+' : '';
-                    
-                    row.innerHTML = `
-                        <td>${dateString}</td>
-                        <td>${trade.symbol || 'N/A'}</td>
-                        <td>${trade.side || 'N/A'}</td>
-                        <td>${trade.quantity || 0}</td>
-                        <td>$${(trade.price || 0).toFixed(4)}</td>
-                        <td class="${pnlClass}">${pnlSign}$${pnl.toFixed(2)}</td>
-                        <td><span class="status-indicator status-${trade.status === 'closed' ? 'success' : 'warning'}">${trade.status || 'unknown'}</span></td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            }
-            
-            async function refreshRecentActivity() {
-                try {
-                    const response = await fetch('/api/trades?page=1&limit=10', {
-                        credentials: 'same-origin'
-                    });
-                    const data = await response.json();
-                    
-                    if (data.error || !data.trades) return;
-                    
-                    const tbody = document.getElementById('recent-activity');
-                    if (!tbody) return;
-                    
-                    tbody.innerHTML = '';
-                    
-                    data.trades.slice(0, 5).forEach(trade => {
-                        const row = document.createElement('tr');
-                        const timestamp = new Date(trade.timestamp * 1000);
-                        const timeString = timestamp.toLocaleTimeString('en-US', { 
-                            hour12: false, 
-                            hour: '2-digit', 
-                            minute: '2-digit',
-                            second: '2-digit'
-                        });
-                        
-                        row.innerHTML = `
-                            <td>${timeString}</td>
-                            <td>${trade.symbol || 'N/A'}</td>
-                            <td>${trade.side || 'N/A'}</td>
-                            <td>$${(trade.price || 0).toFixed(2)}</td>
-                            <td><span class="status-indicator status-${trade.status === 'filled' ? 'success' : 'warning'}">${trade.status || 'unknown'}</span></td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                    
-                } catch (error) {
-                    console.error('Error refreshing recent activity:', error);
-                }
-            }
-            
-            async function refreshMarketData() {
-                try {
-                    const response = await fetch('/api/market_data', {
-                        credentials: 'same-origin'
-                    });
-                    const data = await response.json();
-                    
-                    if (data.error) return;
-                    
-                    // Update market data table
-                    const tbody = document.getElementById('market-data-table');
-                    if (!tbody) return;
-                    
-                    tbody.innerHTML = '';
-                    
-                    // Get top symbols for display
-                    const symbols = Object.keys(data.market_data || {}).slice(0, 20);
-                    
-                    symbols.forEach(symbol => {
-                        const marketInfo = data.market_data[symbol] || {};
-                        const aiSignal = data.ai_signals?.[symbol] || {};
-                        
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${symbol}</td>
-                            <td>$${(marketInfo.price || 0).toFixed(4)}</td>
-                            <td class="${(marketInfo.price_change_24h || 0) >= 0 ? 'text-success' : 'text-danger'}">
-                                ${(marketInfo.price_change_24h || 0).toFixed(2)}%
-                            </td>
-
-                // Add New User
-                async function addNewUser() {
-                    const username = document.getElementById('new-username').value.trim();
-                    const password = document.getElementById('new-password').value;
-                    const confirmPassword = document.getElementById('confirm-password').value;
-                    const role = document.getElementById('new-user-role').value;
-                    if (!username || !password || password !== confirmPassword) {
-                        alert('Please enter valid username and matching passwords.');
-                        return;
-                    }
-                    try {
-                        const res = await fetch('/api/users', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                username,
-                                password,
-                                email: username + '@example.com', // Placeholder, can be updated
-                                is_admin: role === 'admin',
-                                is_active: true
-                            })
-                        });
-                        const data = await res.json();
-                        if (data.error) alert(data.error);
-                        else {
-                            closeAddUserModal();
-                            refreshUsers();
-                        }
-                    } catch (err) {
-                        alert('Error creating user.');
-                    }
-                }
-
-                // Edit User
-                async function editUser(username) {
-                    try {
-                        const res = await fetch(`/api/users/${username}`, { credentials: 'same-origin' });
-                        const user = await res.json();
-                        if (user.error) return alert(user.error);
-                        // Populate modal with user info
-                        document.getElementById('new-username').value = user.username;
-                        document.getElementById('new-user-role').value = user.is_admin ? 'admin' : 'user';
-                        document.getElementById('new-password').value = '';
-                        document.getElementById('confirm-password').value = '';
-                        // Show modal
-                        document.getElementById('add-user-modal').style.display = 'flex';
-                        // Change button to update
-                        const btn = document.querySelector('#add-user-modal .btn-primary');
-                        btn.textContent = 'Update User';
-                        btn.onclick = function() { updateUser(username); };
-                    } catch (err) {
-                        alert('Error loading user details.');
-                    }
-                }
-
-                // Update User
-                async function updateUser(username) {
-                    const role = document.getElementById('new-user-role').value;
-                    const password = document.getElementById('new-password').value;
-                    const email = username + '@example.com';
-                    try {
-                        const res = await fetch(`/api/users/${username}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                is_admin: role === 'admin',
-                                email,
-                                password
-                            })
-                        });
-                        const data = await res.json();
-                        if (data.error) alert(data.error);
-                        else {
-                            closeAddUserModal();
-                            refreshUsers();
-                        }
-                    } catch (err) {
-                        alert('Error updating user.');
-                    }
-                }
-
-                // Delete User
-                async function deleteUser(username) {
-                    if (!confirm(`Delete user ${username}?`)) return;
-                    try {
-                        const res = await fetch(`/api/users/${username}`, {
-                            method: 'DELETE',
-                            credentials: 'same-origin'
-                        });
-                        const data = await res.json();
-                        if (data.error) alert(data.error);
-                        else refreshUsers();
-                    } catch (err) {
-                        alert('Error deleting user.');
-                    }
-                }
-                            <td>${(marketInfo.volume_24h || 0).toLocaleString()}</td>
-                            <td><span class="status-indicator status-${aiSignal.confidence > 0.7 ? 'success' : aiSignal.confidence > 0.5 ? 'warning' : 'neutral'}">${aiSignal.signal || 'HOLD'}</span></td>
-                            <td>${((aiSignal.confidence || 0) * 100).toFixed(1)}%</td>
-                            <td>
-                                <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="viewSymbolDetails('${symbol}')">View</button>
-                            </td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                    
-                } catch (error) {
-                    console.error('Error refreshing market data:', error);
-                }
-            }
-            
-            function updateLastRefreshTime() {
-                const now = new Date();
-                const timeString = now.toLocaleTimeString('en-US', {
-                    hour12: false,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-                
-                // Update any last refresh indicators
-                const refreshIndicators = document.querySelectorAll('.last-refresh-time');
-                refreshIndicators.forEach(indicator => {
-                    indicator.textContent = `Last updated: ${timeString}`;
-                });
-            }
-            
-            function viewSymbolDetails(symbol) {
-                // Placeholder for symbol details view
-                alert(`Symbol details for ${symbol} would be shown here`);
-            }
-            
-            // Start dashboard refresh when page loads
-            document.addEventListener('DOMContentLoaded', function() {
-                startDashboardRefresh();
-                updateCurrentUserInfo();
-            });
-            
-            // Pause refresh when page is not visible
-            document.addEventListener('visibilitychange', function() {
-                if (document.hidden) {
-                    if (dashboardRefreshInterval) {
-                        clearInterval(dashboardRefreshInterval);
-                        dashboardRefreshInterval = null;
-                    }
-                } else {
-                    startDashboardRefresh();
-                }
-            });
-            
-            // QFM Analytics functionality
-            async function refreshQFMData() {
-                try {
-                    const response = await fetch('/api/qfm');
-                    const data = await response.json();
-                    
-                    if (data.error) {
-                        console.error('QFM data error:', data.error);
-                        return;
-                    }
-                    
-                    // Update aggregate metrics
-                    const aggregate = data.aggregate;
-                    document.getElementById('qfm-velocity').textContent = aggregate.qfm_velocity.toFixed(4);
-                    document.getElementById('qfm-acceleration').textContent = aggregate.qfm_acceleration.toFixed(4);
-                    document.getElementById('qfm-jerk').textContent = aggregate.qfm_jerk.toFixed(4);
-                    document.getElementById('qfm-volume-pressure').textContent = aggregate.qfm_volume_pressure.toFixed(4);
-                    document.getElementById('qfm-trend-confidence').textContent = aggregate.qfm_trend_confidence.toFixed(4);
-                    document.getElementById('qfm-regime-score').textContent = aggregate.qfm_regime_score.toFixed(4);
-                    document.getElementById('qfm-entropy').textContent = aggregate.qfm_entropy.toFixed(4);
-                    
-                    // Update symbol table
-                    const tableBody = document.getElementById('qfm-table-body');
-                    tableBody.innerHTML = '';
-                    
-                    for (const [symbol, metrics] of Object.entries(data.by_symbol)) {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${symbol}</td>
-                            <td>${metrics.qfm_velocity.toFixed(4)}</td>
-                            <td>${metrics.qfm_acceleration.toFixed(4)}</td>
-                            <td>${metrics.qfm_jerk.toFixed(4)}</td>
-                            <td>${metrics.qfm_volume_pressure.toFixed(4)}</td>
-                            <td>${metrics.qfm_trend_confidence.toFixed(4)}</td>
-                            <td>${metrics.qfm_regime_score.toFixed(4)}</td>
-                            <td>${metrics.qfm_entropy.toFixed(4)}</td>
-                        `;
-                        tableBody.appendChild(row);
-                    }
-                    
-                } catch (error) {
-                    console.error('Failed to refresh QFM data:', error);
-                }
-            }
-            
-            // Add event listener for QFM page
-            document.addEventListener('click', function(e) {
-                if (e.target.closest('[data-page="qfm-analytics"]')) {
-                    setTimeout(refreshQFMData, 100); // Small delay to ensure page is visible
-                }
-            });
-            
-            // Add event listener for QFM refresh button
-            document.addEventListener('click', function(e) {
-                if (e.target.textContent === 'Refresh QFM Data') {
-                    refreshQFMData();
-                }
-            });
-
-            // Strategy Management Functions
-            async function refreshStrategies() {
-                try {
-                    const response = await fetch('/api/strategies', {
-                        credentials: 'same-origin'
-                    });
-                    const data = await response.json();
-
-                    if (data.error) {
-                        console.error('Strategy data error:', data.error);
-                        return;
-                    }
-
-                    // Update overview cards
-                    document.getElementById('active-strategies-count').textContent = data.active_count;
-                    document.getElementById('total-strategies-count').textContent = data.total_count;
-
-                    // Update strategies table
-                    const tableBody = document.getElementById('strategies-table');
-                    tableBody.innerHTML = '';
-
-                    // Get performance data
-                    const perfResponse = await fetch('/api/strategies/performance', {
-                        credentials: 'same-origin'
-                    });
-                    const perfData = await perfResponse.json();
-                    const performance = perfData.performance || {};
-
-                    let bestStrategy = null;
-                    let bestPnL = -Infinity;
-                    let totalWinRate = 0;
-                    let strategyCount = 0;
-
-                    for (const strategy of data.strategies) {
-                        const perf = performance[strategy.name] || {};
-                        const winRate = perf.win_rate || 0;
-                        const totalPnL = perf.total_pnl || 0;
-
-                        totalWinRate += winRate;
-                        strategyCount++;
-
-                        if (totalPnL > bestPnL) {
-                            bestPnL = totalPnL;
-                            bestStrategy = strategy.name;
-                        }
-
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${strategy.name}</td>
-                            <td>${strategy.type || 'Unknown'}</td>
-                            <td>
-                                <span class="status-indicator ${strategy.active ? 'status-success' : 'status-neutral'}">
-                                    ${strategy.active ? 'Active' : 'Inactive'}
-                                </span>
-                            </td>
-                            <td>${(winRate * 100).toFixed(1)}%</td>
-                            <td style="color: ${totalPnL >= 0 ? 'var(--success)' : 'var(--danger)'}">
-                                $${totalPnL.toFixed(2)}
-                            </td>
-                            <td>${perf.total_trades || 0}</td>
-                            <td>${strategy.last_updated || 'Never'}</td>
-                            <td>
-                                <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="toggleStrategy('${strategy.name}', ${!strategy.active})">
-                                    ${strategy.active ? 'Disable' : 'Enable'}
-                                </button>
-                                <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;" onclick="configureStrategy('${strategy.name}')">
-                                    Configure
-                                </button>
-                            </td>
-                        `;
-                        tableBody.appendChild(row);
-                    }
-
-                    // Update best strategy info
-                    if (bestStrategy) {
-                        document.getElementById('best-strategy-name').textContent = bestStrategy;
-                        document.getElementById('best-strategy-pnl').textContent = `$${bestPnL.toFixed(2)}`;
-                    }
-
-                    // Update average win rate
-                    const avgWinRate = strategyCount > 0 ? (totalWinRate / strategyCount) * 100 : 0;
-                    document.getElementById('avg-win-rate').textContent = `${avgWinRate.toFixed(1)}%`;
-
-                } catch (error) {
-                    console.error('Failed to refresh strategies:', error);
-                }
-            }
-
-            async function toggleStrategy(strategyName, enable) {
-                try {
-                    const response = await fetch(`/api/strategies/${strategyName}/toggle`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({ enable: enable })
-                    });
-
-                    const data = await response.json();
-                    if (data.error) {
-                        alert('Error: ' + data.error);
-                    } else {
-                        alert(data.message);
-                        refreshStrategies();
-                    }
-                } catch (error) {
-                    console.error('Failed to toggle strategy:', error);
-                    alert('Failed to toggle strategy');
-                }
-            }
-
-            async function configureStrategy(strategyName) {
-                try {
-                    const response = await fetch(`/api/strategies/${strategyName}`, {
-                        credentials: 'same-origin'
-                    });
-                    const strategy = await response.json();
-
-                    if (strategy.error) {
-                        alert('Error: ' + strategy.error);
-                        return;
-                    }
-
-                    // Show configuration modal
-                    document.getElementById('config-modal-title').textContent = `Configure ${strategyName}`;
-                    const configContent = document.getElementById('strategy-config-content');
-
-                    configContent.innerHTML = `
-                        <div class="form-group">
-                            <label class="form-label">Strategy Type</label>
-                            <input type="text" class="form-input" value="${strategy.type || ''}" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Description</label>
-                            <textarea class="form-input" rows="3" readonly>${strategy.description || ''}</textarea>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Risk Level</label>
-                            <select class="form-input" id="config-risk-level">
-                                <option value="low" ${strategy.config?.risk_level === 'low' ? 'selected' : ''}>Low</option>
-                                <option value="medium" ${strategy.config?.risk_level === 'medium' ? 'selected' : ''}>Medium</option>
-                                <option value="high" ${strategy.config?.risk_level === 'high' ? 'selected' : ''}>High</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Max Position Size (% of portfolio)</label>
-                            <input type="number" class="form-input" id="config-max-position" value="${strategy.config?.max_position_size || 10}" min="1" max="100">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Stop Loss (%)</label>
-                            <input type="number" class="form-input" id="config-stop-loss" value="${strategy.config?.stop_loss || 2}" min="0.1" max="10" step="0.1">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Take Profit (%)</label>
-                            <input type="number" class="form-input" id="config-take-profit" value="${strategy.config?.take_profit || 5}" min="0.1" max="20" step="0.1">
-                        </div>
-                    `;
-
-                    // Store current strategy name for saving
-                    configContent.dataset.strategyName = strategyName;
-                    document.getElementById('strategy-config-modal').style.display = 'flex';
-
-                } catch (error) {
-                    console.error('Failed to load strategy config:', error);
-                    alert('Failed to load strategy configuration');
-                }
-            }
-
-            function closeStrategyConfig() {
-                document.getElementById('strategy-config-modal').style.display = 'none';
-            }
-
-            async function saveStrategyConfig() {
-                const configContent = document.getElementById('strategy-config-content');
-                const strategyName = configContent.dataset.strategyName;
-
-                const config = {
-                    risk_level: document.getElementById('config-risk-level').value,
-                    max_position_size: parseFloat(document.getElementById('config-max-position').value),
-                    stop_loss: parseFloat(document.getElementById('config-stop-loss').value),
-                    take_profit: parseFloat(document.getElementById('config-take-profit').value)
-                };
-
-                try {
-                    const response = await fetch(`/api/strategies/${strategyName}/configure`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({ config: config })
-                    });
-
-                    const data = await response.json();
-                    if (data.error) {
-                        alert('Error: ' + data.error);
-                    } else {
-                        alert(data.message);
-                        closeStrategyConfig();
-                        refreshStrategies();
-                    }
-                } catch (error) {
-                    console.error('Failed to save strategy config:', error);
-                    alert('Failed to save strategy configuration');
-                }
-            }
-
-            async function optimizeStrategies() {
-                if (!confirm('Start automatic strategy optimization using QFM analytics? This may take several minutes.')) {
-                    return;
-                }
-
-                try {
-                    // Update UI to show optimization in progress
-                    document.getElementById('optimization-progress').textContent = 'Running...';
-                    document.getElementById('optimization-status').textContent = 'Optimizing strategies...';
-
-                    const response = await fetch('/api/strategies/optimize', {
-                        method: 'POST',
-                        credentials: 'same-origin'
-                    });
-
-                    const data = await response.json();
-                    
-                    if (data.error) {
-                        alert('Error: ' + data.error);
-                        document.getElementById('optimization-progress').textContent = '0%';
-                        document.getElementById('optimization-status').textContent = 'Optimization failed';
-                        return;
-                    }
-
-                    // Update optimization results
-                    document.getElementById('optimization-progress').textContent = '100%';
-                    document.getElementById('optimization-status').textContent = 'Optimization complete';
-                    document.getElementById('qfm-improvements').textContent = data.improvements || 0;
-                    document.getElementById('last-optimization').textContent = new Date().toLocaleTimeString();
-                    document.getElementById('optimization-result').textContent = `${data.improvements || 0} strategies optimized`;
-
-                    alert(`Strategy optimization complete! ${data.improvements || 0} strategies were enhanced using QFM analytics.`);
-                    
-                    // Refresh strategies table
-                    refreshStrategies();
-
-                } catch (error) {
-                    console.error('Strategy optimization error:', error);
-                    alert('Failed to optimize strategies');
-                    document.getElementById('optimization-progress').textContent = '0%';
-                    document.getElementById('optimization-status').textContent = 'Optimization failed';
-                }
-            }
-
-            async function runQFMStrategyAnalysis() {
-                try {
-                    document.getElementById('optimization-status').textContent = 'Running QFM analysis...';
-
-                    const response = await fetch('/api/strategies/qfm_analysis', {
-                        credentials: 'same-origin'
-                    });
-
-                    const data = await response.json();
-                    
-                    if (data.error) {
-                        alert('Error: ' + data.error);
-                        return;
-                    }
-
-                    // Display QFM analysis results
-                    let analysisText = 'QFM Strategy Analysis Results:\n\n';
-                    
-                    if (data.analysis && data.analysis.length > 0) {
-                        data.analysis.forEach(item => {
-                            analysisText += `${item.strategy}: ${item.recommendation}\n`;
-                            analysisText += `  QFM Score: ${item.qfm_score?.toFixed(3) || 'N/A'}\n`;
-                            analysisText += `  Confidence: ${((item.confidence || 0) * 100).toFixed(1)}%\n\n`;
-                        });
-                    } else {
-                        analysisText += 'No QFM analysis data available.';
-                    }
-
-                    alert(analysisText);
-                    document.getElementById('optimization-status').textContent = 'QFM analysis complete';
-
-                } catch (error) {
-                    console.error('QFM analysis error:', error);
-                    alert('Failed to run QFM analysis');
-                    document.getElementById('optimization-status').textContent = 'QFM analysis failed';
-                }
-            }
-
-            async function toggleAutoOptimize() {
-                try {
-                    const response = await fetch('/api/strategies/auto_optimize/toggle', {
-                        method: 'POST',
-                        credentials: 'same-origin'
-                    });
-
-                    const data = await response.json();
-                    
-                    if (data.error) {
-                        alert('Error: ' + data.error);
-                        return;
-                    }
-
-                    // Update auto-optimize status
-                    const statusElement = document.getElementById('auto-optimize-status');
-                    if (statusElement) {
-                        statusElement.textContent = data.enabled ? 'ENABLED' : 'DISABLED';
-                        statusElement.className = `status-indicator ${data.enabled ? 'status-success' : 'status-neutral'}`;
-                    }
-
-                    alert(`Auto-optimization ${data.enabled ? 'enabled' : 'disabled'}`);
-
-                } catch (error) {
-                    console.error('Auto-optimize toggle error:', error);
-                    alert('Failed to toggle auto-optimization');
-                }
-            }
-
-            // Add event listener for Strategies page
-            document.addEventListener('click', function(e) {
-                if (e.target.closest('[data-page="strategies"]')) {
-                    setTimeout(refreshStrategies, 100); // Small delay to ensure page is visible
-                }
-            });
-
-            // Add event listener for Strategy refresh button
-            document.addEventListener('click', function(e) {
-                if (e.target.textContent === 'Refresh') {
-                    const strategiesSection = document.getElementById('strategies');
-                    if (strategiesSection.classList.contains('active')) {
-                        refreshStrategies();
-                    }
-                }
-            });
-
-            // Spot Trading Functions
-            async function executeSpotTrade() {
-                const symbol = document.getElementById('spot-trade-symbol').value;
-                const side = document.getElementById('spot-trade-side').value;
-                const amount = document.getElementById('spot-trade-amount').value;
-
-                if (!symbol || !amount) {
-                    alert('Please fill in all fields');
-                    return;
-                }
-
-                try {
-                    const response = await fetch('/api/spot/trade', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({
-                            symbol: symbol,
-                            side: side,
-                            amount: parseFloat(amount)
-                        })
-                    });
-
-                    const data = await response.json();
-                    if (data.error) {
-                        alert('Error: ' + data.error);
-                    } else {
-                        alert('Trade executed successfully!');
-                        // Refresh spot positions
-                        refreshSpotData();
-                    }
-                } catch (error) {
-                    console.error('Failed to execute spot trade:', error);
-                    alert('Failed to execute trade');
-                }
-            }
-
-            async function refreshSpotData() {
-                try {
-                    // This would fetch spot trading data from the API
-                    // For now, just log that it would refresh
-                    console.log('Refreshing spot trading data...');
-                } catch (error) {
-                    console.error('Failed to refresh spot data:', error);
-                }
-            }
-
-            // User Management Functions
-            // === 1. MODAL CONTROL FUNCTIONS ===
-            function showAddUserModal() {
-                document.getElementById('add-user-modal').style.display = 'flex';
-            }
-
-            function closeAddUserModal() {
-                document.getElementById('add-user-modal').style.display = 'none';
-                // Clear form fields
-                document.getElementById('new-username').value = '';
-                document.getElementById('new-password').value = '';
-                document.getElementById('confirm-password').value = '';
-                document.getElementById('new-user-role').value = 'user';
-            }
-
-            // === 2. COMPLETE ADD USER FUNCTION ===
-            async function addNewUser() {
-                const username = document.getElementById('new-username').value.trim();
-                const password = document.getElementById('new-password').value;
-                const confirmPassword = document.getElementById('confirm-password').value;
-                const role = document.getElementById('new-user-role').value;
-                
-                if (!username || !password) {
-                    alert('Username and password are required!');
-                    return;
-                }
-                
-                if (password !== confirmPassword) {
-                    alert('Passwords do not match!');
-                    return;
-                }
-                
-                if (password.length < 6) {
-                    alert('Password must be at least 6 characters long!');
-                    return;
-                }
-                
-                try {
-                    const response = await fetch('/api/users', {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCSRFToken() // Add if you have CSRF protection
-                        },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({
-                            username: username,
-                            password: password,
-                            is_admin: role === 'admin',
-                            email: `${username}@tradingbot.com` // Auto-generate email
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    if (data.error) {
-                        alert('Error: ' + data.error);
-                    } else {
-                        alert('✅ User created successfully!');
-                        closeAddUserModal();
-                        refreshUsers(); // Refresh the user list
-                    }
-                } catch (error) {
-                    console.error('Failed to create user:', error);
-                    alert('❌ Failed to create user - check console for details');
-                }
-            }
-
-            // === 3. EDIT USER FUNCTION ===
-            function editUser(username) {
-                alert(`✏️ Edit user: ${username}\n\nFeature coming soon!`);
-                // Future implementation: Open edit modal with user data
-            }
-
-            // === 4. ENHANCED DELETE USER FUNCTION ===
-            async function deleteUser(username) {
-                if (username === 'admin') {
-                    alert('❌ Cannot delete the main admin account!');
-                    return;
-                }
-                
-                if (!confirm(`⚠️ Are you sure you want to delete user "${username}"?\n\nThis action cannot be undone!`)) {
-                    return;
-                }
-
-                try {
-                    const response = await fetch(`/api/users/${encodeURIComponent(username)}`, {
-                        method: 'DELETE',
-                        credentials: 'same-origin',
-                        headers: {
-                            'X-CSRFToken': getCSRFToken()
-                        }
-                    });
-
-                    const data = await response.json();
-                    if (data.error) {
-                        alert('❌ Error: ' + data.error);
-                    } else {
-                        alert('✅ User deleted successfully!');
-                        refreshUsers();
-                    }
-                } catch (error) {
-                    console.error('Failed to delete user:', error);
-                    alert('❌ Failed to delete user - check console for details');
-                }
-            }
-
-            // === 5. ENHANCED REFRESH USERS ===
-            async function refreshUsers() {
-                try {
-                    console.log('🔄 Refreshing user list...');
-                    const response = await fetch('/api/users', {
-                        credentials: 'same-origin',
-                        headers: {
-                            'Cache-Control': 'no-cache'
-                        }
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    const data = await response.json();
-
-                    if (data.error) {
-                        console.error('❌ User data error:', data.error);
-                        alert('Error loading users: ' + data.error);
-                        return;
-                    }
-
-                    // Update overview cards
-                    const users = data.users || [];
-                    const totalUsers = users.length;
-                    const activeUsers = users.filter(u => u.is_active).length;
-                    const adminUsers = users.filter(u => u.is_admin).length;
-                    
-                    // Find most recent login
-                    const lastLogin = users.reduce((latest, user) => {
-                        if (!user.last_login) return latest;
-                        const loginTime = new Date(user.last_login);
-                        return (!latest || loginTime > latest.time) ? { time: loginTime, user: user.username } : latest;
-                    }, null);
-
-                    document.getElementById('total-users-count').textContent = totalUsers;
-                    document.getElementById('active-users-count').textContent = activeUsers;
-                    document.getElementById('admin-users-count').textContent = adminUsers;
-                    
-                    const lastLoginElement = document.getElementById('last-login-time');
-                    if (lastLogin) {
-                        const timeAgo = getTimeAgo(lastLogin.time);
-                        lastLoginElement.textContent = `${timeAgo} (${lastLogin.user})`;
-                    } else {
-                        lastLoginElement.textContent = 'Never';
-                    }
-
-                    // Update users table
-                    const tableBody = document.getElementById('users-table');
-                    tableBody.innerHTML = '';
-
-                    if (users.length === 0) {
-                        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No users found</td></tr>';
-                        return;
-                    }
-
-                    users.forEach(user => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>
-                                <strong>${escapeHtml(user.username)}</strong>
-                                ${user.is_admin ? ' 👑' : ''}
-                            </td>
-                            <td>${user.is_admin ? 'Administrator' : 'Standard User'}</td>
-                            <td>
-                                <span class="status-indicator ${user.is_active ? 'status-success' : 'status-neutral'}">
-                                    ${user.is_active ? 'Active' : 'Inactive'}
-                                </span>
-                            </td>
-                            <td>${user.last_login ? getTimeAgo(new Date(user.last_login)) : 'Never'}</td>
-                            <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}</td>
-                            <td>
-                                <button class="btn btn-secondary btn-sm" onclick="editUser('${escapeHtml(user.username)}')">
-                                    Edit
-                                </button>
-                                <button class="btn btn-danger btn-sm" 
-                                        onclick="deleteUser('${escapeHtml(user.username)}')"
-                                        ${user.username === 'admin' ? 'disabled' : ''}>
-                                    Delete
-                                </button>
-                            </td>
-                        `;
-                        tableBody.appendChild(row);
-                    });
-
-                    console.log('✅ User list refreshed successfully');
-
-                } catch (error) {
-                    console.error('❌ Failed to refresh users:', error);
-                    alert('Failed to load users. Check console for details.');
-                }
-            }
-
-            // === 6. HELPER FUNCTIONS ===
-            function getTimeAgo(date) {
-                const seconds = Math.floor((new Date() - date) / 1000);
-                const intervals = {
-                    year: 31536000,
-                    month: 2592000,
-                    week: 604800,
-                    day: 86400,
-                    hour: 3600,
-                    minute: 60
-                };
-                
-                for (const [unit, secondsInUnit] of Object.entries(intervals)) {
-                    const interval = Math.floor(seconds / secondsInUnit);
-                    if (interval >= 1) {
-                        return `${interval} ${unit}${interval === 1 ? '' : 's'} ago`;
-                    }
-                }
-                return 'Just now';
-            }
-
-            function escapeHtml(unsafe) {
-                return unsafe
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;");
-            }
-
-            function getCSRFToken() {
-                // If you're using Flask-WTF or similar CSRF protection
-                const metaTag = document.querySelector('meta[name="csrf-token"]');
-                return metaTag ? metaTag.getAttribute('content') : '';
-            }
-
-            // === 7. ENHANCED EVENT LISTENERS ===
-            document.addEventListener('DOMContentLoaded', function() {
-                // Add User button
-                const addUserBtn = document.querySelector('.btn-secondary');
-                if (addUserBtn && addUserBtn.textContent.includes('Add User')) {
-                    addUserBtn.addEventListener('click', showAddUserModal);
-                }
-                
-                // Refresh Users button
-                const refreshBtn = document.querySelector('.btn-primary');
-                if (refreshBtn && refreshBtn.textContent.includes('Refresh Users')) {
-                    refreshBtn.addEventListener('click', refreshUsers);
-                }
-                
-                // Close modal when clicking outside
-                document.getElementById('add-user-modal').addEventListener('click', function(e) {
-                    if (e.target.id === 'add-user-modal') {
-                        closeAddUserModal();
-                    }
-                });
-                
-                // Enter key in modal
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape') {
-                        closeAddUserModal();
-                    }
-                });
-                
-                // Auto-refresh when page loads
-                setTimeout(refreshUsers, 1000);
-            });
-
-            // Logout functionality
-            async function logout() {
-                try {
-                    const response = await fetch('/logout', {
-                        method: 'GET',
-                        credentials: 'same-origin'
-                    });
-                    
-                    if (response.redirected) {
-                        // Redirect to login page
-                        window.location.href = response.url;
-                    } else {
-                        // Fallback: redirect to login page
-                        window.location.href = '/login';
-                    }
-                } catch (error) {
-                    console.error('Logout error:', error);
-                    // Fallback: redirect to login page
-                    window.location.href = '/login';
-                }
-            }
-
-            // Update current user info on page load
-            document.addEventListener('DOMContentLoaded', function() {
-                // This would normally fetch current user info from an API
-                // For now, we'll just set it statically
-                updateCurrentUserInfo();
-            });
-
-            function updateCurrentUserInfo() {
-                // This function would fetch current user info from /api/current_user
-                // For now, we'll use a placeholder
-                const usernameElement = document.getElementById('current-username');
-                if (usernameElement) {
-                    // In a real implementation, this would be fetched from the server
-                    // For now, we'll leave it as is since the server doesn't provide this endpoint
+// Fix sidebar and logout functionality
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ DOM loaded - initializing sidebar and logout');
+    
+    // Mobile menu toggle
+    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    
+    if (mobileMenuToggle && sidebar) {
+        console.log('✅ Found mobile menu toggle and sidebar');
+        
+        mobileMenuToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('📱 Mobile menu toggle clicked');
+            sidebar.classList.toggle('open');
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(e) {
+            if (window.innerWidth <= 768) {
+                if (!sidebar.contains(e.target) && 
+                    !mobileMenuToggle.contains(e.target) && 
+                    sidebar.classList.contains('open')) {
+                    console.log('📱 Closing sidebar (clicked outside)');
+                    sidebar.classList.remove('open');
                 }
             }
         });
+    } else {
+        console.log('❌ Mobile menu elements not found:', {
+            toggle: !!mobileMenuToggle,
+            sidebar: !!sidebar
+        });
+    }
+    
+    // Fix logout button
+    const logoutBtn = document.querySelector('button[onclick="logout()"]');
+    if (logoutBtn) {
+        console.log('✅ Found logout button');
+        logoutBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+        });
+    }
+});
+
+// Global logout function - FIXED
+async function logout() {
+    console.log('🚪 Logout initiated');
+    if (confirm('Are you sure you want to logout?')) {
+        try {
+            const response = await fetch('/logout', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            // Since we changed to redirect, just redirect
+            window.location.href = '/login';
+            
+        } catch (error) {
+            console.error('Logout error:', error);
+            alert('Logout failed. Please try again.');
+        }
+    }
+}
+
+// Add CSS for sidebar open state if missing
+const style = document.createElement('style');
+style.textContent = `
+    .sidebar.open {
+        transform: translateX(0);
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    @media (max-width: 768px) {
+        .sidebar {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .sidebar.open {
+            transform: translateX(0);
+        }
+    }
+    
+    .mobile-menu-toggle {
+        cursor: pointer;
+        z-index: 1001;
+    }
+`;
+document.head.appendChild(style);
+</script>
 
         // Futures Trading Functions
         async function executeFuturesTrade() {

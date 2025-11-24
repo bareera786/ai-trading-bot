@@ -24494,6 +24494,117 @@ async function executeFuturesTrade() {
                 clearInterval(pollingInterval);
             }
         });
+
+        // Missing utility functions
+        function updateUserPortfolioWidgets(data) {
+            try {
+                const summary = data.summary || {};
+
+                // Update user portfolio value
+                const userPortfolioValueElement = document.getElementById('user-portfolio-value');
+                if (userPortfolioValueElement) {
+                    userPortfolioValueElement.textContent = `$${summary.total_value?.toFixed(2) || '0.00'}`;
+                }
+
+                // Update user portfolio status
+                const userPortfolioStatusElement = document.getElementById('user-portfolio-status');
+                if (userPortfolioStatusElement) {
+                    userPortfolioStatusElement.textContent = summary.total_positions > 0 ? `${summary.total_positions} active positions` : 'No active positions';
+                }
+
+                console.log('✅ User portfolio widgets updated');
+            } catch (error) {
+                console.error('Error updating user portfolio widgets:', error);
+            }
+        }
+
+        function updateLastRefreshTime() {
+            try {
+                const lastRefreshElement = document.querySelector('.last-refresh-time');
+                if (lastRefreshElement) {
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString('en-US', {
+                        hour12: false,
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    lastRefreshElement.textContent = `Last updated: ${timeString}`;
+                }
+            } catch (error) {
+                console.error('Error updating last refresh time:', error);
+            }
+        }
+
+        function viewSymbolDetails(symbol) {
+            try {
+                console.log('Viewing details for symbol:', symbol);
+                // For now, just show an alert. You can expand this to show a modal or navigate to a details page
+                alert(`Symbol Details: ${symbol}\n\nThis feature is coming soon!`);
+            } catch (error) {
+                console.error('Error viewing symbol details:', error);
+            }
+        }
+
+        // Add navigation functionality
+        function initializeNavigation() {
+            const navItems = document.querySelectorAll('.nav-item[data-page]');
+            const pageSections = document.querySelectorAll('.page-section');
+
+            navItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const pageId = this.getAttribute('data-page');
+
+                    // Remove active class from all nav items and pages
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    pageSections.forEach(page => page.classList.remove('active'));
+
+                    // Add active class to clicked nav item and corresponding page
+                    this.classList.add('active');
+                    const targetPage = document.getElementById(pageId);
+                    if (targetPage) {
+                        targetPage.classList.add('active');
+
+                        // Update page title and subtitle
+                        const pageTitle = document.getElementById('page-title');
+                        const pageSubtitle = document.getElementById('page-subtitle');
+
+                        if (pageTitle && pageSubtitle) {
+                            const titles = {
+                                'dashboard': { title: 'Dashboard', subtitle: 'Overview of your trading bot performance' },
+                                'market-data': { title: 'Market Data', subtitle: 'Real-time market information and analysis' },
+                                'symbols': { title: 'Symbol Management', subtitle: 'Manage trading symbols and models' },
+                                'spot': { title: 'Spot Trading', subtitle: 'Manual spot trading interface' },
+                                'futures': { title: 'Futures Trading', subtitle: 'Advanced futures trading with leverage' },
+                                'strategies': { title: 'Trading Strategies', subtitle: 'Configure and manage trading strategies' },
+                                'crt-signals': { title: 'CRT Signals', subtitle: 'Composite Reasoning Technology signals' },
+                                'trade-history': { title: 'Trade History', subtitle: 'Historical trading performance' },
+                                'statistics': { title: 'Statistics', subtitle: 'Detailed trading statistics and analytics' },
+                                'qfm-analytics': { title: 'QFM Analytics', subtitle: 'Quantum Fusion Momentum analytics' },
+                                'backtest-lab': { title: 'Backtest Lab', subtitle: 'Strategy backtesting and optimization' },
+                                'ml-telemetry': { title: 'ML Telemetry', subtitle: 'Machine learning model performance' },
+                                'safety': { title: 'Safety Systems', subtitle: 'Risk management and safety controls' },
+                                'health': { title: 'System Health', subtitle: 'System status and diagnostics' },
+                                'api-keys': { title: 'API Keys', subtitle: 'Exchange API key management' },
+                                'journal': { title: 'Trading Journal', subtitle: 'Personal trading journal entries' },
+                                'persistence': { title: 'Data Persistence', subtitle: 'Data backup and persistence settings' },
+                                'user-management': { title: 'User Management', subtitle: 'Manage user accounts and permissions' }
+                            };
+
+                            const pageInfo = titles[pageId] || { title: 'Page', subtitle: 'Page description' };
+                            pageTitle.textContent = pageInfo.title;
+                            pageSubtitle.textContent = pageInfo.subtitle;
+                        }
+                    }
+                });
+            });
+        }
+
+        // Initialize navigation when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavigation();
+        });
     </script>
 </body>
 </html>'''

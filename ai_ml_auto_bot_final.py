@@ -17366,8 +17366,14 @@ def login():
         return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.get_json()
+            username = data.get('username')
+            password = data.get('password')
+        else:
+            username = request.form.get('username')
+            password = request.form.get('password')
         
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
@@ -17379,6 +17385,10 @@ def login():
             response.headers['Pragma'] = 'no-cache'
             response.headers['Expires'] = '0'
             return response
+        
+        # Handle invalid login - return JSON error for API calls, redirect for form submissions
+        if request.is_json:
+            return jsonify({'error': 'Invalid username or password'}), 401
         
         flash('Invalid username or password')
         return redirect(url_for('login'))
@@ -17697,6 +17707,12 @@ def dashboard():
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-Content-Type-Options'] = 'nosniff'
     return response
+
+@app.route('/dashboard')
+@login_required
+def dashboard_redirect():
+    """Redirect /dashboard to main dashboard"""
+    return redirect(url_for('dashboard'))
 
 login_manager.login_view = 'login'
 

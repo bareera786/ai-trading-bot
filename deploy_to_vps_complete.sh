@@ -4,11 +4,19 @@
 
 set -e  # Exit on any error
 
-# Configuration - Update these variables for your VPS
-VPS_HOST="your-vps-ip-or-domain"
-VPS_USER="tahir"
-VPS_PATH="/home/tahir/ai-bot"
-VPS_SSH_PORT="22"
+# Load configuration from deploy.env
+if [ -f "config/deploy.env" ]; then
+    source config/deploy.env
+else
+    echo "❌ config/deploy.env not found. Please create it with your VPS details."
+    exit 1
+fi
+
+# Set defaults if not specified
+VPS_HOST="${VPS_HOST:-your-vps-ip-or-domain}"
+VPS_USER="${VPS_USER:-tahir}"
+VPS_PATH="${VPS_PATH:-/home/tahir/ai-bot}"
+VPS_SSH_PORT="${VPS_SSH_PORT:-22}"
 
 echo "🚀 Starting complete AI Trading Bot deployment to VPS..."
 echo "📍 Target: $VPS_USER@$VPS_HOST:$VPS_PATH"
@@ -45,21 +53,34 @@ SSH_CMD="ssh -p $VPS_SSH_PORT $VPS_USER@$VPS_HOST"
 
 # Copy service file and setup script to VPS
 echo "📋 Copying systemd service files..."
-$SSH_CMD "sudo cp $VPS_PATH/ai-trading-bot.service /etc/systemd/system/"
-$SSH_CMD "sudo chmod 644 /etc/systemd/system/ai-trading-bot.service"
+$SSH_CMD "cp $VPS_PATH/ai-trading-bot.service /tmp/ai-trading-bot.service"
 
-# Reload systemd and enable service
-echo "🔄 Reloading systemd and enabling service..."
-$SSH_CMD "sudo systemctl daemon-reload"
-$SSH_CMD "sudo systemctl enable ai-trading-bot"
+echo "🔄 Setting up systemd service (you may need to enter sudo password)..."
+echo "Please run these commands on your VPS as root or with sudo:"
+echo ""
+echo "sudo mv /tmp/ai-trading-bot.service /etc/systemd/system/"
+echo "sudo chmod 644 /etc/systemd/system/ai-trading-bot.service"
+echo "sudo systemctl daemon-reload"
+echo "sudo systemctl enable ai-trading-bot"
+echo "sudo systemctl start ai-trading-bot"
+echo "sudo systemctl status ai-trading-bot --no-pager"
+echo ""
+echo "Or if you have SSH access as root, the script can complete automatically."
 
-# Start the service
-echo "▶️  Starting AI Trading Bot service..."
-$SSH_CMD "sudo systemctl start ai-trading-bot"
-
-# Check service status
-echo "📊 Service status:"
-$SSH_CMD "sudo systemctl status ai-trading-bot --no-pager"
+# Try to complete setup if we have root access
+echo "Attempting automated setup..."
+if $SSH_CMD "sudo -n true 2>/dev/null"; then
+    echo "✅ Sudo access available, completing setup automatically..."
+    $SSH_CMD "sudo mv /tmp/ai-trading-bot.service /etc/systemd/system/"
+    $SSH_CMD "sudo chmod 644 /etc/systemd/system/ai-trading-bot.service"
+    $SSH_CMD "sudo systemctl daemon-reload"
+    $SSH_CMD "sudo systemctl enable ai-trading-bot"
+    $SSH_CMD "sudo systemctl start ai-trading-bot"
+    echo "📊 Service status:"
+    $SSH_CMD "sudo systemctl status ai-trading-bot --no-pager"
+else
+    echo "⚠️  Sudo access not available without password. Please run the commands above manually on your VPS."
+fi
 
 echo ""
 echo "🎉 Deployment completed successfully!"

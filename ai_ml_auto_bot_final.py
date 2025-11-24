@@ -24110,8 +24110,9 @@ style.textContent = `
 document.head.appendChild(style);
 </script>
 
-        // Futures Trading Functions
-        async function executeFuturesTrade() {
+<script>
+// Futures Trading Functions
+async function executeFuturesTrade() {
             const symbol = document.getElementById('futures-trade-symbol').value;
             const side = document.getElementById('futures-trade-side').value;
             const quantity = document.getElementById('futures-trade-quantity').value;

@@ -4596,12 +4596,14 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 def admin_required(f):
-    @login_required
+    from functools import wraps
+    @wraps(f)
     def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return jsonify({'error': 'Please login first'}), 401
         if not current_user.is_admin:
             return jsonify({'error': 'Admin access required'}), 403
         return f(*args, **kwargs)
-    decorated_function.__name__ = f.__name__
     return decorated_function
 
 # User-only decorator

@@ -7,7 +7,7 @@ ENHANCED WITH COMPREHENSIVE TRADE HISTORY & CRT MODULE
 PROFESSIONAL PERSISTENCE SYSTEM ADDED
 """
 
-from flask import Flask, render_template_string, jsonify, request, send_file, redirect, url_for, flash, session
+from flask import Flask, render_template_string, jsonify, request, send_file, redirect, url_for, flash, session, make_response
 from flask_socketio import SocketIO, emit
 import threading
 import time
@@ -17689,7 +17689,14 @@ def update_live_portfolio_pnl(user_id=None):
 @login_required
 def dashboard():
     """Main dashboard page"""
-    return render_template_string(HTML_TEMPLATE)
+    response = make_response(render_template_string(HTML_TEMPLATE))
+    # Add explicit cache control to dashboard to prevent any caching
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private, no-transform'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
 
 login_manager.login_view = 'login'
 

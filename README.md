@@ -89,9 +89,43 @@ The bot will start a web server at `http://localhost:5000`
 - **Note**: Change the default password after first login!
 
 ### Production Deployment
+
+#### Option 1: Systemd Service (Recommended for VPS)
 ```bash
-# Using the deployment script
+# 1. Copy files to your VPS
+scp -r . user@your-vps:/path/to/ai-bot/
+
+# 2. On your VPS, run the systemd setup script
+cd /path/to/ai-bot
+sudo ./setup_systemd_service.sh
+
+# 3. Or use the complete deployment script from your local machine
+# Edit deploy_to_vps_complete.sh with your VPS details, then run:
+./deploy_to_vps_complete.sh
+```
+
+#### Option 2: Using the deployment script
+```bash
+# Using the existing deployment script
 bash scripts/deploy_to_vps.sh
+```
+
+### Systemd Service Management
+```bash
+# Check service status
+sudo systemctl status ai-trading-bot
+
+# View service logs
+sudo journalctl -u ai-trading-bot -f
+
+# Restart service
+sudo systemctl restart ai-trading-bot
+
+# Stop service
+sudo systemctl stop ai-trading-bot
+
+# Start service
+sudo systemctl start ai-trading-bot
 ```
 
 ### Backtesting
@@ -104,8 +138,12 @@ python scripts/backtest_health_check.py
 ```
 ai-bot/
 ├── ai_ml_auto_bot_final.py    # Main trading bot with Flask web interface
+├── start_server.py           # Flask server startup script
 ├── requirements.txt           # Python dependencies
 ├── .gitignore                 # Git ignore rules
+├── ai-trading-bot.service     # Systemd service configuration
+├── setup_systemd_service.sh   # Systemd service setup script
+├── deploy_to_vps_complete.sh  # Complete VPS deployment script
 ├── config/
 │   ├── deploy.env.example     # Environment template
 │   └── default/               # Default configurations

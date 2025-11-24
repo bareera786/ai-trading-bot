@@ -22082,7 +22082,6 @@ HTML_TEMPLATE = r'''
             left: 0;
             height: 100vh;
             z-index: 1000;
-            overflow-y: auto;
             transition: transform var(--transition-normal);
         }
 
@@ -22232,8 +22231,6 @@ HTML_TEMPLATE = r'''
 
         .content-body {
             padding: var(--spacing-2xl);
-            max-width: 1400px;
-            margin: 0 auto;
         }
 
         /* Page Content */
@@ -24106,6 +24103,10 @@ HTML_TEMPLATE = r'''
                                     <input type="text" class="form-input" id="new-username" placeholder="Enter username">
                                 </div>
                                 <div class="form-group">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-input" id="new-email" placeholder="Enter email address">
+                                </div>
+                                <div class="form-group">
                                     <label class="form-label">Password</label>
                                     <input type="password" class="form-input" id="new-password" placeholder="Enter password">
                                 </div>
@@ -24728,11 +24729,12 @@ async function executeFuturesTrade() {
         async function addNewUser() {
             try {
                 const username = document.getElementById('new-username').value;
+                const email = document.getElementById('new-email').value;
                 const password = document.getElementById('new-password').value;
                 const confirmPassword = document.getElementById('confirm-password').value;
                 const role = document.getElementById('new-user-role').value;
 
-                if (!username || !password || !confirmPassword) {
+                if (!username || !email || !password || !confirmPassword) {
                     alert('Please fill in all required fields');
                     return;
                 }
@@ -24747,6 +24749,13 @@ async function executeFuturesTrade() {
                     return;
                 }
 
+                // Basic email validation
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    alert('Please enter a valid email address');
+                    return;
+                }
+
                 const response = await fetch('/api/users', {
                     method: 'POST',
                     headers: {
@@ -24755,6 +24764,7 @@ async function executeFuturesTrade() {
                     credentials: 'same-origin',
                     body: JSON.stringify({
                         username: username,
+                        email: email,
                         password: password,
                         role: role
                     })
@@ -24819,6 +24829,7 @@ async function executeFuturesTrade() {
                     modal.style.display = 'none';
                     // Clear form
                     document.getElementById('new-username').value = '';
+                    document.getElementById('new-email').value = '';
                     document.getElementById('new-password').value = '';
                     document.getElementById('confirm-password').value = '';
                     document.getElementById('new-user-role').value = 'user';
@@ -24890,15 +24901,33 @@ async function executeFuturesTrade() {
 
         // Add event listener for add user button
         document.addEventListener('DOMContentLoaded', function() {
-            const addUserBtn = document.querySelector('#user-management .btn-primary');
-            if (addUserBtn && addUserBtn.textContent.includes('Add User')) {
-                addUserBtn.addEventListener('click', showAddUserModal);
+            console.log('🔧 Setting up user management event listeners');
+
+            // Find the Add User button more specifically
+            const addUserBtn = document.querySelector('#user-management .btn-secondary');
+            console.log('Add User button found:', addUserBtn);
+
+            if (addUserBtn) {
+                console.log('Add User button text content:', addUserBtn.textContent);
+                addUserBtn.addEventListener('click', function(e) {
+                    console.log('🎯 Add User button clicked');
+                    e.preventDefault();
+                    showAddUserModal();
+                });
+                console.log('✅ Add User button event listener attached');
+            } else {
+                console.log('❌ Add User button not found');
             }
 
-            // Also add event listener for the secondary button if it exists
-            const addUserBtnSecondary = document.querySelector('#user-management .btn-secondary');
-            if (addUserBtnSecondary && addUserBtnSecondary.textContent.includes('Add User')) {
-                addUserBtnSecondary.addEventListener('click', showAddUserModal);
+            // Also add event listener for refresh users button
+            const refreshBtn = document.querySelector('#user-management .btn-primary');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', function(e) {
+                    console.log('🔄 Refresh Users button clicked');
+                    e.preventDefault();
+                    refreshUsersList();
+                });
+                console.log('✅ Refresh Users button event listener attached');
             }
 
             // Load initial users data

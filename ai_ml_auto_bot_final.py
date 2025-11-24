@@ -22635,12 +22635,125 @@ HTML_TEMPLATE = r'''
             margin-left: 0;
             padding: var(--spacing-xl);
             transition: margin-left 0.3s ease;
+            min-height: 100vh;
         }
 
         @media (min-width: 1024px) {
             .main-content {
                 margin-left: 280px;
             }
+        }
+
+        /* Fix page alignment and layout */
+        .content-body {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .page-section {
+            display: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .page-section.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Improve mobile responsiveness */
+        @media (max-width: 768px) {
+            .main-content {
+                padding: var(--spacing-md);
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-md);
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-md);
+            }
+
+            .content-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-md);
+            }
+
+            .content-header-left,
+            .content-header-right {
+                width: 100%;
+            }
+
+            .content-header-right {
+                justify-content: space-between;
+            }
+        }
+
+        /* Fix table responsiveness */
+        .data-table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .data-table {
+            min-width: 600px;
+        }
+
+        @media (max-width: 768px) {
+            .data-table {
+                min-width: 100%;
+                font-size: 14px;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 8px 4px;
+            }
+        }
+
+        /* Fix modal positioning */
+        #add-user-modal {
+            display: flex;
+        }
+
+        #add-user-modal[style*="display: none"] {
+            display: none !important;
+        }
+
+        /* Improve button alignment */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+        /* Fix form layout */
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--bg-input);
+            color: var(--text-primary);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: var(--spacing-sm);
+            font-weight: 500;
+            color: var(--text-primary);
         }
     </style>
 </head>
@@ -24604,6 +24717,187 @@ async function executeFuturesTrade() {
         // Initialize navigation when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             initializeNavigation();
+        });
+
+        // User Management Functions
+        async function addNewUser() {
+            try {
+                const username = document.getElementById('new-username').value;
+                const password = document.getElementById('new-password').value;
+                const confirmPassword = document.getElementById('confirm-password').value;
+                const role = document.getElementById('new-user-role').value;
+
+                if (!username || !password || !confirmPassword) {
+                    alert('Please fill in all required fields');
+                    return;
+                }
+
+                if (password !== confirmPassword) {
+                    alert('Passwords do not match');
+                    return;
+                }
+
+                if (password.length < 6) {
+                    alert('Password must be at least 6 characters long');
+                    return;
+                }
+
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        role: role
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('User created successfully!');
+                    closeAddUserModal();
+                    refreshUsersList();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to create user'));
+                }
+            } catch (error) {
+                console.error('Failed to create user:', error);
+                alert('Failed to create user');
+            }
+        }
+
+        async function editUser(username) {
+            try {
+                // For now, just show an alert. You can expand this to show an edit modal
+                alert(`Edit user: ${username}\n\nThis feature is coming soon!`);
+            } catch (error) {
+                console.error('Failed to edit user:', error);
+            }
+        }
+
+        async function deleteUser(username) {
+            try {
+                if (username === 'admin') {
+                    alert('Cannot delete the admin user');
+                    return;
+                }
+
+                if (!confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+                    return;
+                }
+
+                const response = await fetch(`/api/users/${username}`, {
+                    method: 'DELETE',
+                    credentials: 'same-origin'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('User deleted successfully!');
+                    refreshUsersList();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to delete user'));
+                }
+            } catch (error) {
+                console.error('Failed to delete user:', error);
+                alert('Failed to delete user');
+            }
+        }
+
+        function closeAddUserModal() {
+            try {
+                const modal = document.getElementById('add-user-modal');
+                if (modal) {
+                    modal.style.display = 'none';
+                    // Clear form
+                    document.getElementById('new-username').value = '';
+                    document.getElementById('new-password').value = '';
+                    document.getElementById('confirm-password').value = '';
+                    document.getElementById('new-user-role').value = 'user';
+                }
+            } catch (error) {
+                console.error('Failed to close add user modal:', error);
+            }
+        }
+
+        async function refreshUsersList() {
+            try {
+                const response = await fetch('/api/users', {
+                    credentials: 'same-origin'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.users) {
+                        updateUsersTable(data.users);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to refresh users list:', error);
+            }
+        }
+
+        function updateUsersTable(users) {
+            try {
+                const tbody = document.getElementById('users-table');
+                if (!tbody) return;
+
+                tbody.innerHTML = '';
+
+                users.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.username}</td>
+                        <td>${user.role || 'user'}</td>
+                        <td><span class="status-indicator status-success">Active</span></td>
+                        <td>${user.last_login || 'Never'}</td>
+                        <td>${user.created_at || 'N/A'}</td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="editUser('${user.username}')">
+                                Edit
+                            </button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteUser('${user.username}')">
+                                Delete
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Failed to update users table:', error);
+            }
+        }
+
+        // Show add user modal
+        function showAddUserModal() {
+            try {
+                const modal = document.getElementById('add-user-modal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                }
+            } catch (error) {
+                console.error('Failed to show add user modal:', error);
+            }
+        }
+
+        // Add event listener for add user button
+        document.addEventListener('DOMContentLoaded', function() {
+            const addUserBtn = document.querySelector('#user-management .btn-primary');
+            if (addUserBtn && addUserBtn.textContent.includes('Add User')) {
+                addUserBtn.addEventListener('click', showAddUserModal);
+            }
+
+            // Also add event listener for the secondary button if it exists
+            const addUserBtnSecondary = document.querySelector('#user-management .btn-secondary');
+            if (addUserBtnSecondary && addUserBtnSecondary.textContent.includes('Add User')) {
+                addUserBtnSecondary.addEventListener('click', showAddUserModal);
+            }
+
+            // Load initial users data
+            refreshUsersList();
         });
     </script>
 </body>

@@ -22180,10 +22180,15 @@ HTML_TEMPLATE = r'''
             z-index: 1000;
             transition: transform var(--transition-normal);
             overflow-y: auto;
+            transform: translateX(0); /* Visible by default on desktop */
         }
 
         .sidebar.open {
-            transform: translateX(0);
+            transform: translateX(0) !important; /* Ensure open state is visible */
+        }
+
+        .sidebar.closed {
+            transform: translateX(-100%) !important; /* Hidden state for mobile */
         }
 
         /* Main Content */
@@ -22592,16 +22597,12 @@ HTML_TEMPLATE = r'''
                 display: block;
             }
 
-            .content-header-left {
-                gap: var(--spacing-sm);
+            .sidebar {
+                transform: translateX(-100%); /* Hidden by default on mobile */
             }
 
-            .content-header h1 {
-                font-size: var(--font-size-xl);
-            }
-
-            .content-body {
-                padding: var(--spacing-xl);
+            .sidebar:not(.open) {
+                transform: translateX(-100%); /* Ensure closed state on mobile */
             }
         }
 
@@ -24106,39 +24107,68 @@ HTML_TEMPLATE = r'''
 // Fix sidebar and logout functionality
 document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ DOM loaded - initializing sidebar and logout');
-    
+
     // Mobile menu toggle
     const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
     const sidebar = document.querySelector('.sidebar');
-    
+
     if (mobileMenuToggle && sidebar) {
         console.log('✅ Found mobile menu toggle and sidebar');
-        
+
+        // Initialize sidebar state based on screen size
+        function updateSidebarState() {
+            if (window.innerWidth <= 1024) {
+                // Mobile: start closed
+                sidebar.classList.remove('open');
+                sidebar.classList.add('closed');
+            } else {
+                // Desktop: always visible
+                sidebar.classList.remove('closed');
+                sidebar.classList.add('open');
+            }
+        }
+
+        // Set initial state
+        updateSidebarState();
+
         mobileMenuToggle.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             console.log('📱 Mobile menu toggle clicked');
-            sidebar.classList.toggle('open');
+
+            if (window.innerWidth <= 1024) {
+                // Mobile: toggle between open and closed
+                sidebar.classList.toggle('open');
+                sidebar.classList.toggle('closed');
+            } else {
+                // Desktop: sidebar is always visible, maybe toggle some other state
+                console.log('💻 Desktop: sidebar always visible');
+            }
         });
 
         // Close sidebar when clicking outside on mobile
         document.addEventListener('click', function(e) {
-            if (window.innerWidth <= 768) {
-                if (!sidebar.contains(e.target) && 
-                    !mobileMenuToggle.contains(e.target) && 
+            if (window.innerWidth <= 1024) {
+                if (!sidebar.contains(e.target) &&
+                    !mobileMenuToggle.contains(e.target) &&
                     sidebar.classList.contains('open')) {
                     console.log('📱 Closing sidebar (clicked outside)');
                     sidebar.classList.remove('open');
+                    sidebar.classList.add('closed');
                 }
             }
         });
+
+        // Update sidebar state on window resize
+        window.addEventListener('resize', updateSidebarState);
+
     } else {
         console.log('❌ Mobile menu elements not found:', {
             toggle: !!mobileMenuToggle,
             sidebar: !!sidebar
         });
     }
-    
+
     // Fix logout button
     const logoutBtn = document.querySelector('button[onclick="logout()"]');
     if (logoutBtn) {

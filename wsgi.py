@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-WSGI entry point for the AI Trading Bot
+WSGI application for the AI Trading Bot
 """
 import sys
 import os
@@ -13,6 +13,8 @@ os.environ.setdefault('FLASK_ENV', 'production')
 
 from ai_ml_auto_bot_final import app
 
+# WSGI application object
+application = app
+
 if __name__ == "__main__":
-    # For development/testing only
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=False)
+    application.run(host='0.0.0.0', port=5000, debug=False, threaded=False)

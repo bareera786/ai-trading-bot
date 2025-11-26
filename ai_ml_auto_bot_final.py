@@ -21630,7 +21630,6 @@ def get_realtime_performance():
         }), 500
 
 @app.route('/api/realtime/market_data')
-@login_required
 def get_realtime_market_data():
     """Get current market data for polling fallback"""
     try:

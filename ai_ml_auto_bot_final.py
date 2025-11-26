@@ -20774,9 +20774,9 @@ def api_persistence_backups():
 
 # ==================== CONTROL ENDPOINTS ====================
 @app.route('/api/toggle_trading', methods=['POST'])
-@user_required
+@admin_required
 def toggle_trading():
-    """Toggle trading on/off"""
+    """Toggle trading on/off - Admin only"""
     ultimate_trader.trading_enabled = not ultimate_trader.trading_enabled
     optimized_trader.trading_enabled = ultimate_trader.trading_enabled
     dashboard_data['system_status']['trading_enabled'] = ultimate_trader.trading_enabled
@@ -21701,7 +21701,7 @@ def initialize_ultimate_system():
         try:
             # Check if we're running tests by looking for test indicators
             import sys
-            is_testing = any('test' in arg.lower() for arg in sys.argv) or 'comprehensive_test_suite.py' in str(sys.argv) or True  # Always skip for now
+            is_testing = any('test' in arg.lower() for arg in sys.argv) or 'comprehensive_test_suite.py' in str(sys.argv) or False  # Disable test mode
             if not is_testing:
                 def safe_get_price(symbol):
                     try:

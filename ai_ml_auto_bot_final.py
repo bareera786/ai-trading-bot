@@ -14794,7 +14794,7 @@ def _resolve_binance_rest_hosts():
         pass
 
     if testnet_enabled:
-        return BINANCE_TESTNET_REST_HOSTS + BINANCE_PRIMARY_REST_HOSTS
+        return BINANCE_PRIMARY_REST_HOSTS + BINANCE_TESTNET_REST_HOSTS
     return BINANCE_PRIMARY_REST_HOSTS
 
 
@@ -24811,9 +24811,7 @@ async function executeFuturesTrade() {
                 button.textContent = 'Refreshing...';
                 button.disabled = true;
 
-                const response = await fetch('/api/realtime/market_data', {
-                    credentials: 'same-origin'
-                });
+                const response = await fetch('/api/realtime/market_data');
 
                 const data = await response.json();
 

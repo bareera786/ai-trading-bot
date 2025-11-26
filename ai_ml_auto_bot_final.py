@@ -4574,6 +4574,8 @@ def add_cache_control(response):
     response.headers['Expires'] = '0'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-Content-Type-Options'] = 'nosniff'
+    # Content Security Policy to allow inline scripts and eval for dashboard functionality
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss:;"
     # Additional headers to prevent caching
     response.headers['Cache-Control'] = response.headers['Cache-Control'] + ', s-maxage=0'
     response.headers['Vary'] = 'Accept-Encoding, User-Agent'
@@ -11836,21 +11838,51 @@ class FuturesMLTrainingSystem(UltimateMLTrainingSystem):
             return base_prediction
 
 
+# ==================== USER-SPECIFIC TRADER MANAGEMENT ====================
+user_traders = {}  # Cache for user-specific trader instances
+user_traders_lock = threading.RLock()
+
+def get_user_trader(user_id, profile='ultimate'):
+    """Get or create a user-specific trader instance"""
+    with user_traders_lock:
+        cache_key = f"{user_id}_{profile}"
+        if cache_key in user_traders:
+            return user_traders[cache_key]
+
+        # Create new trader instance for this user
+        if profile == 'ultimate':
+            trader = UltimateAIAutoTrader(initial_balance=1000)
+            trader.qfm_engine = ultimate_ml_system.qfm_engine
+            trader.futures_ml_system = futures_ml_system
+        elif profile == 'optimized':
+            trader = OptimizedAIAutoTrader(initial_balance=1000)
+            trader.qfm_engine = optimized_ml_system.qfm_engine
+            trader.futures_ml_system = futures_ml_system
+        else:
+            raise ValueError(f"Unknown profile: {profile}")
+
+        # Copy shared configuration but isolate state
+        trader.trading_enabled = False  # Start disabled
+        trader.paper_trading = True     # Default to paper trading
+        trader.real_trading_enabled = False
+
+        # Set user-specific profile prefix
+        trader.profile_prefix = f"User_{user_id}_{profile.upper()}"
+
+        user_traders[cache_key] = trader
+        return trader
+
+def cleanup_user_traders():
+    """Clean up old user trader instances periodically"""
+    with user_traders_lock:
+        # Keep only recently used instances (simple cleanup)
+        # In production, implement proper LRU or time-based cleanup
+        pass
+
+
 # ==================== ULTIMATE AI TRADER ====================
 class UltimateAIAutoTrader:
-    
-    def initialize_performance_analytics(self):
-        """Initialize comprehensive performance analytics system"""
-        self.performance_analytics = {
-            'qfm_performance_correlation': {},
-            'strategy_qfm_sensitivity': {},
-            'market_regime_performance': {},
-            'time_based_performance': {},
-            'risk_adjusted_metrics': {},
-            'predictive_analytics': {},
-            'analytics_cache': {},
-            'last_update': 0
-        }
+
 
     def analyze_qfm_strategy_performance(self, symbol=None, timeframe='1d', analysis_window=30):
         """Analyze performance correlation between QFM metrics and strategy results"""
@@ -14636,6 +14668,19 @@ class UltimateAIAutoTrader:
     def get_trade_statistics(self):
         """Get comprehensive trade statistics"""
         return self.trade_history.get_trade_statistics()
+
+    def initialize_performance_analytics(self):
+        """Initialize comprehensive performance analytics system"""
+        self.performance_analytics = {
+            'qfm_performance_correlation': {},
+            'strategy_qfm_sensitivity': {},
+            'market_regime_performance': {},
+            'time_based_performance': {},
+            'risk_adjusted_metrics': {},
+            'predictive_analytics': {},
+            'analytics_cache': {},
+            'last_update': 0
+        }
 
 # ==================== OPTIMIZED AI TRADER ====================
 class OptimizedAIAutoTrader(UltimateAIAutoTrader):
@@ -17830,14 +17875,28 @@ def api_set_indicator_selection():
 
 
 @app.route('/api/status')
+@login_required
 def api_status():
-    """Get dashboard status data including portfolio, performance, and system status"""
-    return jsonify({
-        'portfolio': dashboard_data.get('portfolio', {}),
-        'performance': dashboard_data.get('performance', {}),
-        'system_status': dashboard_data.get('system_status', {}),
-        'last_update': dashboard_data.get('last_update')
-    })
+    """Get user-specific status data"""
+    try:
+        # Get user-specific trader instance
+        user_trader = get_user_trader(current_user.id, 'ultimate')
+
+        # Return user-specific data instead of global data
+        return jsonify({
+            'portfolio': {},  # User-specific portfolio should come from database
+            'performance': {},  # User-specific performance
+            'system_status': {
+                'trading_enabled': user_trader.trading_enabled,
+                'paper_trading': user_trader.paper_trading,
+                'real_trading_enabled': user_trader.real_trading_enabled,
+                'user_id': current_user.id
+            },
+            'last_update': time.time()
+        })
+    except Exception as e:
+        print(f"Error in /api/status: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/safety_status')
 def api_safety_status():
@@ -18488,8 +18547,11 @@ def api_spot_trade():
         if not symbol.endswith('USDT'):
             symbol = symbol + 'USDT'
 
-        # Execute the trade using the ultimate trader
-        result = ultimate_trader.execute_manual_trade(symbol, side, quantity, price)
+        # Get user-specific trader instance
+        user_trader = get_user_trader(current_user.id, 'ultimate')
+
+        # Execute the trade using the user's trader instance
+        result = user_trader.execute_manual_trade(symbol, side, quantity, price)
 
         if result.get('success'):
             # Record trade in user portfolio
@@ -18573,8 +18635,11 @@ def api_futures_trade():
         if not symbol.endswith('USDT'):
             symbol = symbol + 'USDT'
 
+        # Get user-specific trader instance
+        user_trader = get_user_trader(current_user.id, 'ultimate')
+
         # Execute the futures trade
-        result = ultimate_trader.execute_manual_futures_trade(symbol, side, quantity, leverage, price)
+        result = user_trader.execute_manual_futures_trade(symbol, side, quantity, leverage, price)
 
         if result.get('success'):
             # Record the user trade for portfolio tracking
@@ -18622,12 +18687,37 @@ def api_market_data():
     })
 
 @app.route('/api/portfolio')
+@login_required
 def api_portfolio():
-    """Get portfolio data"""
-    return jsonify({
-        'ultimate': dashboard_data['portfolio'],
-        'optimized': dashboard_data['optimized_portfolio']
-    })
+    """Get user-specific portfolio data"""
+    try:
+        # Get user portfolio from database
+        user_portfolio = UserPortfolio.query.filter_by(user_id=current_user.id).first()
+        if not user_portfolio:
+            return jsonify({
+                'ultimate': {},
+                'optimized': {},
+                'user_id': current_user.id,
+                'error': 'Portfolio not found'
+            })
+
+        # Return user-specific portfolio data
+        user_portfolio_data = {
+            'total_balance': user_portfolio.total_balance or 0,
+            'available_balance': user_portfolio.available_balance or 0,
+            'total_pnl': user_portfolio.total_profit_loss or 0,
+            'open_positions': user_portfolio.open_positions or {},
+            'user_id': current_user.id
+        }
+
+        return jsonify({
+            'ultimate': user_portfolio_data,
+            'optimized': user_portfolio_data,  # Same data for both profiles for now
+            'user_id': current_user.id
+        })
+    except Exception as e:
+        print(f"Error in /api/portfolio: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/portfolio/user/<int:user_id>/live_pnl')
 @login_required
@@ -21606,8 +21696,8 @@ def initialize_ultimate_system():
     dashboard_data['optimized_system_status']['trading_enabled'] = optimized_trader.trading_enabled
 
     # Start market data updates
-    # threading.Thread(target=update_ultimate_market_data, daemon=True).start()
-    print("✅ Market data update system skipped (network issues)")
+    threading.Thread(target=update_ultimate_market_data, daemon=True).start()
+    print("✅ Market data update system started")
     
     # Start self-improvement system
     threading.Thread(target=periodic_self_improvement, daemon=True).start()
@@ -22089,89 +22179,11 @@ HTML_TEMPLATE = r'''
             height: 100vh;
             z-index: 1000;
             transition: transform var(--transition-normal);
+            overflow-y: auto;
         }
 
-        .sidebar-header {
-            padding: var(--spacing-xl);
-            border-bottom: 1px solid var(--border-color);
-            background: linear-gradient(135deg, rgba(0, 212, 170, 0.1) 0%, rgba(9, 132, 227, 0.1) 100%);
-        }
-
-        .sidebar-header h1 {
-            font-size: var(--font-size-lg);
-            font-weight: var(--font-weight-bold);
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: var(--spacing-xs);
-        }
-
-        .sidebar-header p {
-            font-size: var(--font-size-sm);
-            color: var(--text-secondary);
-        }
-
-        .sidebar-nav {
-            padding: var(--spacing-lg) 0;
-        }
-
-        .nav-section {
-            margin-bottom: var(--spacing-xl);
-        }
-
-        .nav-section-title {
-            padding: 0 var(--spacing-xl);
-            font-size: var(--font-size-xs);
-            font-weight: var(--font-weight-bold);
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: var(--spacing-sm);
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            padding: var(--spacing-md) var(--spacing-xl);
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: all var(--transition-normal);
-            position: relative;
-            cursor: pointer;
-        }
-
-        .nav-item:hover {
-            background: var(--bg-hover);
-            color: var(--text-primary);
-        }
-
-        .nav-item.active {
-            background: var(--bg-active);
-            color: var(--primary);
-            border-right: 3px solid var(--primary);
-        }
-
-        .nav-item.active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: var(--primary-gradient);
-        }
-
-        .nav-icon {
-            font-size: var(--font-size-lg);
-            margin-right: var(--spacing-md);
-            width: 20px;
-            text-align: center;
-        }
-
-        .nav-text {
-            font-weight: var(--font-weight-medium);
-            font-size: var(--font-size-sm);
+        .sidebar.open {
+            transform: translateX(0);
         }
 
         /* Main Content */
@@ -22179,6 +22191,7 @@ HTML_TEMPLATE = r'''
             flex: 1;
             margin-left: 280px;
             min-height: 100vh;
+            max-width: calc(100vw - 280px);
         }
 
         .content-header {
@@ -22237,6 +22250,8 @@ HTML_TEMPLATE = r'''
 
         .content-body {
             padding: var(--spacing-2xl);
+            max-width: 1400px;
+            margin: 0 auto;
         }
 
         /* Page Content */
@@ -22248,6 +22263,9 @@ HTML_TEMPLATE = r'''
             box-shadow: var(--shadow-lg);
             border: 1px solid var(--border-color);
             display: none;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .page-section.active {
@@ -22281,15 +22299,16 @@ HTML_TEMPLATE = r'''
         /* Dashboard Grid */
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: var(--spacing-xl);
-            margin-bottom: var(--spacing-2xl);
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            width: 100%;
         }
 
         .dashboard-card {
             background: var(--bg-tertiary);
             border-radius: var(--radius-lg);
-            padding: var(--spacing-xl);
+            padding: var(--spacing-lg);
             border: 1px solid var(--border-color);
             transition: all var(--transition-normal);
             position: relative;
@@ -22349,11 +22368,14 @@ HTML_TEMPLATE = r'''
             overflow: hidden;
             border: 1px solid var(--border-color);
             box-shadow: var(--shadow-sm);
+            width: 100%;
+            max-width: 100%;
         }
 
         .data-table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: auto;
         }
 
         .data-table th {
@@ -22562,14 +22584,6 @@ HTML_TEMPLATE = r'''
 
         /* Responsive Design */
         @media (max-width: 1024px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-
-            .sidebar.open {
-                transform: translateX(0);
-            }
-
             .main-content {
                 margin-left: 0;
             }
@@ -22585,70 +22599,9 @@ HTML_TEMPLATE = r'''
             .content-header h1 {
                 font-size: var(--font-size-xl);
             }
-        }
 
-        @media (max-width: 768px) {
             .content-body {
-                padding: var(--spacing-lg);
-            }
-
-            .section-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: var(--spacing-md);
-                min-height: auto;
-            }
-
-            .data-table-container {
-                overflow-x: auto;
-            }
-        }
-
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .fade-in {
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        /* Debug CSS for sidebar visibility */
-        .sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            height: 100vh;
-            width: 280px;
-            background: var(--bg-card);
-            border-right: 1px solid var(--border);
-            z-index: 1000;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
-        }
-
-        .sidebar.open {
-            transform: translateX(0);
-        }
-
-        @media (min-width: 1024px) {
-            .sidebar {
-                position: relative;
-                transform: translateX(0);
-            }
-        }
-
-        .main-content {
-            margin-left: 0;
-            padding: var(--spacing-xl);
-            transition: margin-left 0.3s ease;
-            min-height: 100vh;
-        }
-
-        @media (min-width: 1024px) {
-            .main-content {
-                margin-left: 280px;
+                padding: var(--spacing-xl);
             }
         }
 
@@ -22702,6 +22655,10 @@ HTML_TEMPLATE = r'''
             .content-header-right {
                 justify-content: space-between;
             }
+
+            .content-body {
+                padding: var(--spacing-lg);
+            }
         }
 
         /* Fix table responsiveness */
@@ -22711,7 +22668,8 @@ HTML_TEMPLATE = r'''
         }
 
         .data-table {
-            min-width: 600px;
+            min-width: 100%;
+            font-size: var(--font-size-sm);
         }
 
         @media (max-width: 768px) {
@@ -22723,6 +22681,11 @@ HTML_TEMPLATE = r'''
             .data-table th,
             .data-table td {
                 padding: 8px 4px;
+                white-space: nowrap;
+            }
+
+            .data-table th {
+                font-size: 12px;
             }
         }
 
@@ -24210,23 +24173,6 @@ async function logout() {
 // Add CSS for sidebar open state if missing
 const style = document.createElement('style');
 style.textContent = `
-    .sidebar.open {
-        transform: translateX(0);
-        opacity: 1;
-        visibility: visible;
-    }
-    
-    @media (max-width: 768px) {
-        .sidebar {
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
-        }
-        
-        .sidebar.open {
-            transform: translateX(0);
-        }
-    }
-    
     .mobile-menu-toggle {
         cursor: pointer;
         z-index: 1001;
@@ -24690,6 +24636,14 @@ async function executeFuturesTrade() {
                     const targetPage = document.getElementById(pageId);
                     if (targetPage) {
                         targetPage.classList.add('active');
+
+                        // Close sidebar on mobile after navigation
+                        if (window.innerWidth <= 1024) {
+                            const sidebar = document.querySelector('.sidebar');
+                            if (sidebar) {
+                                sidebar.classList.remove('open');
+                            }
+                        }
 
                         // Update page title and subtitle
                         const pageTitle = document.getElementById('page-title');

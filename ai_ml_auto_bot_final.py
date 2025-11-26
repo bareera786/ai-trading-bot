@@ -14782,7 +14782,7 @@ def _safe_float(value, default=0.0):
 
 def _resolve_binance_rest_hosts():
     """Determine the best REST hosts to target, honoring testnet mode when active."""
-    testnet_enabled = False
+    testnet_enabled = True  # Default to testnet for market data
     try:
         for trader_name in ('ultimate_trader', 'optimized_trader'):
             trader = globals().get(trader_name)

@@ -8693,10 +8693,11 @@ class ProfessionalPersistence:
     
     def _get_trader_state(self, trader):
         """Extract trader state for persistence"""
-        return {
+        state = {
             'balance': trader.balance,
             'positions': trader.positions,
             'trading_enabled': trader.trading_enabled,
+            'futures_trading_enabled': getattr(trader, 'futures_trading_enabled', False),
             'paper_trading': trader.paper_trading,
             'daily_pnl': trader.daily_pnl,
             'max_drawdown': trader.max_drawdown,
@@ -8714,6 +8715,7 @@ class ProfessionalPersistence:
                 'last_rebuild_time': trader.ensemble_system.last_rebuild_time
             }
         }
+        return state
     
     def _get_ml_system_state(self, ml_system):
         """Extract ML system state for persistence"""
@@ -8797,6 +8799,7 @@ class ProfessionalPersistence:
             trader.balance = state.get('balance', trader.initial_balance)
             trader.positions = state.get('positions', {})
             trader.trading_enabled = state.get('trading_enabled', False)
+            trader.futures_trading_enabled = state.get('futures_trading_enabled', False)
             trader.daily_pnl = state.get('daily_pnl', 0)
             trader.max_drawdown = state.get('max_drawdown', 0)
             trader.peak_balance = state.get('peak_balance', trader.initial_balance)
@@ -18516,6 +18519,24 @@ def api_spot_toggle():
         dashboard_data['optimized_system_status']['paper_trading'] = optimized_trader.paper_trading
         dashboard_data['optimized_system_status']['real_trading_ready'] = bool(optimized_trader.real_trading_enabled)
 
+        # Directly update the state file to ensure persistence
+        try:
+            state_file = os.path.join("bot_persistence", "bot_state.json")
+            if os.path.exists(state_file):
+                with open(state_file, 'r') as f:
+                    state = json.load(f)
+
+                if 'trader_state' in state:
+                    state['trader_state']['trading_enabled'] = enable
+                    state['timestamp'] = datetime.now().isoformat()
+
+                    with open(state_file, 'w') as f:
+                        json.dump(state, f, indent=2, default=str)
+
+                    print(f"💾 Directly updated state file: spot trading_enabled = {enable}")
+        except Exception as e:
+            print(f"⚠️ Failed to directly update state file: {e}")
+
         return jsonify({
             'trading_enabled': enable,
             'message': f'Spot trading {"enabled" if enable else "disabled"} for both profiles'
@@ -18602,6 +18623,24 @@ def api_futures_toggle():
         dashboard_data['system_status']['futures_trading_ready'] = enable
         dashboard_data['optimized_system_status']['futures_trading_enabled'] = enable
         dashboard_data['optimized_system_status']['futures_trading_ready'] = enable
+
+        # Directly update the state file to ensure persistence
+        try:
+            state_file = os.path.join("bot_persistence", "bot_state.json")
+            if os.path.exists(state_file):
+                with open(state_file, 'r') as f:
+                    state = json.load(f)
+
+                if 'trader_state' in state:
+                    state['trader_state']['futures_trading_enabled'] = enable
+                    state['timestamp'] = datetime.now().isoformat()
+
+                    with open(state_file, 'w') as f:
+                        json.dump(state, f, indent=2, default=str)
+
+                    print(f"💾 Directly updated state file: futures_trading_enabled = {enable}")
+        except Exception as e:
+            print(f"⚠️ Failed to directly update state file: {e}")
 
         return jsonify({
             'futures_trading_enabled': enable,
@@ -20785,6 +20824,42 @@ def toggle_trading():
     dashboard_data['optimized_system_status']['trading_enabled'] = optimized_trader.trading_enabled
     dashboard_data['optimized_system_status']['paper_trading'] = optimized_trader.paper_trading
     dashboard_data['optimized_system_status']['real_trading_ready'] = bool(optimized_trader.real_trading_enabled)
+    
+    # Directly update the state file to ensure persistence
+    try:
+        state_file = os.path.join("bot_persistence", "bot_state.json")
+        if os.path.exists(state_file):
+            with open(state_file, 'r') as f:
+                state = json.load(f)
+            
+            if 'trader_state' in state:
+                state['trader_state']['trading_enabled'] = ultimate_trader.trading_enabled
+                state['timestamp'] = datetime.now().isoformat()
+                
+                with open(state_file, 'w') as f:
+                    json.dump(state, f, indent=2, default=str)
+                
+                print(f"💾 Directly updated state file: trading_enabled = {ultimate_trader.trading_enabled}")
+    except Exception as e:
+        print(f"⚠️ Failed to directly update state file: {e}")
+    
+    # Save state immediately after toggling
+    try:
+        print(f"DEBUG: About to call manual_save with ultimate_trader id: {id(ultimate_trader)}")
+        success = persistence_scheduler.manual_save(
+            ultimate_trader, 
+            ultimate_ml_system, 
+            TRADING_CONFIG, 
+            TOP_SYMBOLS, 
+            historical_data
+        )
+        if success:
+            print(f"💾 Trading state saved: {'enabled' if ultimate_trader.trading_enabled else 'disabled'}")
+        else:
+            print(f"❌ Failed to save trading state: {'enabled' if ultimate_trader.trading_enabled else 'disabled'}")
+    except Exception as e:
+        print(f"⚠️ Failed to save trading state: {e}")
+    
     return jsonify({
         'trading_enabled': ultimate_trader.trading_enabled,
         'optimized_trading_enabled': optimized_trader.trading_enabled,
@@ -21701,7 +21776,7 @@ def initialize_ultimate_system():
         try:
             # Check if we're running tests by looking for test indicators
             import sys
-            is_testing = any('test' in arg.lower() for arg in sys.argv) or 'comprehensive_test_suite.py' in str(sys.argv) or False  # Disable test mode
+            is_testing = any('test' in arg.lower() for arg in sys.argv) or 'comprehensive_test_suite.py' in str(sys.argv) or True  # Force test mode to skip network calls
             if not is_testing:
                 def safe_get_price(symbol):
                     try:
@@ -21777,10 +21852,14 @@ def initialize_ultimate_system():
     threading.Thread(target=real_time_update_worker, daemon=True).start()
     print("✅ Real-time update worker started")
 
-    # Register signal handlers after full initialization
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-    print("✅ Signal handlers registered for graceful shutdown")
+    # Register signal handlers after full initialization (only for interactive mode)
+    is_service = os.environ.get('RUN_AS_SERVICE', '').lower() in ('true', '1', 'yes')
+    if not is_service:
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+        print("✅ Signal handlers registered for graceful shutdown")
+    else:
+        print("🔄 Running in service mode - signal handlers disabled")
 
     print("=" * 80)
     print("🎉 ULTIMATE AI TRADING BOT FULLY INITIALIZED AND READY!")
@@ -25267,9 +25346,20 @@ if __name__ == "__main__":
 
         # Keep the main thread alive and handle server shutdown
         try:
-            while server_thread.is_alive() and not shutdown_requested:
-                import time
-                time.sleep(1)
+            # Check if running as a service (systemd)
+            is_service = os.environ.get('RUN_AS_SERVICE', '').lower() in ('true', '1', 'yes')
+            
+            if is_service:
+                # Run indefinitely for systemd
+                print("🔄 Running in service mode - will run indefinitely")
+                while server_thread.is_alive():
+                    import time
+                    time.sleep(10)  # Check every 10 seconds
+            else:
+                # Interactive mode - wait for shutdown signal
+                while server_thread.is_alive() and not shutdown_requested:
+                    import time
+                    time.sleep(1)
         except KeyboardInterrupt:
             print("\n🛑 Received keyboard interrupt - shutting down gracefully...")
             shutdown_requested = True

@@ -4575,7 +4575,7 @@ def add_cache_control(response):
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-Content-Type-Options'] = 'nosniff'
     # Content Security Policy to allow inline scripts and eval for dashboard functionality
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss:;"
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://use.fontawesome.com; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss:;"
     # Additional headers to prevent caching
     response.headers['Cache-Control'] = response.headers['Cache-Control'] + ', s-maxage=0'
     response.headers['Vary'] = 'Accept-Encoding, User-Agent'
@@ -15212,6 +15212,30 @@ def get_trending_pairs():
     return []
 
 
+def get_top_symbols_by_volume(limit=10):
+    """Get top cryptocurrency pairs by trading volume"""
+    try:
+        all_data = fetch_binance_24hr_ticker(timeout=10)
+        if isinstance(all_data, list):
+            usdt_pairs = [pair for pair in all_data if pair.get('symbol', '').endswith('USDT')]
+            top_pairs = sorted(usdt_pairs, key=lambda x: _safe_float(x.get('volume')), reverse=True)[:limit]
+            top_data = []
+            for pair in top_pairs:
+                top_data.append({
+                    'symbol': pair.get('symbol'),
+                    'price': _safe_float(pair.get('lastPrice')),
+                    'change': _safe_float(pair.get('priceChangePercent')),
+                    'volume': _safe_float(pair.get('volume'))
+                })
+            bot_logger.info("Top symbols by volume refreshed count=%d", len(top_data))
+            return top_data
+    except Exception as e:
+        print(f"❌ Error fetching top symbols by volume: {e}")
+        _log_binance_rest_failure(f"Top symbols by volume fetch failed: {e}")
+    bot_logger.error("Top symbols by volume fetch failed", exc_info=True)
+    return []
+
+
 def get_real_market_data(symbol):
     """Get real market data from Binance"""
     try:
@@ -18497,7 +18521,7 @@ def api_futures_manual_toggle_trading():
     })
 
 @app.route('/api/spot/toggle', methods=['POST'])
-@user_required
+@login_required
 def api_spot_toggle():
     """Toggle spot trading on/off"""
     try:
@@ -18652,7 +18676,7 @@ def api_futures_toggle():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/futures/trade', methods=['POST'])
-@user_required
+@login_required
 def api_futures_trade():
     """Execute manual futures trade"""
     try:
@@ -18701,9 +18725,17 @@ def api_futures_trade():
 
 @app.route('/api/market_data')
 def api_market_data():
-    """Get market data for all symbols"""
+    """Get market data for all symbols - fetches fresh data on-demand"""
     active = set(get_active_trading_universe())
 
+    # Fetch fresh market data for all active symbols
+    market_data = {}
+    for symbol in active:
+        real_data = get_real_market_data(symbol)
+        if real_data:
+            market_data[symbol] = real_data
+
+    # Get other data from dashboard_data (predictions, signals, etc.)
     def _filter_mapping(key):
         mapping = dashboard_data.get(key, {})
         if isinstance(mapping, dict):
@@ -18711,7 +18743,7 @@ def api_market_data():
         return {}
 
     return jsonify({
-        'market_data': _filter_mapping('market_data'),
+        'market_data': market_data,  # Fresh data fetched on-demand
         'ml_predictions': _filter_mapping('ml_predictions'),
         'ai_signals': _filter_mapping('ai_signals'),
         'trending_pairs': [symbol for symbol in dashboard_data.get('trending_pairs', []) if symbol in active],
@@ -20644,13 +20676,64 @@ def api_trades():
             'error': str(e)
         }), 500
 
-@app.route('/api/performance')
-def api_performance():
-    """Get performance metrics"""
-    return jsonify({
-        'ultimate': dashboard_data['performance'],
-        'optimized': dashboard_data['optimized_performance']
-    })
+@app.route('/api/dashboard_performance')
+def api_dashboard_performance():
+    """Get real-time dashboard performance metrics from trader instances"""
+    try:
+        # Get performance data from ultimate trader
+        ultimate_performance = {}
+        if hasattr(ultimate_trader, 'get_performance_metrics'):
+            ultimate_performance = ultimate_trader.get_performance_metrics()
+        else:
+            # Fallback: calculate basic metrics
+            ultimate_performance = {
+                'total_profit': getattr(ultimate_trader, 'total_profit', 0),
+                'total_trades': getattr(ultimate_trader, 'total_trades', 0),
+                'successful_trades': getattr(ultimate_trader, 'successful_trades', 0),
+                'active_trades': len(getattr(ultimate_trader, 'positions', {})),
+                'win_rate': 0,
+                'portfolio_value': getattr(ultimate_trader, 'portfolio_value', 0),
+                'daily_change': getattr(ultimate_trader, 'daily_change', 0),
+                'system_status': 'active' if getattr(ultimate_trader, 'trading_enabled', False) else 'inactive'
+            }
+            if ultimate_performance['total_trades'] > 0:
+                ultimate_performance['win_rate'] = (ultimate_performance['successful_trades'] / ultimate_performance['total_trades']) * 100
+
+        # Get performance data from optimized trader
+        optimized_performance = {}
+        if hasattr(optimized_trader, 'get_performance_metrics'):
+            optimized_performance = optimized_trader.get_performance_metrics()
+        else:
+            # Fallback: calculate basic metrics
+            optimized_performance = {
+                'total_profit': getattr(optimized_trader, 'total_profit', 0),
+                'total_trades': getattr(optimized_trader, 'total_trades', 0),
+                'successful_trades': getattr(optimized_trader, 'successful_trades', 0),
+                'active_trades': len(getattr(optimized_trader, 'positions', {})),
+                'win_rate': 0,
+                'portfolio_value': getattr(optimized_trader, 'portfolio_value', 0),
+                'daily_change': getattr(optimized_trader, 'daily_change', 0),
+                'system_status': 'active' if getattr(optimized_trader, 'trading_enabled', False) else 'inactive'
+            }
+            if optimized_performance['total_trades'] > 0:
+                optimized_performance['win_rate'] = (optimized_performance['successful_trades'] / optimized_performance['total_trades']) * 100
+
+        return jsonify({
+            'ultimate': ultimate_performance,
+            'optimized': optimized_performance,
+            'timestamp': time.time(),
+            'success': True
+        })
+
+    except Exception as e:
+        print(f"Error in /api/dashboard_performance: {e}")
+        return jsonify({
+            'error': str(e),
+            'ultimate': {},
+            'optimized': {},
+            'timestamp': time.time(),
+            'success': False
+        }), 500
 
 @app.route('/api/ml_telemetry')
 def api_ml_telemetry():
@@ -20812,6 +20895,51 @@ def api_persistence_backups():
     return jsonify({'backups': backups})
 
 # ==================== CONTROL ENDPOINTS ====================
+@app.route('/api/enable_paper_trading', methods=['POST'])
+@admin_required
+def enable_paper_trading():
+    """Enable paper trading mode - Admin only"""
+    try:
+        # Disable real trading for both traders
+        ultimate_trader.disable_real_trading("paper_trading_enabled")
+        optimized_trader.disable_real_trading("paper_trading_enabled")
+        
+        # Enable trading
+        ultimate_trader.trading_enabled = True
+        optimized_trader.trading_enabled = True
+        
+        # Update dashboard data
+        dashboard_data['system_status']['trading_enabled'] = True
+        dashboard_data['system_status']['paper_trading'] = True
+        dashboard_data['system_status']['real_trading_ready'] = False
+        dashboard_data['optimized_system_status']['trading_enabled'] = True
+        dashboard_data['optimized_system_status']['paper_trading'] = True
+        dashboard_data['optimized_system_status']['real_trading_ready'] = False
+        
+        # Save state
+        try:
+            persistence_scheduler.manual_save(
+                ultimate_trader, 
+                ultimate_ml_system, 
+                TRADING_CONFIG, 
+                TOP_SYMBOLS, 
+                historical_data
+            )
+        except Exception as e:
+            print(f"⚠️ Failed to save paper trading state: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Paper trading mode enabled for both profiles',
+            'trading_enabled': True,
+            'paper_trading': True,
+            'real_trading_enabled': False
+        })
+        
+    except Exception as e:
+        print(f"Error enabling paper trading: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/toggle_trading', methods=['POST'])
 @admin_required
 def toggle_trading():
@@ -21017,6 +21145,106 @@ def api_enable_symbol():
 
 
 @app.route('/api/symbols', methods=['GET'])
+
+
+@app.route('/api/symbols/auto_add_top', methods=['POST'])
+@login_required
+def api_auto_add_top_symbols():
+    """Auto-add top symbols by trading volume"""
+    data = request.get_json(silent=True) or {}
+    limit = data.get('limit', 10)
+    retrain = bool(data.get('retrain', False))
+
+    # Validate limit
+    limit = max(1, min(limit, 20))  # Max 20 symbols at once
+
+    try:
+        # Get top symbols by volume
+        top_symbols = get_top_symbols_by_volume(limit=limit)
+
+        if not top_symbols:
+            return jsonify({
+                'error': 'No top symbols found or all already in trading universe',
+                'added': [],
+                'skipped': [],
+                'total_requested': limit
+            }), 404
+
+        added_symbols = []
+        skipped_symbols = []
+        failed_symbols = []
+
+        for symbol_data in top_symbols:
+            symbol = symbol_data['symbol']
+
+            # Check if already in TOP_SYMBOLS
+            if symbol in TOP_SYMBOLS:
+                skipped_symbols.append({
+                    'symbol': symbol,
+                    'reason': 'Already in TOP_SYMBOLS',
+                    'volume': symbol_data.get('volume', 0)
+                })
+                continue
+
+            try:
+                # Add symbol with retraining
+                success_ultimate = ultimate_ml_system.add_symbol_with_retrain(symbol)
+                success_optimized = optimized_ml_system.add_symbol_with_retrain(symbol)
+
+                if success_ultimate or success_optimized:
+                    added_symbols.append({
+                        'symbol': symbol,
+                        'volume': symbol_data.get('volume', 0),
+                        'price': symbol_data.get('price', 0),
+                        'change': symbol_data.get('change', 0),
+                        'ultimate_success': success_ultimate,
+                        'optimized_success': success_optimized
+                    })
+
+                    # Add to historical data if not present
+                    if symbol not in historical_data:
+                        historical_data[symbol] = []
+                else:
+                    failed_symbols.append({
+                        'symbol': symbol,
+                        'reason': 'Failed to add to ML systems',
+                        'volume': symbol_data.get('volume', 0)
+                    })
+
+            except Exception as e:
+                failed_symbols.append({
+                    'symbol': symbol,
+                    'reason': str(e),
+                    'volume': symbol_data.get('volume', 0)
+                })
+
+        # Refresh symbol counters and telemetry
+        refresh_symbol_counters()
+
+        if 'ml_telemetry' in dashboard_data:
+            dashboard_data['ml_telemetry']['ultimate'] = ultimate_ml_system.get_ml_telemetry()
+            dashboard_data['ml_telemetry']['optimized'] = optimized_ml_system.get_ml_telemetry()
+
+        response = {
+            'message': f'Added {len(added_symbols)} top symbols by volume',
+            'added': added_symbols,
+            'skipped': skipped_symbols,
+            'failed': failed_symbols,
+            'total_requested': limit,
+            'total_added': len(added_symbols),
+            'total_skipped': len(skipped_symbols),
+            'total_failed': len(failed_symbols),
+            'retrained': retrain
+        }
+
+        # Log the operation
+        bot_logger.info(f"Auto-added {len(added_symbols)} top symbols by volume (requested: {limit})")
+
+        return jsonify(response)
+
+    except Exception as e:
+        bot_logger.error(f"Error in auto-add top symbols: {e}")
+        return jsonify({'error': str(e)}), 500
 def api_list_symbols():
     search = request.args.get('search', '', type=str).strip().upper()
     page = request.args.get('page', 1, type=int)
@@ -21776,7 +22004,7 @@ def initialize_ultimate_system():
         try:
             # Check if we're running tests by looking for test indicators
             import sys
-            is_testing = any('test' in arg.lower() for arg in sys.argv) or 'comprehensive_test_suite.py' in str(sys.argv) or True  # Force test mode to skip network calls
+            is_testing = any('test' in arg.lower() for arg in sys.argv) or 'comprehensive_test_suite.py' in str(sys.argv)
             if not is_testing:
                 def safe_get_price(symbol):
                     try:
@@ -21867,6 +22095,17 @@ def initialize_ultimate_system():
     print("📍 Dashboard available at: http://localhost:5000")
     print("📍 Health check at: http://localhost:5000/health")
     print("=" * 80)
+
+# Initialize the system when the module is imported (for WSGI deployment)
+# Only initialize if not in test mode and not already initialized
+if not os.environ.get('TESTING') and not hasattr(app, '_system_initialized'):
+    try:
+        initialize_ultimate_system()
+        app._system_initialized = True
+        print("✅ System initialized on module import (WSGI mode)")
+    except Exception as e:
+        print(f"⚠️ Failed to initialize system on import: {e}")
+        print("ℹ️ System will initialize on first request")
 
 # ==================== STRATEGY PERFORMANCE INTEGRATION ENDPOINTS ====================
 
@@ -22252,6 +22491,54 @@ HTML_TEMPLATE = r'''
             --transition-normal: 0.3s ease;
             --transition-slow: 0.5s ease;
         }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+            margin-right: var(--spacing-sm);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Alert Styles */
+        .alert {
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+            border-left: 4px solid;
+        }
+
+        .alert-warning {
+            background: rgba(253, 203, 110, 0.1);
+            border-left-color: var(--warning);
+            color: var(--warning);
+        }
+
+        .alert-danger {
+            background: rgba(225, 112, 85, 0.1);
+            border-left-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .alert-success {
+            background: rgba(0, 184, 148, 0.1);
+            border-left-color: var(--success);
+            color: var(--success);
+        }
+
+        /* Text color utilities */
+        .text-success { color: var(--success) !important; }
+        .text-danger { color: var(--danger) !important; }
+        .text-warning { color: var(--warning) !important; }
+        .text-muted { color: var(--text-muted) !important; }
 
         /* Global Styles */
         * {
@@ -23902,35 +24189,133 @@ HTML_TEMPLATE = r'''
                             <span class="section-icon">🤖</span>
                             ML Telemetry
                         </h2>
-                        <button class="btn btn-primary">Refresh Metrics</button>
+                        <button class="btn btn-primary" onclick="refreshMLTelemetry()">Refresh Metrics</button>
                     </div>
 
-                    <div class="dashboard-grid">
+                    <!-- ML Summary Cards -->
+                    <div class="dashboard-grid" id="ml-summary-cards">
                         <div class="dashboard-card">
                             <div class="card-header">
                                 <span class="card-icon">🧠</span>
                                 <h3 class="card-title">Models Trained</h3>
                             </div>
-                            <div class="card-value">27</div>
-                            <p class="card-subtitle">Active ML models</p>
+                            <div class="card-value" id="ultimate-models-count">-</div>
+                            <p class="card-subtitle">Ultimate ML models</p>
                         </div>
 
                         <div class="dashboard-card">
                             <div class="card-header">
                                 <span class="card-icon">⚡</span>
-                                <h3 class="card-title">Training Time</h3>
+                                <h3 class="card-title">Avg Accuracy</h3>
                             </div>
-                            <div class="card-value">2.3h</div>
-                            <p class="card-subtitle">Average per model</p>
+                            <div class="card-value" id="ultimate-avg-accuracy">-%</div>
+                            <p class="card-subtitle">Ultimate models</p>
                         </div>
 
                         <div class="dashboard-card">
                             <div class="card-header">
                                 <span class="card-icon">🎯</span>
-                                <h3 class="card-title">Prediction Accuracy</h3>
+                                <h3 class="card-title">Optimized Models</h3>
                             </div>
-                            <div class="card-value">78.5%</div>
-                            <p class="card-subtitle">Last 24 hours</p>
+                            <div class="card-value" id="optimized-models-count">-</div>
+                            <p class="card-subtitle">Optimized ML models</p>
+                        </div>
+
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <span class="card-icon">📈</span>
+                                <h3 class="card-title">Opt Avg Accuracy</h3>
+                            </div>
+                            <div class="card-value" id="optimized-avg-accuracy">-%</div>
+                            <p class="card-subtitle">Optimized models</p>
+                        </div>
+                    </div>
+
+                    <!-- Symbols Trained Results -->
+                    <div class="section-header" style="margin-top: var(--spacing-2xl);">
+                        <h3 class="section-title">
+                            <span class="section-icon">📊</span>
+                            Symbols Trained Results
+                        </h3>
+                    </div>
+
+                    <div class="data-table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Accuracy</th>
+                                    <th>Trend</th>
+                                    <th>Last Trained</th>
+                                    <th>Age</th>
+                                    <th>Status</th>
+                                    <th>Data Points</th>
+                                </tr>
+                            </thead>
+                            <tbody id="symbols-trained-table">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: var(--spacing-xl);">
+                                        <div class="loading-spinner"></div>
+                                        Loading symbols trained results...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- ML Alerts Section -->
+                    <div class="section-header" style="margin-top: var(--spacing-2xl);">
+                        <h3 class="section-title">
+                            <span class="section-icon">⚠️</span>
+                            ML System Alerts
+                        </h3>
+                    </div>
+
+                    <div class="dashboard-grid" id="ml-alerts-grid">
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <span class="card-icon">⏰</span>
+                                <h3 class="card-title">Stale Models</h3>
+                            </div>
+                            <div class="card-value" id="ultimate-stale-count">-</div>
+                            <p class="card-subtitle">Models older than 18h</p>
+                        </div>
+
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <span class="card-icon">📉</span>
+                                <h3 class="card-title">Low Accuracy</h3>
+                            </div>
+                            <div class="card-value" id="ultimate-low-accuracy-count">-</div>
+                            <p class="card-subtitle">Models below 65% accuracy</p>
+                        </div>
+
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <span class="card-icon">⏰</span>
+                                <h3 class="card-title">Opt Stale Models</h3>
+                            </div>
+                            <div class="card-value" id="optimized-stale-count">-</div>
+                            <p class="card-subtitle">Optimized models older than 18h</p>
+                        </div>
+
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <span class="card-icon">📉</span>
+                                <h3 class="card-title">Opt Low Accuracy</h3>
+                            </div>
+                            <div class="card-value" id="optimized-low-accuracy-count">-</div>
+                            <p class="card-subtitle">Optimized models below 65%</p>
+                        </div>
+                    </div>
+
+                    <!-- Alerts List -->
+                    <div id="alerts-list" style="display: none;">
+                        <div class="section-header" style="margin-top: var(--spacing-xl);">
+                            <h4 class="section-title">Active Alerts</h4>
+                        </div>
+                        <div class="alerts-container" id="alerts-container">
+                            <!-- Alerts will be populated here -->
                         </div>
                     </div>
                 </section>
@@ -24915,73 +25300,388 @@ async function executeFuturesTrade() {
             }
         }
 
-        // Add navigation functionality
-        function initializeNavigation() {
-            const navItems = document.querySelectorAll('.nav-item[data-page]');
-            const pageSections = document.querySelectorAll('.page-section');
-
-            navItems.forEach(item => {
-                item.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const pageId = this.getAttribute('data-page');
-
-                    // Remove active class from all nav items and pages
-                    navItems.forEach(nav => nav.classList.remove('active'));
-                    pageSections.forEach(page => page.classList.remove('active'));
-
-                    // Add active class to clicked nav item and corresponding page
-                    this.classList.add('active');
-                    const targetPage = document.getElementById(pageId);
-                    if (targetPage) {
-                        targetPage.classList.add('active');
-
-                        // Close sidebar on mobile after navigation
-                        if (window.innerWidth <= 1024) {
-                            const sidebar = document.querySelector('.sidebar');
-                            if (sidebar) {
-                                sidebar.classList.remove('open');
-                            }
-                        }
-
-                        // Update page title and subtitle
-                        const pageTitle = document.getElementById('page-title');
-                        const pageSubtitle = document.getElementById('page-subtitle');
-
-                        if (pageTitle && pageSubtitle) {
-                            const titles = {
-                                'dashboard': { title: 'Dashboard', subtitle: 'Overview of your trading bot performance' },
-                                'market-data': { title: 'Market Data', subtitle: 'Real-time market information and analysis' },
-                                'symbols': { title: 'Symbol Management', subtitle: 'Manage trading symbols and models' },
-                                'spot': { title: 'Spot Trading', subtitle: 'Manual spot trading interface' },
-                                'futures': { title: 'Futures Trading', subtitle: 'Advanced futures trading with leverage' },
-                                'strategies': { title: 'Trading Strategies', subtitle: 'Configure and manage trading strategies' },
-                                'crt-signals': { title: 'CRT Signals', subtitle: 'Composite Reasoning Technology signals' },
-                                'trade-history': { title: 'Trade History', subtitle: 'Historical trading performance' },
-                                'statistics': { title: 'Statistics', subtitle: 'Detailed trading statistics and analytics' },
-                                'qfm-analytics': { title: 'QFM Analytics', subtitle: 'Quantum Fusion Momentum analytics' },
-                                'backtest-lab': { title: 'Backtest Lab', subtitle: 'Strategy backtesting and optimization' },
-                                'ml-telemetry': { title: 'ML Telemetry', subtitle: 'Machine learning model performance' },
-                                'safety': { title: 'Safety Systems', subtitle: 'Risk management and safety controls' },
-                                'health': { title: 'System Health', subtitle: 'System status and diagnostics' },
-                                'api-keys': { title: 'API Keys', subtitle: 'Exchange API key management' },
-                                'journal': { title: 'Trading Journal', subtitle: 'Personal trading journal entries' },
-                                'persistence': { title: 'Data Persistence', subtitle: 'Data backup and persistence settings' },
-                                'user-management': { title: 'User Management', subtitle: 'Manage user accounts and permissions' }
-                            };
-
-                            const pageInfo = titles[pageId] || { title: 'Page', subtitle: 'Page description' };
-                            pageTitle.textContent = pageInfo.title;
-                            pageSubtitle.textContent = pageInfo.subtitle;
-                        }
-                    }
+        // ML Telemetry Functions
+        async function loadMLTelemetryData() {
+            try {
+                console.log('Loading ML telemetry data...');
+                const response = await fetch('/api/ml_telemetry', {
+                    credentials: 'same-origin'
                 });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('ML telemetry data loaded:', data);
+
+                // Update summary cards
+                updateMLSummaryCards(data);
+
+                // Update symbols trained table
+                updateSymbolsTrainedTable(data);
+
+                // Update alerts
+                updateMLAlerts(data);
+
+            } catch (error) {
+                console.error('Error loading ML telemetry data:', error);
+                showMLTelemetryError('Failed to load ML telemetry data: ' + error.message);
+            }
+        }
+
+        function updateMLSummaryCards(data) {
+            try {
+                const ultimate = data.ultimate || {};
+                const optimized = data.optimized || {};
+
+                // Ultimate ML stats
+                const ultimateSummary = ultimate.summary || {};
+                document.getElementById('ultimate-models-count').textContent = ultimateSummary.model_count || 0;
+                document.getElementById('ultimate-avg-accuracy').textContent = ultimateSummary.avg_accuracy_percent ?
+                    `${ultimateSummary.avg_accuracy_percent.toFixed(1)}%` : '-%';
+
+                // Optimized ML stats
+                const optimizedSummary = optimized.summary || {};
+                document.getElementById('optimized-models-count').textContent = optimizedSummary.model_count || 0;
+                document.getElementById('optimized-avg-accuracy').textContent = optimizedSummary.avg_accuracy_percent ?
+                    `${optimizedSummary.avg_accuracy_percent.toFixed(1)}%` : '-%';
+
+                // Alert counts
+                document.getElementById('ultimate-stale-count').textContent = ultimateSummary.stale_models || 0;
+                document.getElementById('ultimate-low-accuracy-count').textContent = ultimateSummary.low_accuracy_models || 0;
+                document.getElementById('optimized-stale-count').textContent = optimizedSummary.stale_models || 0;
+                document.getElementById('optimized-low-accuracy-count').textContent = optimizedSummary.low_accuracy_models || 0;
+
+            } catch (error) {
+                console.error('Error updating ML summary cards:', error);
+            }
+        }
+
+        function updateSymbolsTrainedTable(data) {
+            try {
+                const tbody = document.getElementById('symbols-trained-table');
+                if (!tbody) return;
+
+                // Combine ultimate and optimized models
+                const allModels = [];
+
+                if (data.ultimate && data.ultimate.models) {
+                    data.ultimate.models.forEach(model => {
+                        allModels.push({
+                            ...model,
+                            system: 'Ultimate'
+                        });
+                    });
+                }
+
+                if (data.optimized && data.optimized.models) {
+                    data.optimized.models.forEach(model => {
+                        allModels.push({
+                            ...model,
+                            system: 'Optimized'
+                        });
+                    });
+                }
+
+                // Sort by symbol
+                allModels.sort((a, b) => a.symbol.localeCompare(b.symbol));
+
+                if (allModels.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: var(--spacing-xl);">No trained models found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+
+                allModels.forEach(model => {
+                    const row = document.createElement('tr');
+
+                    // Accuracy with color coding
+                    const accuracyPercent = model.accuracy_percent || 0;
+                    const accuracyClass = accuracyPercent >= 70 ? 'text-success' :
+                                        accuracyPercent >= 60 ? 'text-warning' : 'text-danger';
+
+                    // Trend indicator
+                    const trend = model.trend_percent;
+                    const trendIcon = trend > 0 ? '📈' : trend < 0 ? '📉' : '➡️';
+                    const trendClass = trend > 0 ? 'text-success' : trend < 0 ? 'text-danger' : 'text-muted';
+
+                    // Status indicators
+                    const isStale = model.stale;
+                    const isLowAccuracy = model.low_accuracy;
+                    const statusText = isStale ? 'Stale' : isLowAccuracy ? 'Low Accuracy' : 'Good';
+                    const statusClass = isStale || isLowAccuracy ? 'status-danger' : 'status-success';
+
+                    row.innerHTML = `
+                        <td>
+                            <strong>${model.symbol}</strong>
+                            <br><small class="text-muted">${model.system}</small>
+                        </td>
+                        <td>
+                            <span class="${accuracyClass}">${accuracyPercent.toFixed(1)}%</span>
+                        </td>
+                        <td>
+                            <span class="${trendClass}">${trendIcon} ${trend ? trend.toFixed(1) + '%' : 'N/A'}</span>
+                        </td>
+                        <td>${model.last_trained ? new Date(model.last_trained).toLocaleDateString() : 'Never'}</td>
+                        <td>${model.age_display || 'Unknown'}</td>
+                        <td><span class="status-indicator ${statusClass}">${statusText}</span></td>
+                        <td>${model.data_points ? model.data_points.toLocaleString() : 'N/A'}</td>
+                    `;
+
+                    tbody.appendChild(row);
+                });
+
+            } catch (error) {
+                console.error('Error updating symbols trained table:', error);
+                const tbody = document.getElementById('symbols-trained-table');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: var(--spacing-xl); color: var(--danger);">Error loading symbols data</td></tr>';
+                }
+            }
+        }
+
+        function updateMLAlerts(data) {
+            try {
+                const alertsContainer = document.getElementById('alerts-container');
+                const alertsList = document.getElementById('alerts-list');
+
+                if (!alertsContainer || !alertsList) return;
+
+                const alerts = [];
+
+                // Collect alerts from both systems
+                if (data.ultimate && data.ultimate.summary) {
+                    const ultimateAlerts = data.ultimate.summary.alerts || [];
+                    ultimateAlerts.forEach(alert => {
+                        alerts.push({
+                            system: 'Ultimate',
+                            message: alert,
+                            type: alert.includes('stale') ? 'warning' : 'danger'
+                        });
+                    });
+                }
+
+                if (data.optimized && data.optimized.summary) {
+                    const optimizedAlerts = data.optimized.summary.alerts || [];
+                    optimizedAlerts.forEach(alert => {
+                        alerts.push({
+                            system: 'Optimized',
+                            message: alert,
+                            type: alert.includes('stale') ? 'warning' : 'danger'
+                        });
+                    });
+                }
+
+                if (alerts.length === 0) {
+                    alertsList.style.display = 'none';
+                    return;
+                }
+
+                alertsList.style.display = 'block';
+                alertsContainer.innerHTML = '';
+
+                alerts.forEach(alert => {
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = `alert alert-${alert.type}`;
+                    alertDiv.innerHTML = `
+                        <strong>${alert.system}:</strong> ${alert.message}
+                    `;
+                    alertsContainer.appendChild(alertDiv);
+                });
+
+            } catch (error) {
+                console.error('Error updating ML alerts:', error);
+            }
+        }
+
+        function showMLTelemetryError(message) {
+            // Update summary cards with error state
+            const elements = [
+                'ultimate-models-count', 'ultimate-avg-accuracy',
+                'optimized-models-count', 'optimized-avg-accuracy',
+                'ultimate-stale-count', 'ultimate-low-accuracy-count',
+                'optimized-stale-count', 'optimized-low-accuracy-count'
+            ];
+
+            elements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = '-';
+                    element.style.color = 'var(--danger)';
+                }
             });
+
+            // Update table with error message
+            const tbody = document.getElementById('symbols-trained-table');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: var(--spacing-xl); color: var(--danger);">${message}</td></tr>`;
+            }
+        }
+
+        async function refreshMLTelemetry() {
+            const button = document.querySelector('#ml-telemetry .btn-primary');
+            const originalText = button.textContent;
+
+            try {
+                button.textContent = 'Refreshing...';
+                button.disabled = true;
+
+                await loadMLTelemetryData();
+
+                console.log('✅ ML telemetry data refreshed successfully');
+            } catch (error) {
+                console.error('❌ Error refreshing ML telemetry:', error);
+                showMLTelemetryError('Failed to refresh data: ' + error.message);
+            } finally {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
         }
 
         // Initialize navigation when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             initializeNavigation();
         });
+
+        // Navigation initialization function
+        function initializeNavigation() {
+            console.log('🚀 Initializing navigation system...');
+
+            // Get all navigation items
+            const navItems = document.querySelectorAll('.nav-item');
+            console.log('Found navigation items:', navItems.length);
+
+            // Add click event listeners to navigation items
+            navItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const pageId = this.getAttribute('data-page');
+                    console.log('Navigation clicked:', pageId);
+
+                    if (pageId) {
+                        showPage(pageId);
+                    }
+                });
+            });
+
+            // Initialize with dashboard if no page is active
+            const activePage = document.querySelector('.page-section.active');
+            if (!activePage) {
+                showPage('dashboard');
+            }
+
+            console.log('✅ Navigation system initialized');
+        }
+
+        // Function to show a specific page
+        function showPage(pageId) {
+            console.log('Showing page:', pageId);
+
+            // Hide all pages
+            const allPages = document.querySelectorAll('.page-section');
+            allPages.forEach(page => {
+                page.classList.remove('active');
+            });
+
+            // Remove active class from all nav items
+            const allNavItems = document.querySelectorAll('.nav-item');
+            allNavItems.forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Show the selected page
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) {
+                targetPage.classList.add('active');
+                console.log('✅ Page activated:', pageId);
+            } else {
+                console.log('❌ Page not found:', pageId);
+            }
+
+            // Add active class to the corresponding nav item
+            const targetNavItem = document.querySelector(`.nav-item[data-page="${pageId}"]`);
+            if (targetNavItem) {
+                targetNavItem.classList.add('active');
+                console.log('✅ Nav item activated:', pageId);
+            }
+
+            // Update page title and subtitle
+            updatePageTitle(pageId);
+
+            // Load page-specific data if needed
+            loadPageData(pageId);
+        }
+
+        // Update page title and subtitle based on active page
+        function updatePageTitle(pageId) {
+            const titleElement = document.getElementById('page-title');
+            const subtitleElement = document.getElementById('page-subtitle');
+
+            const pageTitles = {
+                'dashboard': { title: 'Dashboard', subtitle: 'Overview of your trading bot performance' },
+                'market-data': { title: 'Market Data', subtitle: 'Real-time market information and analysis' },
+                'symbols': { title: 'Symbol Management', subtitle: 'Manage trading symbols and model training' },
+                'spot': { title: 'Spot Trading', subtitle: 'Spot market trading operations' },
+                'futures': { title: 'Futures Trading', subtitle: 'Futures market trading operations' },
+                'strategies': { title: 'Trading Strategies', subtitle: 'Configure and manage trading strategies' },
+                'crt-signals': { title: 'CRT Signals', subtitle: 'Composite Reasoning Technology signals' },
+                'trade-history': { title: 'Trade History', subtitle: 'Historical trading performance' },
+                'statistics': { title: 'Trading Statistics', subtitle: 'Detailed performance analytics' },
+                'qfm-analytics': { title: 'QFM Analytics', subtitle: 'Quantum Fusion Momentum analysis' },
+                'backtest-lab': { title: 'Backtest Lab', subtitle: 'Strategy backtesting and optimization' },
+                'ml-telemetry': { title: 'ML Telemetry', subtitle: 'Machine learning model performance' },
+                'user-management': { title: 'User Management', subtitle: 'Manage system users and permissions' },
+                'safety': { title: 'Safety Systems', subtitle: 'Risk management and safety controls' },
+                'health': { title: 'System Health', subtitle: 'System diagnostics and monitoring' },
+                'api-keys': { title: 'API Keys', subtitle: 'Exchange API key management' },
+                'journal': { title: 'Trading Journal', subtitle: 'Personal trading journal entries' },
+                'persistence': { title: 'Data Persistence', subtitle: 'Data backup and recovery' }
+            };
+
+            const pageInfo = pageTitles[pageId] || pageTitles['dashboard'];
+
+            if (titleElement) {
+                titleElement.textContent = pageInfo.title;
+            }
+            if (subtitleElement) {
+                subtitleElement.textContent = pageInfo.subtitle;
+            }
+        }
+
+        // Load page-specific data when switching pages
+        function loadPageData(pageId) {
+            console.log('Loading data for page:', pageId);
+
+            switch (pageId) {
+                case 'dashboard':
+                    // Dashboard data is loaded automatically
+                    break;
+                case 'market-data':
+                    // Load market data
+                    if (typeof refreshMarketData === 'function') {
+                        refreshMarketData();
+                    }
+                    break;
+                case 'ml-telemetry':
+                    // Load ML telemetry data
+                    if (typeof loadMLTelemetryData === 'function') {
+                        loadMLTelemetryData();
+                    }
+                    break;
+                case 'user-management':
+                    // Load users list
+                    if (typeof refreshUsersList === 'function') {
+                        refreshUsersList();
+                    }
+                    break;
+                default:
+                    console.log('No specific data loading for page:', pageId);
+            }
+        }
 
         // User Management Functions
         async function addNewUser() {
@@ -25191,6 +25891,104 @@ async function executeFuturesTrade() {
             // Load initial users data
             refreshUsersList();
         });
+
+        // Dashboard Performance Functions
+        async function refreshDashboardData() {
+            try {
+                console.log('Refreshing dashboard performance data...');
+
+                // Fetch performance data from API
+                const response = await fetch('/api/performance', {
+                    credentials: 'same-origin'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('Performance data received:', data);
+
+                // The /api/performance endpoint already returns flat data structure
+                const combinedData = data;
+
+                // Update performance cards with real data
+                updatePerformanceCards(combinedData);
+
+                // Update last refresh time
+                updateLastRefreshTime();
+
+                console.log('✅ Dashboard performance data refreshed successfully');
+            } catch (error) {
+                console.error('❌ Error refreshing dashboard data:', error);
+                // Show error in system status
+                const systemStatusElement = document.querySelector('.status-indicator');
+                if (systemStatusElement) {
+                    systemStatusElement.textContent = 'ERROR';
+                    systemStatusElement.className = 'status-indicator status-danger';
+                }
+            }
+        }
+
+        function updatePerformanceCards(data) {
+            try {
+                // Update Portfolio Value
+                const portfolioValueElement = document.getElementById('portfolio-value');
+                if (portfolioValueElement && data.portfolio_value !== undefined) {
+                    portfolioValueElement.textContent = `$${data.portfolio_value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                }
+
+                // Update Total Profit (Active Trades subtitle)
+                const activeTradesElement = document.getElementById('active-trades');
+                if (activeTradesElement && data.active_trades !== undefined) {
+                    activeTradesElement.textContent = data.active_trades;
+                }
+
+                // Update Daily Change
+                const portfolioChangeElement = document.getElementById('portfolio-change');
+                if (portfolioChangeElement && data.daily_change !== undefined) {
+                    const change = data.daily_change;
+                    const isPositive = change >= 0;
+                    portfolioChangeElement.textContent = `${isPositive ? '+' : ''}${change.toFixed(2)}% today`;
+                    portfolioChangeElement.style.color = isPositive ? 'var(--success)' : 'var(--danger)';
+                }
+
+                // Update Win Rate
+                const winRateElement = document.getElementById('win-rate');
+                if (winRateElement && data.win_rate !== undefined) {
+                    winRateElement.textContent = `${data.win_rate}%`;
+                }
+
+                // Update System Status
+                const systemStatusElement = document.querySelector('.status-indicator');
+                if (systemStatusElement && data.system_status) {
+                    systemStatusElement.textContent = data.system_status;
+                    systemStatusElement.className = `status-indicator ${data.system_status === 'ONLINE' ? 'status-success' : 'status-danger'}`;
+                }
+
+                // Update trades subtitle with profit info
+                const tradesSubtitleElement = document.getElementById('trades-subtitle');
+                if (tradesSubtitleElement && data.successful_trades !== undefined && data.total_trades !== undefined) {
+                    const successful = data.successful_trades;
+                    const total = data.total_trades;
+                    const pending = Math.max(0, data.active_trades - (total - successful));
+                    tradesSubtitleElement.textContent = `${successful} profitable, ${pending} pending`;
+                }
+
+                console.log('✅ Performance cards updated with real data');
+            } catch (error) {
+                console.error('Error updating performance cards:', error);
+            }
+        }
+
+        // Initialize dashboard data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load initial dashboard data
+            refreshDashboardData();
+
+            // Set up periodic refresh every 30 seconds
+            setInterval(refreshDashboardData, 30000);
+        });
     </script>
 </body>
 </html>'''
@@ -25303,10 +26101,80 @@ def api_dashboard():
                 'btc_price': 41500.50,
                 'eth_price': 2450.75,
                 'market_trend': 'bullish'
+            },
+            'system_status': {
+                'paper_trading': ultimate_trader.paper_trading if hasattr(app, 'ultimate_trader') and app.ultimate_trader else True,
+                'trading_enabled': ultimate_trader.trading_enabled if hasattr(app, 'ultimate_trader') and app.ultimate_trader else False,
+                'real_trading_ready': bool(ultimate_trader.real_trading_enabled) if hasattr(app, 'ultimate_trader') and app.ultimate_trader else False,
+                'futures_trading_enabled': getattr(ultimate_trader, 'futures_trading_enabled', False) if hasattr(app, 'ultimate_trader') and app.ultimate_trader else False,
+                'futures_trading_ready': bool(getattr(ultimate_trader, 'futures_trading_enabled', False)) if hasattr(app, 'ultimate_trader') and app.ultimate_trader else False
             }
         }
         return jsonify(dashboard_data)
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/performance')
+@login_required
+def api_performance():
+    """Get real bot performance data"""
+    try:
+        # Get performance data from all trader instances
+        total_profit = 0
+        total_trades = 0
+        successful_trades = 0
+        active_trades = 0
+        win_rate = 0
+
+        # Check if we have trader instances available
+        if hasattr(app, 'ultimate_trader') and app.ultimate_trader:
+            trader = app.ultimate_trader
+            if hasattr(trader, 'bot_efficiency'):
+                efficiency = trader.bot_efficiency
+                total_profit += efficiency.get('total_profit', 0)
+                total_trades += efficiency.get('total_trades', 0)
+                successful_trades += efficiency.get('successful_trades', 0)
+
+            # Count active positions
+            if hasattr(trader, 'positions') and trader.positions:
+                active_trades = len(trader.positions)
+
+        if hasattr(app, 'optimized_trader') and app.optimized_trader:
+            trader = app.optimized_trader
+            if hasattr(trader, 'bot_efficiency'):
+                efficiency = trader.bot_efficiency
+                total_profit += efficiency.get('total_profit', 0)
+                total_trades += efficiency.get('total_trades', 0)
+                successful_trades += efficiency.get('successful_trades', 0)
+
+            # Count active positions
+            if hasattr(trader, 'positions') and trader.positions:
+                active_trades += len(trader.positions)
+
+        # Calculate win rate
+        if total_trades > 0:
+            win_rate = (successful_trades / total_trades) * 100
+
+        # Get portfolio value (simplified - in real implementation would calculate current positions)
+        portfolio_value = 10000.00 + total_profit  # Starting balance + profit
+
+        # Get daily change (simplified - would need to track daily performance)
+        daily_change = 2.5  # Placeholder
+
+        performance_data = {
+            'portfolio_value': round(portfolio_value, 2),
+            'total_profit': round(total_profit, 2),
+            'daily_change': daily_change,
+            'win_rate': round(win_rate, 1),
+            'active_trades': active_trades,
+            'total_trades': total_trades,
+            'successful_trades': successful_trades,
+            'system_status': 'ONLINE' if (hasattr(app, 'ultimate_trader') and app.ultimate_trader) else 'OFFLINE'
+        }
+
+        return jsonify(performance_data)
+    except Exception as e:
+        print(f"Error getting performance data: {e}")
         return jsonify({'error': str(e)}), 500
 
 

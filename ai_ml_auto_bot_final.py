@@ -16470,7 +16470,7 @@ def update_ultimate_market_data():
             optimized_ai_signals = {}
             optimized_crt_signals = {}
             optimized_qfm_signals = {}
-            trending_pairs = get_trending_pairs()
+            trending_pairs = get_top_symbols_by_volume(limit=10)
             dashboard_data['trending_pairs'] = [pair for pair in trending_pairs if pair in active_symbols]
             ultimate_qfm_engine = getattr(ultimate_trader, 'qfm_engine', None)
             optimized_qfm_engine = getattr(optimized_trader, 'qfm_engine', None)
@@ -21145,6 +21145,76 @@ def api_enable_symbol():
 
 
 @app.route('/api/symbols', methods=['GET'])
+@login_required
+def api_list_symbols():
+    search = request.args.get('search', '', type=str).strip().upper()
+    page = request.args.get('page', 1, type=int)
+    page_size = request.args.get('page_size', 15, type=int)
+
+    page = max(1, page)
+    page_size = max(1, min(page_size, 100))
+
+    all_symbols = get_all_known_symbols()
+    active_set = set(get_active_trading_universe())
+    disabled_set = set(get_disabled_symbols())
+
+    if search:
+        all_symbols = [sym for sym in all_symbols if search in sym.upper()]
+
+    all_symbols.sort()
+    total = len(all_symbols)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    if page > total_pages:
+        page = total_pages
+
+    start = (page - 1) * page_size
+    end = start + page_size
+    page_symbols = all_symbols[start:end]
+
+    portfolio_symbols = set()
+    for trader in (ultimate_trader, optimized_trader):
+        if hasattr(trader, 'positions') and isinstance(trader.positions, dict):
+            portfolio_symbols.update(trader.positions.keys())
+
+    def _model_state(system, symbol_name):
+        if symbol_name in system.models:
+            model_info = system.models.get(symbol_name, {})
+            return True, model_info.get('training_date')
+        model_path = os.path.join(system.models_dir, f'{symbol_name}_ultimate_model.pkl')
+        return os.path.exists(model_path), None
+
+    symbols_payload = []
+    for idx, sym in enumerate(page_symbols, start=start + 1):
+        ultimate_ready, ultimate_trained = _model_state(ultimate_ml_system, sym)
+        optimized_ready, optimized_trained = _model_state(optimized_ml_system, sym)
+        symbols_payload.append({
+            'symbol': sym,
+            'index': idx,
+            'active': sym in active_set,
+            'disabled': sym in disabled_set,
+            'ultimate_model_ready': ultimate_ready,
+            'optimized_model_ready': optimized_ready,
+            'ultimate_last_trained': ultimate_trained,
+            'optimized_last_trained': optimized_trained,
+            'in_portfolio': sym in portfolio_symbols
+        })
+
+    response = {
+        'symbols': symbols_payload,
+        'pagination': {
+            'page': page,
+            'page_size': page_size,
+            'total': total,
+            'total_pages': total_pages
+        },
+        'metrics': {
+            'active': len(active_set),
+            'disabled': len(disabled_set),
+            'known': len(get_all_known_symbols())
+        }
+    }
+
+    return jsonify(response)
 
 
 @app.route('/api/symbols/auto_add_top', methods=['POST'])
@@ -21245,77 +21315,6 @@ def api_auto_add_top_symbols():
     except Exception as e:
         bot_logger.error(f"Error in auto-add top symbols: {e}")
         return jsonify({'error': str(e)}), 500
-def api_list_symbols():
-    search = request.args.get('search', '', type=str).strip().upper()
-    page = request.args.get('page', 1, type=int)
-    page_size = request.args.get('page_size', 15, type=int)
-
-    page = max(1, page)
-    page_size = max(1, min(page_size, 100))
-
-    all_symbols = get_all_known_symbols()
-    active_set = set(get_active_trading_universe())
-    disabled_set = set(get_disabled_symbols())
-
-    if search:
-        all_symbols = [sym for sym in all_symbols if search in sym.upper()]
-
-    all_symbols.sort()
-    total = len(all_symbols)
-    total_pages = max(1, (total + page_size - 1) // page_size)
-    if page > total_pages:
-        page = total_pages
-
-    start = (page - 1) * page_size
-    end = start + page_size
-    page_symbols = all_symbols[start:end]
-
-    portfolio_symbols = set()
-    for trader in (ultimate_trader, optimized_trader):
-        if hasattr(trader, 'positions') and isinstance(trader.positions, dict):
-            portfolio_symbols.update(trader.positions.keys())
-
-    def _model_state(system, symbol_name):
-        if symbol_name in system.models:
-            model_info = system.models.get(symbol_name, {})
-            return True, model_info.get('training_date')
-        model_path = os.path.join(system.models_dir, f'{symbol_name}_ultimate_model.pkl')
-        return os.path.exists(model_path), None
-
-    symbols_payload = []
-    for idx, sym in enumerate(page_symbols, start=start + 1):
-        ultimate_ready, ultimate_trained = _model_state(ultimate_ml_system, sym)
-        optimized_ready, optimized_trained = _model_state(optimized_ml_system, sym)
-        symbols_payload.append({
-            'symbol': sym,
-            'index': idx,
-            'active': sym in active_set,
-            'disabled': sym in disabled_set,
-            'ultimate_model_ready': ultimate_ready,
-            'optimized_model_ready': optimized_ready,
-            'ultimate_last_trained': ultimate_trained,
-            'optimized_last_trained': optimized_trained,
-            'in_portfolio': sym in portfolio_symbols
-        })
-
-    response = {
-        'symbols': symbols_payload,
-        'pagination': {
-            'page': page,
-            'page_size': page_size,
-            'total': total,
-            'total_pages': total_pages
-        },
-        'metrics': {
-            'active': len(active_set),
-            'disabled': len(disabled_set),
-            'known': len(get_all_known_symbols())
-        }
-    }
-
-    return jsonify(response)
-
-
 @app.route('/api/start_continuous_training', methods=['POST'])
 @login_required
 def start_continuous_training():

@@ -58,23 +58,30 @@ _Last updated: 2025-11-02_
 
 ### Phase 0 Work Breakdown (in progress)
 
-- [ ] Read `BOT_PROFILE` (default `default`) at bootstrap and derive:
+- [x] Read `BOT_PROFILE` (default `default`) at bootstrap and derive dedicated storage paths:
 	- Persistence root: `bot_persistence/<BOT_PROFILE>/`
 	- Log directory: `logs/<BOT_PROFILE>/`
 	- Credential vault: `credentials/<BOT_PROFILE>.json`
-- [ ] Update `setup_application_logging` to accept dynamic directories without double-initializing handlers.
-- [ ] Thread profile-aware paths through `ProfessionalPersistence`, `BinanceCredentialStore`, ML model caches, and dashboard state snapshots.
-- [ ] Provide a migration helper that relocates existing single-tenant data into `bot_persistence/default` on first boot after upgrade.
-- [ ] Extend deployment docs with instructions to export `BOT_PROFILE` per instance/container.
+- [x] Update `setup_application_logging` to accept dynamic directories without double-initializing handlers.
+- [x] Thread profile-aware paths through `ProfessionalPersistence`, `BinanceCredentialStore`, ML model caches, and dashboard state snapshots.
+- [x] Provide a migration helper that relocates existing single-tenant data into `bot_persistence/default` on first boot after upgrade.
+- [x] Extend deployment docs with instructions to export `BOT_PROFILE` per instance/container.
 
 > Completion of Phase 0 is a prerequisite for meaningful multi-tenant tests. Each checkbox should land in source control with accompanying smoke verification before moving to Phase 1.
 
 ## 6. Testing & Validation Checklist
 
-- [ ] Unit tests for `BinanceCredentialStore` multi-tenant lookups.
-- [ ] Integration test: start two tenant contexts, ensure trades/persistence remain isolated.
+- [x] Unit tests for `BinanceCredentialStore` multi-tenant lookups (`tests/test_profile_pathing.py::test_binance_store_isolates_multiple_profiles`).
+- [x] Integration test: start two tenant contexts, ensure trades/persistence remain isolated (`tests/test_profile_pathing.py::test_profile_paths_isolate_persistence`).
 - [ ] Load test with concurrent tenant requests (Gunicorn + workers).
 - [ ] Security review for credential storage and log redaction per tenant.
+
+Run the completed checks locally with:
+
+```bash
+source .venv/bin/activate
+pytest tests/test_profile_pathing.py
+```
 
 ## 7. Decision Log
 

@@ -1,0 +1,50 @@
+export function initNavigation() {
+  const navItems = document.querySelectorAll('.nav-item');
+  const pageSections = document.querySelectorAll('.page-section');
+  const pageTitle = document.getElementById('page-title');
+  const pageSubtitle = document.getElementById('page-subtitle');
+
+  const pageInfo = {
+    dashboard: { title: 'Dashboard', subtitle: 'Overview of your trading bot performance' },
+    'market-data': { title: 'Market Data', subtitle: 'Real-time market data and AI signals' },
+    symbols: { title: 'Symbols', subtitle: 'Manage trading symbols and models' },
+    spot: { title: 'Spot Trading', subtitle: 'Spot trading management and positions' },
+    futures: { title: 'Futures', subtitle: 'Futures trading management' },
+    strategies: { title: 'Strategies', subtitle: 'Trading strategy management and performance' },
+    'crt-signals': { title: 'CRT Signals', subtitle: 'CRT signal analysis and predictions' },
+    'trade-history': { title: 'Trade History', subtitle: 'Historical trading performance' },
+    statistics: { title: 'Statistics', subtitle: 'Trading statistics and analytics' },
+    'qfm-analytics': { title: 'QFM Analytics', subtitle: 'Quantitative Financial Modeling metrics' },
+    'backtest-lab': { title: 'Backtest Lab', subtitle: 'Strategy backtesting and optimization' },
+    'ml-telemetry': { title: 'ML Telemetry', subtitle: 'Machine learning model metrics' },
+    safety: { title: 'Safety', subtitle: 'Risk management and safety systems' },
+    health: { title: 'Health', subtitle: 'System health and diagnostics' },
+    'api-keys': { title: 'API Keys', subtitle: 'Exchange API key management' },
+    journal: { title: 'Journal', subtitle: 'Trading journal and notes' },
+    persistence: { title: 'Persistence', subtitle: 'Data backup and persistence' },
+    'user-management': { title: 'User Management', subtitle: 'Manage user accounts and permissions' },
+  };
+
+  navItems.forEach((item) => {
+    item.addEventListener('click', (event) => {
+      event.preventDefault();
+      navItems.forEach((nav) => nav.classList.remove('active'));
+      item.classList.add('active');
+
+      pageSections.forEach((section) => section.classList.remove('active'));
+      const pageId = item.getAttribute('data-page');
+      const targetSection = document.getElementById(pageId);
+
+      if (targetSection) {
+        targetSection.classList.add('active');
+        if (pageInfo[pageId]) {
+          pageTitle.textContent = pageInfo[pageId].title;
+          pageSubtitle.textContent = pageInfo[pageId].subtitle;
+        }
+        if (pageId === 'user-management') {
+          window.dispatchEvent(new CustomEvent('dashboard:user-management-visible'));
+        }
+      }
+    });
+  });
+}

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Trading Bot — Institutional Automation</title>
+    <link rel="stylesheet" href="{{ asset_url('auth.css') }}">
+</head>
+<body class="auth-body auth-landing marketing-landing" data-subscription-plans-url="{{ url_for('subscriptions.api_public_subscription_plans') }}">
+    <main class="marketing-wrapper">
+        <section class="landing-layout marketing-layout">
+            <div class="hero-section marketing-hero">
+                <div class="hero-badge">{{ version_label }} • FINAL_HAMMER ready</div>
+                <h1 class="hero-title">Institutional AI trading desks without rebuilding tooling</h1>
+                <p class="hero-description">
+                    Keep your existing compliance stack, colors, and workflow while we supply the automation fabric:
+                    tenant isolation, FINAL_HAMMER safeguards, and 24/7 ML-powered execution.
+                </p>
+                <div class="hero-cta">
+                    <a class="btn" href="{{ url_for('auth.register') }}">Start free pilot</a>
+                    <a class="btn ghost" href="{{ url_for('auth.login') }}">View live dashboard</a>
+                </div>
+                <div class="stats-grid">
+                    <div class="stats-card">
+                        <div class="value">1,280+</div>
+                        <div class="label">Signals / day</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="value">99.95%</div>
+                        <div class="label">Uptime SLA</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="value">65+</div>
+                        <div class="label">Curated symbols</div>
+                    </div>
+                </div>
+                <div class="pill-row">
+                    <span class="pill">Tenant isolation</span>
+                    <span class="pill">Dual-operator approvals</span>
+                    <span class="pill">FINAL_HAMMER enforcement</span>
+                    <span class="pill">Audit-grade logging</span>
+                </div>
+            </div>
+            <div class="marketing-aside">
+                <article class="subscription-card marketing-plan" data-subscription-card data-plan-code="foundation">
+                    <div class="plan-header">
+                        <h3 data-plan-name>Foundation</h3>
+                        <span class="plan-badge" data-plan-badge>Launch teams</span>
+                    </div>
+                    <div class="plan-price">
+                        <span class="price" data-plan-price>$149</span>
+                        <span class="term" data-plan-term>/month</span>
+                    </div>
+                    <p class="plan-subtext" data-plan-subtext>14-day pilot, cancel anytime.</p>
+                    <ul class="plan-features">
+                        <li><span>✓</span> Tenant-isolated dashboard</li>
+                        <li><span>✓</span> Paper & spot automation</li>
+                        <li><span>✓</span> Compliance-grade auditing</li>
+                    </ul>
+                    <div class="plan-meta">
+                        <span data-plan-duration>30-day cycles</span>
+                        <span data-plan-trial>14-day pilot</span>
+                    </div>
+                    <a href="{{ url_for('auth.register') }}" class="plan-cta">Start pilot</a>
+                </article>
+                <article class="subscription-card marketing-plan" data-subscription-card data-plan-code="elite">
+                    <div class="plan-header">
+                        <h3 data-plan-name>Elite Automation</h3>
+                        <span class="plan-badge" data-plan-badge>Most popular</span>
+                    </div>
+                    <div class="plan-price">
+                        <span class="price" data-plan-price>$249</span>
+                        <span class="term" data-plan-term>/month</span>
+                    </div>
+                    <p class="plan-subtext" data-plan-subtext>Ultimate + Optimized ML stacks unlocked.</p>
+                    <ul class="plan-features">
+                        <li><span>✓</span> Multi-profile signal orchestration</li>
+                        <li><span>✓</span> Dedicated reliability engineer</li>
+                        <li><span>✓</span> 24/7 automated runbooks</li>
+                    </ul>
+                    <div class="plan-meta">
+                        <span data-plan-duration>30-day cycles</span>
+                        <span data-plan-trial>14-day pilot</span>
+                    </div>
+                    <div class="dual-cta">
+                        <a href="{{ url_for('auth.register') }}" class="plan-cta">Book review</a>
+                        <a href="{{ url_for('auth.login') }}" class="secondary-link">Already onboard? <span>Access desk</span></a>
+                    </div>
+                </article>
+                <article class="subscription-card marketing-plan" data-subscription-card data-plan-code="enterprise">
+                    <div class="plan-header">
+                        <h3 data-plan-name>Enterprise Desk</h3>
+                        <span class="plan-badge" data-plan-badge>Custom scope</span>
+                    </div>
+                    <div class="plan-price">
+                        <span class="price" data-plan-price>$799</span>
+                        <span class="term" data-plan-term>/month</span>
+                    </div>
+                    <p class="plan-subtext" data-plan-subtext>Dedicated infrastructure pods & SLAs.</p>
+                    <ul class="plan-features">
+                        <li><span>✓</span> Futures + spot FINAL_HAMMER workflows</li>
+                        <li><span>✓</span> Change-management trail & RBAC granularity</li>
+                        <li><span>✓</span> Embedded quant + compliance partner</li>
+                    </ul>
+                    <div class="plan-meta">
+                        <span data-plan-duration>Quarterly cycles</span>
+                        <span data-plan-trial>Custom pilot</span>
+                    </div>
+                    <a href="{{ url_for('auth.register') }}" class="plan-cta">Schedule brief</a>
+                </article>
+            </div>
+        </section>
+
+        <section class="marketing-panels wide">
+            <article class="login-container marketing-panel">
+                <div class="panel-heading">
+                    <h2>Live desk snapshot</h2>
+                    <span class="live-dot" aria-label="Live feed"></span>
+                </div>
+                <ul class="telemetry-list">
+                    <li>
+                        <span>Signals (24h)</span>
+                        <strong data-telemetry-signals>1,284</strong>
+                    </li>
+                    <li>
+                        <span>Risk incidents</span>
+                        <strong data-telemetry-incidents>0</strong>
+                    </li>
+                    <li>
+                        <span>Desk latency</span>
+                        <strong data-telemetry-latency>3.2 ms</strong>
+                    </li>
+                    <li>
+                        <span>Active tenants</span>
+                        <strong data-telemetry-tenants>42</strong>
+                    </li>
+                </ul>
+                <p class="plan-subtext">CRT + QFM telemetry mirrored hourly from production.</p>
+            </article>
+            <article class="login-container marketing-panel">
+                <div class="panel-heading">
+                    <h2>Deployment playbook</h2>
+                    <a href="{{ url_for('subscriptions.api_public_subscription_plans') }}" class="secondary-link" target="_blank" rel="noreferrer">View API response →</a>
+                </div>
+                <ul class="timeline">
+                    <li><strong>Week 0</strong> — compliance intake, exchange credential rotation, sandbox deploy.</li>
+                    <li><strong>Week 1</strong> — connect funds, calibrate signal guardrails, train ML on top symbols.</li>
+                    <li><strong>Week 2</strong> — shadow trading, human-in-loop overrides, finalize FINAL_HAMMER checklist.</li>
+                    <li><strong>Week 3+</strong> — production turnover with incident rehearsal + automation runbooks.</li>
+                </ul>
+            </article>
+            <article class="login-container marketing-panel">
+                <h2>Request white-glove onboarding</h2>
+                <form method="POST" data-lead-form data-lead-endpoint="{{ url_for('leads.capture_lead') }}">
+                    <div class="form-group">
+                        <label class="form-label" for="lead-name">Name</label>
+                        <input id="lead-name" name="name" type="text" class="form-input" placeholder="Jane Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="lead-email">Work Email</label>
+                        <input id="lead-email" name="email" type="email" class="form-input" placeholder="you@firm.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="lead-company">Company</label>
+                        <input id="lead-company" name="company" type="text" class="form-input" placeholder="Fund or desk name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="lead-notes">What do you need help with?</label>
+                        <textarea id="lead-notes" name="message" class="form-input" rows="3" placeholder="Tell us about your mandate"></textarea>
+                    </div>
+                    <button class="btn" type="submit">Request contact</button>
+                    <p class="plan-subtext">We respond within one business day.</p>
+                    <div class="lead-status" data-lead-status aria-live="polite"></div>
+                </form>
+            </article>
+        </section>
+    </main>
+    <script type="module" src="{{ asset_url('subscription-card.js') }}" defer></script>
+    <script type="module" src="{{ asset_url('lead-capture.js') }}" defer></script>
+    {% if analytics and analytics.enabled and analytics.script_src %}
+        <script defer src="{{ analytics.script_src }}"{% if analytics.domain %} data-domain="{{ analytics.domain }}"{% endif %}{% if analytics.api_host %} data-api="{{ analytics.api_host }}"{% endif %}></script>
+    {% endif %}
+</body>
+</html>

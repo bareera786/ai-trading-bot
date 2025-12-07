@@ -1,12 +1,14 @@
 import unittest
 import json
-from ai_ml_auto_bot_final import app, db, User
+from app import create_app
+from app.extensions import db
+from app.models import User
 
 class UserManagementTestCase(unittest.TestCase):
     def setUp(self):
-        self.app = app.test_client()
+        self.app = create_app()
         self.app.testing = True
-        with app.app_context():
+        with self.app.app_context():
             db.drop_all()
             db.create_all()
             # Create admin user
@@ -20,7 +22,7 @@ class UserManagementTestCase(unittest.TestCase):
             db.session.commit()
 
     def tearDown(self):
-        with app.app_context():
+        with self.app.app_context():
             db.session.remove()
             db.drop_all()
 

@@ -120,34 +120,30 @@ def _summarize_result(result: Dict) -> Dict[str, float]:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    parser = _build_arg_parser()
-    args = parser.parse_args(argv)
+    from app import create_app
+    from app.runtime.builder import build_runtime_context
+    from app.runtime.symbols import TOP_SYMBOLS, normalize_symbol as _normalize_symbol
+    from app.services.pathing import resolve_profile_path
 
-    if args.profile:
-        os.environ["BOT_PROFILE"] = args.profile
+    app = create_app()
+    with app.app_context():
+        context = build_runtime_context()
 
-    try:
-        from ai_ml_auto_bot_final import (
-            OptimizedMLTrainingSystem,
-            TOP_SYMBOLS,
-            UltimateMLTrainingSystem,
-            _normalize_symbol,
-            resolve_profile_path,
-        )
-    except ImportError as exc:  # pragma: no cover - defensive
-        parser.error(f"Failed to import trading bot module: {exc}")
-        return 2
+        parser = _build_arg_parser()
+        args = parser.parse_args(argv)
 
-    system_cls = OptimizedMLTrainingSystem if args.optimized else UltimateMLTrainingSystem
-    system = system_cls()
+        if args.profile:
+            os.environ["BOT_PROFILE"] = args.profile
 
-    target_symbols = _normalize_symbols(args.symbols, _normalize_symbol)
-    if not target_symbols:
-        target_symbols = list(TOP_SYMBOLS)
+        system = context['optimized_ml_system'] if args.optimized else context['ultimate_ml_system']
 
-    if not args.quiet:
-        mode = "Optimized" if args.optimized else "Ultimate"
-        print(f"🚀 Running {mode} backtests | symbols={len(target_symbols)} | years={args.years} | interval={args.interval}\n")
+        target_symbols = _normalize_symbols(args.symbols, _normalize_symbol)
+        if not target_symbols:
+            target_symbols = list(TOP_SYMBOLS)
+
+        if not args.quiet:
+            mode = "Optimized" if args.optimized else "Ultimate"
+            print(f"🚀 Running {mode} backtests | symbols={len(target_symbols)} | years={args.years} | interval={args.interval}\n")
 
     summary: Dict[str, Dict[str, float]] = {}
     failures: Dict[str, str] = {}

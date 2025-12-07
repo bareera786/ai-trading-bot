@@ -53,7 +53,7 @@ cd ~/ && git clone https://github.com/<your-org>/ai-bot.git
 cd ai-bot
 ```
 
-If copying files manually, ensure `ai_ml_auto_bot_final.py`, the `docs/` folder, and `bot_persistence/` directory land in the same root.
+If copying files manually, ensure `start_server.py`, `wsgi.py`, the `app/` package, and the `docs/` + `bot_persistence/` directories land in the same root.
 
 ## 4. Create the Python Environment
 
@@ -79,37 +79,52 @@ If copying files manually, ensure `ai_ml_auto_bot_final.py`, the `docs/` folder,
 
 ## 5. Configure Runtime Paths & Environment
 
-1. **Directory layout**
+1. **Directory layout (per profile)**
    ```bash
-   mkdir -p ~/ai-bot/logs
-   mkdir -p ~/ai-bot/bot_persistence/backups
-   mkdir -p ~/ai-bot/trade_data
+   PROFILE=${BOT_PROFILE:-default}
+   mkdir -p ~/ai-bot/logs/$PROFILE
+   mkdir -p ~/ai-bot/bot_persistence/$PROFILE/backups
+   mkdir -p ~/ai-bot/credentials
+   mkdir -p ~/ai-bot/trade_data/$PROFILE
    ```
+   Each instance now writes to profile-scoped folders (`bot_persistence/<profile>/`, `logs/<profile>/`,
+   and `credentials/<profile>.json`). Switching `BOT_PROFILE` keeps tenants isolated on the same host.
 
 2. **Environment variables** (append to `~/.bashrc` or a systemd unit):
    ```bash
+   export BOT_PROFILE=default            # set per tenant/container
    export BOT_LOG_LEVEL=INFO
    export BOT_LOG_DIR="/home/aibot/ai-bot/logs"
    export BOT_LOG_COMPONENTS="ALL"     # e.g. TRADE_ENGINE,ML_SYSTEM,UI
    export BINANCE_TESTNET=1             # Stays in paper mode
    export FLASK_RUN_PORT=5000
+   export BINANCE_CREDENTIAL_KEY="$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
+   export BINANCE_TERMS_ACCEPTED=0
    ```
    - Override `BOT_LOG_COMPONENTS` with a comma-separated list (e.g. `TRADE_ENGINE,ORDER_ROUTER`) to restrict noise.
    - Set `BOT_REAL_TRADING=1` only after wiring secure credentials.
 
-3. **Binance credentials**
+3. **Binance credentials & compliance flags**
    - For spot/futures, POST them via the dashboard UI or `curl` to `/api/binance/credentials` once the app is running.
    - Store keys in the provided encrypted persistence store; never hardcode them.
+   - Non-testnet trading remains blocked until both `BINANCE_TERMS_ACCEPTED=1` and `FINAL_HAMMER=TRUE` are set.
 
 ## 6. Launch the Bot
 
 ### Development mode (manual shell)
 ```bash
 source ~/ai-bot/.venv/bin/activate
-python ai_ml_auto_bot_final.py
+python start_server.py
 ```
 - The dashboard renders at `http://<server-ip>:5000/`.
 - Logs stream to `logs/bot.log` and `logs/bot.debug.log` while also teeing to stdout.
+
+Prefer using the Flask CLI for iterative dev/testing so you can override settings via `FLASK_APP=app:create_app`:
+
+```bash
+export FLASK_APP=app:create_app
+flask run --host=0.0.0.0 --port=5000
+```
 
 ### Production mode (systemd)
 Create `/etc/systemd/system/aibot.service` (as `root`):
@@ -125,7 +140,7 @@ Environment="BOT_LOG_DIR=/home/aibot/ai-bot/logs"
 Environment="BOT_LOG_LEVEL=INFO"
 Environment="FLASK_RUN_PORT=5000"
 EnvironmentFile=/home/aibot/.aibot-env  # optional extra vars
-ExecStart=/home/aibot/ai-bot/.venv/bin/python /home/aibot/ai-bot/ai_ml_auto_bot_final.py
+ExecStart=/home/aibot/ai-bot/.venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 --threads 2 --timeout 120 wsgi:application
 Restart=on-failure
 RestartSec=5
 
@@ -139,6 +154,8 @@ sudo systemctl enable --now aibot.service
 sudo systemctl status aibot.service
 ```
 Tail logs with `journalctl -u aibot.service -f` or the log files under `~/ai-bot/logs`.
+
+> Tip: The repo ships with `ai-trading-bot.service` plus `setup_systemd_service.sh` to copy it into `/etc/systemd/system/`—customize the paths/env vars there if your deployment layout differs.
 
 ### Updating the VPS without Git
 

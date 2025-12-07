@@ -32,140 +32,233 @@ A comprehensive AI-powered cryptocurrency trading bot with advanced machine lear
 
 ## 📋 Requirements
 
-- Python 3.8+
-- Binance API keys (for live trading)
+- Python 3.10+ (3.11 recommended for best performance)
+- pip 23+ with virtualenv support
+- TA-Lib C library installed on the host (macOS: `brew install ta-lib`, Ubuntu/Debian: build from source as shown below)
+- Binance API keys (only when enabling live trading)
 - 8GB+ RAM recommended
 - Multi-core CPU for parallel processing
 
 ## 🛠️ Installation
 
-1. **Clone the Repository**:
-```bash
-git clone https://github.com/YOUR_USERNAME/ai-trading-bot.git
-cd ai-trading-bot
-```
+1. **Clone the repository**
 
-2. **Setup Virtual Environment**:
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/ai-trading-bot.git
+   cd ai-trading-bot
+   ```
 
-3. **Install Dependencies**:
-```bash
-pip install -r requirements.txt
-```
+2. **Install TA-Lib (system dependency)**
 
-4. **Environment Configuration**:
-```bash
-# Copy environment template
-cp config/deploy.env.example config/deploy.env
+   ```bash
+   # macOS
+   brew install ta-lib
 
-# Edit with your settings
-nano config/deploy.env
-```
+   # Debian/Ubuntu (build from source)
+   sudo apt update && sudo apt install -y build-essential wget
+   cd /tmp && wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
+   tar -xzf ta-lib-0.4.0-src.tar.gz && cd ta-lib-0.4.0
+   ./configure --prefix=/usr && make && sudo make install
+   ```
 
-5. **Binance API Setup** (Optional for live trading):
-```bash
-# Add to config/deploy.env
-BINANCE_API_KEY=your_api_key_here
-BINANCE_API_SECRET=your_api_secret_here
-BOT_PROFILE=default
-```
+3. **Create a virtual environment**
+
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate  # Windows: .venv\Scripts\activate
+   ```
+
+4. **Install Python dependencies**
+
+   ```bash
+   pip install --upgrade pip wheel
+   pip install -r requirements.txt
+   ```
+
+5. **Configure environment variables**
+
+   ```bash
+   cp config/deploy.env.example config/deploy.env
+   nano config/deploy.env
+   ```
+
+   Key environment flags:
+
+   - `FINAL_HAMMER`: Defaults to `FALSE`. Keep it `FALSE` for development, paper trading, and futures/real-market dry runs. Set it to `TRUE` **only** after verifying live keys, balances, and risk controls—the bot refuses to place real or futures orders until this is explicitly enabled.
+   - `BOT_PROFILE`: Selects which profile under `config/default` to load (defaults to `default`).
+   - `DATABASE_URL`: Point this at Postgres/MySQL in production; falls back to `sqlite:///trading_bot.db` locally.
+   - `ENABLE_MARKETING_ANALYTICS`, `MARKETING_ANALYTICS_SRC`, `MARKETING_ANALYTICS_DOMAIN`, `MARKETING_ANALYTICS_API_HOST`: Optional Plausible-style tracking snippet injected on `/marketing`, `/login`, `/register` when enabled (set `ENABLE_MARKETING_ANALYTICS=1`).
+
+6. **(Optional) Configure Binance credentials for live trading**
+
+   ```bash
+   # In config/deploy.env
+   BINANCE_API_KEY=your_api_key_here
+   BINANCE_API_SECRET=your_api_secret_here
+   BOT_PROFILE=default
+   ```
+
+## ✅ Binance Compliance & Submission
+
+If you're preparing this bot for Binance Academy/API approval, start with `docs/binance_compliance.md`. It captures:
+
+- A requirement→implementation matrix mapping Binance guidelines to the controls in this repo.
+- Security practices for API key handling, storage, logging, and network boundaries.
+- Test suites & uptime probes Binance reviewers typically request as evidence.
+- A submission checklist (architecture diagram, demo video, compliance attestation, etc.).
+
+**New safeguards to configure before submitting:**
+
+- Generate a credential encryption key and set `BINANCE_CREDENTIAL_KEY` so Binance API keys are written to disk only after Fernet encryption. Example: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+- Set `BINANCE_TERMS_ACCEPTED=1` only after accepting the [Binance Developer Terms](https://developers.binance.com/docs/binance-api/terms); the bot blocks non-testnet trading until this flag is enabled.
+- Keep `FINAL_HAMMER=FALSE` + `BINANCE_TESTNET=1` for demos and review sessions—switching either flag requires a full compliance re-check.
+
+Keep your deployment on `BINANCE_TESTNET=1` with `FINAL_HAMMER=FALSE` until Binance approves the integration, then follow the rotation steps outlined in that document before enabling live trading.
 
 ## 🚀 Usage
 
-### Development Mode
+### Local dashboard (development)
+
 ```bash
-python ai_ml_auto_bot_final.py
+source .venv/bin/activate
+export FINAL_HAMMER=FALSE
+python start_server.py
 ```
 
-The bot will start a web server at `http://localhost:5000`
+This starts the Flask dashboard at `http://localhost:5000`. You can also run it via Flask CLI:
 
-### Admin Access
-- **URL**: http://localhost:5000/login
-- **Username**: admin
-- **Password**: admin123
-- **Note**: Change the default password after first login!
+```bash
+export FLASK_APP=start_server.py
+export FINAL_HAMMER=FALSE
+flask run --host=0.0.0.0 --port=5000
+```
 
-### Production Deployment
+> **Note:** `ai_ml_auto_bot_final.py` is kept for backwards compatibility, but the preferred entrypoint is `start_server.py`/Flask CLI so the modular `app/` package wiring is respected—helper scripts such as `simple_server.py` and `create_admin.py` now bootstrap through `create_app()` as well.
 
-#### Option 1: Systemd Service (Recommended for VPS)
+## 🧩 Runtime architecture
+
+The legacy monolith has been decomposed into typed runtime modules so the Flask factory (and tests) can wire everything without importing `ai_ml_auto_bot_final.py` directly:
+
+- `app/runtime/context.py` – typed wrapper around the dashboard payload plus helpers for attaching to Flask apps.
+- `app/runtime/builder.py` – assembles the runtime context (indicator + symbol + persistence + background + service runtimes) and is used by `app/bootstrap.py`.
+- `app/runtime/factories.py` – builds ML/trading service bundles so both Flask bootstrap and `ai_ml_auto_bot_final.py` can import them without side effects.
+- `app/runtime/indicators.py`, `symbols.py`, `persistence.py`, `background.py`, `services.py` – focused builders for each subsystem.
+- `app/runtime/system.py` – runs the legacy initialization flow (`initialize_runtime_from_context`) using only the assembled payload.
+
+When `create_app()` runs, `bootstrap_runtime()` calls the builder, attaches the resulting context to Flask, and then hands the payload to `initialize_runtime_from_context()` to start schedulers, background workers, and health monitoring. Running `ai_ml_auto_bot_final.py` directly still works, but it now calls `register_ai_bot_context(app, force=True)` only when executed as a script, keeping imports side-effect free.
+
+To keep the initializer honest, `tests/test_runtime_system.py` spins up dummy traders, ML systems, and background managers to assert that persistence, background tasks, health monitoring, and signal handlers all wire up correctly with (and without) optional services.
+
+### Refreshing hashed dashboard assets
+
+The dashboard HTML references hashed bundles generated under `app/static/dist/`. If those bundles are missing or were checked in as empty files, the Flask helper now falls back to the legacy `app/static/css/*.css` and `app/static/js/*.js` assets so you still get a working UI. For the production look and smaller payloads, rebuild the hashed bundles:
+
+```bash
+npm install         # once per machine
+npm run build:assets
+```
+
+The command populates `app/static/dist/` and rewrites `app/static/dist/manifest.json`. After rebuilding you can restart `flask run` (or `start_server.py`) and the dashboard/login pages will automatically pick up the fresh hashed assets.
+
+### Creating an admin user
+
+Use the shared CLI helper (it now bootstraps the Flask app via `create_app()` so it works against the exact same database/extension wiring):
+
+```bash
+source .venv/bin/activate
+python create_admin.py --username admin --email admin@example.com
+```
+
+- Omit `--password` to be prompted securely; include it for scripted environments.
+- Pass `--reset-password` to rotate credentials for an existing admin without deleting records.
+- Log in at `http://localhost:5000/login` afterwards and force a password change in production.
+
+### Profile-scoped storage sanity check
+
+Phase 0 of the multi-tenant roadmap is complete: persistence, logs, and Binance credentials now live under per-profile directories. You can smoke-test this behavior without touching live data:
+
+```bash
+source .venv/bin/activate
+pytest tests/test_profile_pathing.py
+```
+
+The suite provisions temporary `BOT_PROFILE` values (e.g., `alpha`, `bravo`) and verifies that:
+
+- `resolve_profile_path()` routes persistence assets to distinct folders per profile and leaves prior data untouched.
+- `BinanceCredentialStore` reads/writes vault files scoped to `<profile>.json`, so credentials saved for one tenant never appear in another tenant's store.
+
+Run the tests whenever you change profile/pathing logic or before rolling out new tenant profiles.
+
+### Backtesting & diagnostics
+
+```bash
+source .venv/bin/activate
+FINAL_HAMMER=FALSE python scripts/backtest_health_check.py
+python scripts/status_diagnostics.py
+```
+
+### Production deployment
+
+#### Option 1: Systemd service (recommended for VPS)
+
 ```bash
 # 1. Copy files to your VPS
 scp -r . user@your-vps:/path/to/ai-bot/
 
-# 2. On your VPS, run the systemd setup script
+# 2. On your VPS, install system dependencies/venv as above, then run:
 cd /path/to/ai-bot
 sudo ./setup_systemd_service.sh
 
-# 3. Or use the complete deployment script from your local machine
-# Edit deploy_to_vps_complete.sh with your VPS details, then run:
+# 3. Or from your local machine after editing VPS details:
 ./deploy_to_vps_complete.sh
 ```
 
-#### Option 2: Using the deployment script
+#### Option 2: Deployment helper script
+
 ```bash
-# Using the existing deployment script
 bash scripts/deploy_to_vps.sh
 ```
 
-### Systemd Service Management
+### Systemd service management
+
 ```bash
-# Check service status
-sudo systemctl status ai-trading-bot
-
-# View service logs
-sudo journalctl -u ai-trading-bot -f
-
-# Restart service
-sudo systemctl restart ai-trading-bot
-
-# Stop service
-sudo systemctl stop ai-trading-bot
-
-# Start service
-sudo systemctl start ai-trading-bot
+sudo systemctl status ai-trading-bot      # check status
+sudo journalctl -u ai-trading-bot -f      # follow logs
+sudo systemctl restart ai-trading-bot     # restart
+sudo systemctl stop ai-trading-bot        # stop
+sudo systemctl start ai-trading-bot       # start
 ```
 
-### Backtesting
-```bash
-python scripts/backtest_health_check.py
-```
+## 🧩 Modular architecture status
 
-## 📁 Project Structure
+The legacy single-file app has been split into a maintainable Flask package housed under `app/`. Highlights:
 
-```
-ai-bot/
-├── ai_ml_auto_bot_final.py    # Main trading bot with Flask web interface
-├── start_server.py           # Flask server startup script
-├── requirements.txt           # Python dependencies
-├── .gitignore                 # Git ignore rules
-├── ai-trading-bot.service     # Systemd service configuration
-├── setup_systemd_service.sh   # Systemd service setup script
-├── deploy_to_vps_complete.sh  # Complete VPS deployment script
-├── config/
-│   ├── deploy.env.example     # Environment template
-│   └── default/               # Default configurations
-├── scripts/
-│   ├── deploy_to_vps.sh       # VPS deployment script
-│   ├── status_diagnostics.py  # System diagnostics
-│   ├── backtest_health_check.py # Backtesting utilities
-│   └── create_deployment_bundle.py # Deployment bundler
-├── api_routes/                # API route handlers
-├── database_layer/            # Database utilities
-├── robot_module/              # Bot control functions
-├── configs/                   # Configuration files
-├── trade_data/                # Trade history storage
-├── artifacts/                 # ML model artifacts
-├── reports/                   # Backtest reports
-├── futures_models/            # Futures trading models
-├── optimized_models/          # Optimized ML models
-├── ultimate_models/           # Ultimate ML models
-├── instance/                  # SQLite database
-├── bot_persistence/           # Bot state persistence
-└── docs/                      # Documentation
-```
+- `create_app()` in `app/__init__.py` is now the default entrypoint for `start_server.py`, `wsgi.py`, CLI helpers, and tests. The old `ai_ml_auto_bot_final.py` simply imports shared services for backwards compatibility.
+- Blueprints under `app/routes/` replace inline route declarations, so auth, users, dashboard, trading, analytics, and persistence APIs live in dedicated modules.
+- Services such as traders, ML pipelines, persistence, futures control, market data, health checks, and live P&L schedulers reside in `app/services/` and are wired through a common AI bot context to keep global state in one place.
+- Background jobs live in `app/tasks/`, giving schedulers predictable lifecycle hooks for market data, self-improvement, persistence snapshots, and live portfolio refresh.
+- Dashboard UI assets have moved into `app/templates/` and `app/static/` (with ES-module JS controllers), paving the way for future bundlers without blocking legacy usage.
+
+Remaining modularization work:
+
+1. Optional asset bundling (Flask-Assets/esbuild) so the new JS modules can emit hashed builds for CDN caching.
+2. Final audit for any helper functions still imported directly from the legacy monolith and migrate them into the services/tasks packages.
+3. Broaden the automated test matrix (see `tests/`) to cover the newly extracted services once the bundling step is complete.
+
+## 🔄 Differences vs the legacy GitHub release
+
+Compared to the public `bareera786/ai-trading-bot` repository snapshot:
+
+- **Safety controls** – `FINAL_HAMMER`, Binance credential encryption, and compliance toggles are enforced across services, whereas the public repo had manual safeguards only.
+- **Documentation** – This README plus `docs/binance_compliance.md`, `docs/modularization_plan.md`, `docs/runtime_component_matrix.md`, and others document the new architecture, deployment paths, and review checklists.
+- **Modular codebase** – The `app/` package, blueprints, and services/tasks do not exist in the old repo, which still relies on the single-file `ai_ml_auto_bot_final.py`.
+- **Testing & automation** – A full `tests/` suite (user APIs, subscriptions, toggles, compliance probes, persistence) now backs the code; the legacy repo only had a handful of scripts.
+- **Deployment experience** – Updated scripts (`deploy_to_vps_complete.sh`, `scripts/deploy_to_vps.sh`, systemd helpers) and the README’s production checklist reflect real-world operations and compliance steps absent in the older version.
+
+These deltas are intentionally kept in this workspace for review before we push them to GitHub; once you’re ready, committing and pushing this README plus the modular code will update the online repo.
+## 🧭 Modularization Progress
+
+The repository is mid-flight from the legacy single-file app toward a modular Flask package housed in `app/`. Most services, background workers, and blueprints have already moved; outstanding work focuses on finalising the `create_app` factory, trimming duplicated endpoints, and modernising the asset pipeline. For the full milestone tracker and detailed checklist, see `docs/modularization_plan.md`.
 
 ## ⚙️ Configuration
 
@@ -233,6 +326,11 @@ ai-bot/
 - Graceful API failure recovery
 - Fallback indicator calculations
 - Automatic reconnection logic
+
+### FINAL_HAMMER safeguard
+- `FINAL_HAMMER=FALSE` is the default and blocks real-money or futures execution; paper trading, backtesting, and dashboard exploration all work normally in this mode.
+- Set `FINAL_HAMMER=TRUE` only after confirming environment variables, balances, circuit breakers, and credentials. The bot validates this flag at startup and before each order, so failing to enable it keeps trading logic read-only.
+- Follow the [FINAL_HAMMER Launch Checklist](docs/final_hammer_checklist.md) every time you promote a build. It captures the non-negotiables: build hashed dashboard assets via `npm run build:assets`, verify the Futures Manual Service endpoints (`/api/futures/manual`, `/api/futures/manual/select`, `/api/futures/manual/toggle`), and rerun the regression set (`pytest tests/test_public_landing.py tests/test_public_subscriptions.py tests/test_user_api.py tests/test_toggle.py tests/test_futures_toggle.py`).
 
 ## 🔍 Troubleshooting
 

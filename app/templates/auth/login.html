@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Trading Bot - Login</title>
+    <link rel="stylesheet" href="{{ asset_url('auth.css') }}">
+</head>
+<body class="auth-body auth-landing" data-subscription-plans-url="{{ url_for('subscriptions.api_public_subscription_plans') }}">
+    <div class="landing-layout">
+        <section class="hero-section">
+            <div class="hero-badge">Premium automation • V4</div>
+            <h1 class="hero-title">Professional AI trading infrastructure for elite teams</h1>
+            <p class="hero-description">
+                Deploy institutional-grade strategies with 24/7 monitoring, adaptive risk controls,
+                and human-friendly controls. The dashboard you sign into powers live capital across spot and futures.
+            </p>
+            <div class="stats-grid">
+                <div class="stats-card">
+                    <div class="value">1,200+</div>
+                    <div class="label">Signals / day</div>
+                </div>
+                <div class="stats-card">
+                    <div class="value">99.95%</div>
+                    <div class="label">Uptime SLA</div>
+                </div>
+                <div class="stats-card">
+                    <div class="value">65+</div>
+                    <div class="label">Curated symbols</div>
+                </div>
+            </div>
+            <div class="subscription-card" data-subscription-card>
+                <div class="plan-header">
+                    <h3 data-plan-name>Elite Automation</h3>
+                    <span class="plan-badge" data-plan-badge>Most popular</span>
+                </div>
+                <div class="plan-price">
+                    <span class="price" data-plan-price>$249</span>
+                    <span class="term" data-plan-term>/month</span>
+                </div>
+                <ul class="plan-features">
+                    <li><span>✓</span> Institutional-grade AI signal engine</li>
+                    <li><span>✓</span> Dedicated portfolio concierge & onboarding</li>
+                    <li><span>✓</span> Futures + spot automation with compliance logging</li>
+                    <li><span>✓</span> Priority support & white-glove deployment</li>
+                </ul>
+                <a href="{{ url_for('auth.register') }}" class="plan-cta">Start free pilot</a>
+                <p class="plan-subtext" data-plan-subtext>Includes 14-day pilot, cancel anytime.</p>
+            </div>
+        </section>
+
+        <div class="login-container">
+            <div class="login-header">
+                <h1>🚀 AI Trading Bot</h1>
+                <p>Please sign in to access your dashboard</p>
+            </div>
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-danger">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST">
+                <div class="form-group">
+                    <label class="form-label" for="username">Username</label>
+                    <input type="text" id="username" name="username" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" name="password" class="form-input" required>
+                </div>
+
+                <button type="submit" class="btn">Sign In</button>
+            </form>
+
+            <div class="register-link">
+                Don't have an account? <a href="{{ url_for('auth.register') }}">Register here</a>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="{{ asset_url('subscription-card.js') }}" defer></script>
+    {% if analytics and analytics.enabled and analytics.script_src %}
+        <script defer src="{{ analytics.script_src }}"{% if analytics.domain %} data-domain="{{ analytics.domain }}"{% endif %}{% if analytics.api_host %} data-api="{{ analytics.api_host }}"{% endif %}></script>
+    {% endif %}
+</body>
+</html>

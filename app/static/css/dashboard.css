@@ -397,6 +397,22 @@
             display: block;
         }
 
+        /* Admin dashboard typography alignment */
+        .admin-dashboard-page .section-title {
+            font-size: var(--font-size-xl);
+            letter-spacing: -0.01em;
+        }
+
+        .admin-dashboard-page .dashboard-card .card-title {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-semibold);
+        }
+
+        .admin-dashboard-page .section-helper {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+
         .section-header {
             display: flex;
             justify-content: space-between;

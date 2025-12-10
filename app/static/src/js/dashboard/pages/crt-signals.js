@@ -2,13 +2,21 @@ import { fetchJson } from '../utils/network.js';
 
 export async function refreshCRTSignals() {
   try {
-    const response = await fetchJson('/api/crt_data');
-    if (response && response.data) {
-      updateCRTSignalsTable(response.data);
-    }
+    // Try optimized signals first (often more populated), fallback to ultimate.
+    const [optimizedResp, ultimateResp] = await Promise.all([
+      fetchJson('/api/crt_data?mode=optimized').catch(() => null),
+      fetchJson('/api/crt_data?mode=ultimate').catch(() => null),
+    ]);
+
+    const data = optimizedResp?.data && Object.keys(optimizedResp.data).length
+      ? optimizedResp.data
+      : ultimateResp?.data || {};
+
+    updateCRTSignalsTable(data);
     console.log('CRT signals refreshed');
   } catch (error) {
     console.error('Failed to refresh CRT signals:', error);
+    updateCRTSignalsTable({});
   }
 }
 

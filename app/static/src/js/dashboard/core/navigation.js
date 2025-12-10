@@ -58,6 +58,9 @@ export function initNavigation() {
         if (pageId === 'backtest-lab') {
           window.dispatchEvent(new CustomEvent('dashboard:backtest-lab-visible'));
         }
+        if (pageId === 'crt-signals') {
+          window.dispatchEvent(new CustomEvent('dashboard:crt-signals-visible'));
+        }
       }
     });
   });

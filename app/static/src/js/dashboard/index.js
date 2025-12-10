@@ -6,6 +6,7 @@ import './pages/symbols.js';
 import './pages/admin-settings.js';
 import './pages/admin-dashboard.js';
 import './pages/backtest.js';
+import './pages/crt-signals.js';
 
 function bootstrap() {
   initNavigation();

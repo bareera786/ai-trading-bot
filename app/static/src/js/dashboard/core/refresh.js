@@ -4,6 +4,7 @@ import { refreshStrategies } from '../pages/strategies.js';
 import { refreshQFMData } from '../pages/qfm.js';
 import { refreshUsers } from '../pages/user-management.js';
 import { refreshSpotData, refreshFuturesData } from '../pages/trading.js';
+import { refreshCRTSignals } from '../pages/crt-signals.js';
 
 let refreshActiveSectionRef = async () => {};
 
@@ -54,6 +55,9 @@ export function initAutoRefresh() {
           break;
         case 'futures':
           await refreshFuturesData();
+          break;
+        case 'crt-signals':
+          await refreshCRTSignals();
           break;
         default:
           break;

@@ -40,156 +40,6 @@
                         <span class="nav-text">System Settings</span>
                     </a>
                 </div>
-                                <!-- Admin Dashboard Page -->
-                                <section id="admin-dashboard" class="page-section">
-                                    <div class="section-header">
-                                        <h2 class="section-title">
-                                            <span class="section-icon">️</span>
-                                            Admin Dashboard
-                                        </h2>
-                                        <p class="section-helper">Industrial-grade overview and controls for administrators.</p>
-                                    </div>
-                                    <div class="dashboard-grid">
-                                        <div class="dashboard-card">
-                                            <div class="card-header"><span class="card-icon">👥</span><h3 class="card-title">Total Users</h3></div>
-                                            <div class="card-value" id="admin-total-users">0</div>
-                                            <p class="card-subtitle">All registered users</p>
-                                        </div>
-                                        <div class="dashboard-card">
-                                            <div class="card-header"><span class="card-icon">✅</span><h3 class="card-title">Active Users</h3></div>
-                                            <div class="card-value" id="admin-active-users">0</div>
-                                            <p class="card-subtitle">Currently active</p>
-                                        </div>
-                                        <div class="dashboard-card">
-                                            <div class="card-header"><span class="card-icon">💸</span><h3 class="card-title">Total Revenue</h3></div>
-                                            <div class="card-value" id="admin-total-revenue">$0.00</div>
-                                            <p class="card-subtitle">All-time subscription revenue</p>
-                                        </div>
-                                        <div class="dashboard-card">
-                                            <div class="card-header"><span class="card-icon">⚡</span><h3 class="card-title">System Health</h3></div>
-                                            <div class="card-value"><span class="status-indicator status-success" id="admin-system-health">ONLINE</span></div>
-                                            <p class="card-subtitle">All systems operational</p>
-                                        </div>
-                                    </div>
-                                    <div class="section-header" style="margin-top:2.5rem;">
-                                        <h3 class="section-title">Quick Admin Actions</h3>
-                                    </div>
-                                    <div style="display:flex;gap:2rem;flex-wrap:wrap;">
-                                        <a href="#" class="btn btn-primary" data-page="user-management" style="min-width:180px;">User Management</a>
-                                        <a href="#" class="btn btn-secondary" data-page="symbols" style="min-width:180px;">Symbol Management</a>
-                                        <a href="#" class="btn btn-secondary" data-page="backtest-lab" style="min-width:180px;">Backtest Lab</a>
-                                        <a href="#" class="btn btn-secondary" data-page="admin-settings" style="min-width:180px;">System Settings</a>
-                                    </div>
-
-                                    <!-- Self-Improvement System Dashboard -->
-                                    <div class="section-header" style="margin-top:3rem;">
-                                        <h3 class="section-title">
-                                            <span class="section-icon">🤖</span>
-                                            AI Self-Improvement System
-                                        </h3>
-                                        <p class="section-helper">Advanced autonomous optimization and predictive analytics.</p>
-                                    </div>
-
-                                    <!-- Self-Improvement Metrics Grid -->
-                                    <div class="dashboard-grid">
-                                        <div class="dashboard-card">
-                                            <div class="card-header"><span class="card-icon">📈</span><h3 class="card-title">Success Rate</h3></div>
-                                            <div class="card-value" id="si-success-rate">0.0%</div>
-                                            <p class="card-subtitle">Average improvement success</p>
-                                        </div>
-                                        <div class="dashboard-card">
-                                            <div class="card-header"><span class="card-icon">🔄</span><h3 class="card-title">Cycle Count</h3></div>
-                                            <div class="card-value" id="si-cycle-count">0</div>
-                                            <p class="card-subtitle">Total improvement cycles</p>
-                                        </div>
-                                        <div class="dashboard-card">
-                                            <div class="card-header"><span class="card-icon">⚡</span><h3 class="card-title">Improvement Velocity</h3></div>
-                                            <div class="card-value" id="si-velocity">0.00</div>
-                                            <p class="card-subtitle">Rate of performance change</p>
-                                        </div>
-                                        <div class="dashboard-card">
-                                            <div class="card-header"><span class="card-icon">🔮</span><h3 class="card-title">System Health</h3></div>
-                                            <div class="card-value"><span class="status-indicator" id="si-health">UNKNOWN</span></div>
-                                            <p class="card-subtitle" id="si-health-desc">Self-improvement status</p>
-                                        </div>
-                                    </div>
-
-                                    <!-- Performance Charts -->
-                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin:2rem 0;">
-                                        <div class="dashboard-card">
-                                            <div class="card-header"><h3 class="card-title">Success Rate Trend</h3></div>
-                                            <div style="height:200px;">
-                                                <canvas id="si-success-chart" style="width:100%;height:100%;"></canvas>
-                                            </div>
-                                        </div>
-                                        <div class="dashboard-card">
-                                            <div class="card-header"><h3 class="card-title">Model Accuracy History</h3></div>
-                                            <div style="height:200px;">
-                                                <canvas id="si-accuracy-chart" style="width:100%;height:100%;"></canvas>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Predictive Analytics -->
-                                    <div class="dashboard-card" style="margin:2rem 0;">
-                                        <div class="card-header"><span class="card-icon">🔮</span><h3 class="card-title">Predictive Analytics</h3></div>
-                                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
-                                            <div>
-                                                <strong>Next Cycle Prediction:</strong>
-                                                <div id="si-next-prediction">Calculating...</div>
-                                            </div>
-                                            <div>
-                                                <strong>Optimal Timing:</strong>
-                                                <div id="si-optimal-timing">Analyzing...</div>
-                                            </div>
-                                            <div>
-                                                <strong>Confidence Level:</strong>
-                                                <div id="si-confidence">0%</div>
-                                            </div>
-                                            <div>
-                                                <strong>Market Regime:</strong>
-                                                <div id="si-market-regime">Unknown</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Auto-Fix Actions -->
-                                    <div class="dashboard-card" style="margin:2rem 0;">
-                                        <div class="card-header"><span class="card-icon">🔧</span><h3 class="card-title">Auto-Fix System</h3></div>
-                                        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-                                            <button class="btn btn-secondary" id="si-trigger-cycle" style="min-width:150px;">🔄 Run Cycle Now</button>
-                                            <button class="btn btn-warning" id="si-model-retrain" style="min-width:150px;">🧠 Retrain Models</button>
-                                            <button class="btn btn-warning" id="si-optimize-indicators" style="min-width:150px;">📊 Optimize Indicators</button>
-                                            <button class="btn btn-danger" id="si-reset-config" style="min-width:150px;">⚙️ Reset Config</button>
-                                            <button class="btn btn-info" id="si-cleanup-memory" style="min-width:150px;">🧹 Memory Cleanup</button>
-                                        </div>
-                                        <div style="margin-top:1rem;">
-                                            <strong>Last Auto-Fix:</strong> <span id="si-last-autofix">None</span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Performance Details Table -->
-                                    <div class="dashboard-card" style="margin:2rem 0;">
-                                        <div class="card-header"><h3 class="card-title">Recent Performance Details</h3></div>
-                                        <div style="overflow-x:auto;">
-                                            <table id="si-performance-table" style="width:100%;border-collapse:collapse;">
-                                                <thead>
-                                                    <tr style="background:#f8f9fa;">
-                                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Cycle #</th>
-                                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Timestamp</th>
-                                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Ultimate Rate</th>
-                                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Optimized Rate</th>
-                                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Average</th>
-                                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Duration</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="si-performance-body">
-                                                    <tr><td colspan="6" style="text-align:center;padding:2rem;color:#6c757d;">Loading performance data...</td></tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </section>
                 <div class="nav-section">
                     <div class="nav-section-title">Overview</div>
                     <a href="#" class="nav-item active" data-page="dashboard">
@@ -303,6 +153,157 @@
             </header>
 
             <div class="content-body">
+                <!-- Admin Dashboard Page -->
+                <section id="admin-dashboard" class="page-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span class="section-icon">️</span>
+                            Admin Dashboard
+                        </h2>
+                        <p class="section-helper">Industrial-grade overview and controls for administrators.</p>
+                    </div>
+                    <div class="dashboard-grid">
+                        <div class="dashboard-card">
+                            <div class="card-header"><span class="card-icon">👥</span><h3 class="card-title">Total Users</h3></div>
+                            <div class="card-value" id="admin-total-users">0</div>
+                            <p class="card-subtitle">All registered users</p>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="card-header"><span class="card-icon">✅</span><h3 class="card-title">Active Users</h3></div>
+                            <div class="card-value" id="admin-active-users">0</div>
+                            <p class="card-subtitle">Currently active</p>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="card-header"><span class="card-icon">💸</span><h3 class="card-title">Total Revenue</h3></div>
+                            <div class="card-value" id="admin-total-revenue">$0.00</div>
+                            <p class="card-subtitle">All-time subscription revenue</p>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="card-header"><span class="card-icon">⚡</span><h3 class="card-title">System Health</h3></div>
+                            <div class="card-value"><span class="status-indicator status-success" id="admin-system-health">ONLINE</span></div>
+                            <p class="card-subtitle">All systems operational</p>
+                        </div>
+                    </div>
+                    <div class="section-header" style="margin-top:2.5rem;">
+                        <h3 class="section-title">Quick Admin Actions</h3>
+                    </div>
+                    <div style="display:flex;gap:2rem;flex-wrap:wrap;">
+                        <a href="#" class="btn btn-primary" data-page="user-management" style="min-width:180px;">User Management</a>
+                        <a href="#" class="btn btn-secondary" data-page="symbols" style="min-width:180px;">Symbol Management</a>
+                        <a href="#" class="btn btn-secondary" data-page="backtest-lab" style="min-width:180px;">Backtest Lab</a>
+                        <a href="#" class="btn btn-secondary" data-page="admin-settings" style="min-width:180px;">System Settings</a>
+                    </div>
+
+                    <!-- Self-Improvement System Dashboard -->
+                    <div class="section-header" style="margin-top:3rem;">
+                        <h3 class="section-title">
+                            <span class="section-icon">🤖</span>
+                            AI Self-Improvement System
+                        </h3>
+                        <p class="section-helper">Advanced autonomous optimization and predictive analytics.</p>
+                    </div>
+
+                    <!-- Self-Improvement Metrics Grid -->
+                    <div class="dashboard-grid">
+                        <div class="dashboard-card">
+                            <div class="card-header"><span class="card-icon">📈</span><h3 class="card-title">Success Rate</h3></div>
+                            <div class="card-value" id="si-success-rate">0.0%</div>
+                            <p class="card-subtitle">Average improvement success</p>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="card-header"><span class="card-icon">🔄</span><h3 class="card-title">Cycle Count</h3></div>
+                            <div class="card-value" id="si-cycle-count">0</div>
+                            <p class="card-subtitle">Total improvement cycles</p>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="card-header"><span class="card-icon">⚡</span><h3 class="card-title">Improvement Velocity</h3></div>
+                            <div class="card-value" id="si-velocity">0.00</div>
+                            <p class="card-subtitle">Rate of performance change</p>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="card-header"><span class="card-icon">🔮</span><h3 class="card-title">System Health</h3></div>
+                            <div class="card-value"><span class="status-indicator" id="si-health">UNKNOWN</span></div>
+                            <p class="card-subtitle" id="si-health-desc">Self-improvement status</p>
+                        </div>
+                    </div>
+
+                    <!-- Performance Charts -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin:2rem 0;">
+                        <div class="dashboard-card">
+                            <div class="card-header"><h3 class="card-title">Success Rate Trend</h3></div>
+                            <div style="height:200px;">
+                                <canvas id="si-success-chart" style="width:100%;height:100%;"></canvas>
+                            </div>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="card-header"><h3 class="card-title">Model Accuracy History</h3></div>
+                            <div style="height:200px;">
+                                <canvas id="si-accuracy-chart" style="width:100%;height:100%;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Predictive Analytics -->
+                    <div class="dashboard-card" style="margin:2rem 0;">
+                        <div class="card-header"><span class="card-icon">🔮</span><h3 class="card-title">Predictive Analytics</h3></div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+                            <div>
+                                <strong>Next Cycle Prediction:</strong>
+                                <div id="si-next-prediction">Calculating...</div>
+                            </div>
+                            <div>
+                                <strong>Optimal Timing:</strong>
+                                <div id="si-optimal-timing">Analyzing...</div>
+                            </div>
+                            <div>
+                                <strong>Confidence Level:</strong>
+                                <div id="si-confidence">0%</div>
+                            </div>
+                            <div>
+                                <strong>Market Regime:</strong>
+                                <div id="si-market-regime">Unknown</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Auto-Fix Actions -->
+                    <div class="dashboard-card" style="margin:2rem 0;">
+                        <div class="card-header"><span class="card-icon">🔧</span><h3 class="card-title">Auto-Fix System</h3></div>
+                        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+                            <button class="btn btn-secondary" id="si-trigger-cycle" style="min-width:150px;">🔄 Run Cycle Now</button>
+                            <button class="btn btn-warning" id="si-model-retrain" style="min-width:150px;">🧠 Retrain Models</button>
+                            <button class="btn btn-warning" id="si-optimize-indicators" style="min-width:150px;">📊 Optimize Indicators</button>
+                            <button class="btn btn-danger" id="si-reset-config" style="min-width:150px;">⚙️ Reset Config</button>
+                            <button class="btn btn-info" id="si-cleanup-memory" style="min-width:150px;">🧹 Memory Cleanup</button>
+                        </div>
+                        <div style="margin-top:1rem;">
+                            <strong>Last Auto-Fix:</strong> <span id="si-last-autofix">None</span>
+                        </div>
+                    </div>
+
+                    <!-- Performance Details Table -->
+                    <div class="dashboard-card" style="margin:2rem 0;">
+                        <div class="card-header"><h3 class="card-title">Recent Performance Details</h3></div>
+                        <div style="overflow-x:auto;">
+                            <table id="si-performance-table" style="width:100%;border-collapse:collapse;">
+                                <thead>
+                                    <tr style="background:#f8f9fa;">
+                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Cycle #</th>
+                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Timestamp</th>
+                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Ultimate Rate</th>
+                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Optimized Rate</th>
+                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Average</th>
+                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Duration</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="si-performance-body">
+                                    <tr><td colspan="6" style="text-align:center;padding:2rem;color:#6c757d;">Loading performance data...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Dashboard Page -->
                 <section id="dashboard" class="page-section active">
                     <div class="dashboard-grid">

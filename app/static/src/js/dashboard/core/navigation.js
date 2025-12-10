@@ -46,8 +46,13 @@ export function initNavigation() {
         
         // Scroll to top when switching pages, or scroll to section for long content
         if (pageId === 'admin-dashboard') {
-          // For admin dashboard, scroll to the section itself to center it
-          targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // For admin dashboard, scroll to the section itself
+          setTimeout(() => {
+            const rect = targetSection.getBoundingClientRect();
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const targetTop = rect.top + scrollTop - 100; // Add some offset from top
+            window.scrollTo({ top: targetTop, behavior: 'smooth' });
+          }, 150);
         } else {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }

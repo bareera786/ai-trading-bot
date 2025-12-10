@@ -104,7 +104,7 @@ function setupAutoFixHandlers() {
                 triggerCycleBtn.disabled = true;
                 triggerCycleBtn.textContent = '🔄 Running...';
 
-                const response = await apiRequest('/api/admin/self-improvement/trigger-cycle', {
+                const response = await apiRequest('/admin/api/self-improvement/trigger-cycle', {
                     method: 'POST'
                 });
 
@@ -146,7 +146,7 @@ function setupAutoFixHandlers() {
 
 async function triggerAutoFix(actionType) {
     try {
-        const response = await apiRequest('/api/admin/self-improvement/auto-fix', {
+        const response = await apiRequest('/admin/api/self-improvement/auto-fix', {
             method: 'POST',
             body: JSON.stringify({ action: actionType })
         });
@@ -160,7 +160,7 @@ async function triggerAutoFix(actionType) {
 
 async function updateSelfImprovementData() {
     try {
-        const response = await apiRequest('/api/admin/self-improvement/status');
+        const response = await apiRequest('/admin/api/self-improvement/status');
 
         if (response.self_improvement) {
             updateDashboardMetrics(response.self_improvement);

@@ -43,6 +43,10 @@ export function initNavigation() {
           pageTitle.textContent = pageInfo[pageId].title;
           pageSubtitle.textContent = pageInfo[pageId].subtitle;
         }
+        
+        // Scroll to top when switching pages
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
         if (pageId === 'user-management') {
           window.dispatchEvent(new CustomEvent('dashboard:user-management-visible'));
         }

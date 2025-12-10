@@ -44,8 +44,13 @@ export function initNavigation() {
           pageSubtitle.textContent = pageInfo[pageId].subtitle;
         }
         
-        // Scroll to top when switching pages
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Scroll to top when switching pages, or scroll to section for long content
+        if (pageId === 'admin-dashboard') {
+          // For admin dashboard, scroll to the section itself to center it
+          targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
         
         if (pageId === 'user-management') {
           window.dispatchEvent(new CustomEvent('dashboard:user-management-visible'));

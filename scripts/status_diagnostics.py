@@ -73,12 +73,18 @@ def load_status_payload(source: str, *, timeout: float = 5.0) -> StatusPayload:
         try:
             response = requests.get(source, timeout=timeout)
             response.raise_for_status()
-        except Exception as exc:  # pragma: no cover - network errors are runtime concerns
+        except (
+            Exception
+        ) as exc:  # pragma: no cover - network errors are runtime concerns
             raise SystemExit(f"Failed to fetch status from {source}: {exc}") from exc
         try:
             return response.json()
-        except Exception as exc:  # pragma: no cover - payload issues are runtime concerns
-            raise SystemExit(f"Response from {source} was not valid JSON: {exc}") from exc
+        except (
+            Exception
+        ) as exc:  # pragma: no cover - payload issues are runtime concerns
+            raise SystemExit(
+                f"Response from {source} was not valid JSON: {exc}"
+            ) from exc
 
     path = Path(source)
     if not path.exists():
@@ -108,7 +114,9 @@ def _safe_int(value: Any) -> Optional[int]:
         return None
 
 
-def analyze_profile(name: str, profile: Dict[str, Any], thresholds: StatusThresholds) -> List[StatusIssue]:
+def analyze_profile(
+    name: str, profile: Dict[str, Any], thresholds: StatusThresholds
+) -> List[StatusIssue]:
     issues: List[StatusIssue] = []
     summary = profile.get("summary") or {}
 
@@ -129,7 +137,9 @@ def analyze_profile(name: str, profile: Dict[str, Any], thresholds: StatusThresh
     low_accuracy_models = _safe_int(summary.get("low_accuracy_models")) or 0
     if low_accuracy_models:
         threshold = summary.get("low_accuracy_threshold")
-        threshold_str = f"< {threshold}%" if threshold is not None else "below accuracy floor"
+        threshold_str = (
+            f"< {threshold}%" if threshold is not None else "below accuracy floor"
+        )
         issues.append(
             StatusIssue(
                 scope=name,
@@ -141,7 +151,11 @@ def analyze_profile(name: str, profile: Dict[str, Any], thresholds: StatusThresh
     stale_models = _safe_int(summary.get("stale_models")) or 0
     stale_threshold = _safe_float(summary.get("stale_threshold_hours"))
     if stale_models:
-        limit = stale_threshold if stale_threshold is not None else thresholds.max_model_age_hours
+        limit = (
+            stale_threshold
+            if stale_threshold is not None
+            else thresholds.max_model_age_hours
+        )
         issues.append(
             StatusIssue(
                 scope=name,
@@ -153,7 +167,10 @@ def analyze_profile(name: str, profile: Dict[str, Any], thresholds: StatusThresh
     latest_age_hours = _safe_float(summary.get("latest_training_age_hours"))
     if latest_age_hours is None:
         latest_age_hours = _safe_float(summary.get("latest_training_age"))
-    if latest_age_hours is not None and latest_age_hours > thresholds.max_model_age_hours:
+    if (
+        latest_age_hours is not None
+        and latest_age_hours > thresholds.max_model_age_hours
+    ):
         issues.append(
             StatusIssue(
                 scope=name,
@@ -177,19 +194,29 @@ def analyze_profile(name: str, profile: Dict[str, Any], thresholds: StatusThresh
     return issues
 
 
-def analyze_system(scope: str, system_status: Dict[str, Any], thresholds: StatusThresholds) -> List[StatusIssue]:
+def analyze_system(
+    scope: str, system_status: Dict[str, Any], thresholds: StatusThresholds
+) -> List[StatusIssue]:
     issues: List[StatusIssue] = []
     if not system_status:
-        return [StatusIssue(scope=scope, message="System status missing", severity="error")]
+        return [
+            StatusIssue(scope=scope, message="System status missing", severity="error")
+        ]
 
     if not system_status.get("trading_enabled", True):
-        issues.append(StatusIssue(scope=scope, message="Trading disabled", severity="error"))
+        issues.append(
+            StatusIssue(scope=scope, message="Trading disabled", severity="error")
+        )
 
     if system_status.get("ml_system_available") is False:
-        issues.append(StatusIssue(scope=scope, message="ML system unavailable", severity="error"))
+        issues.append(
+            StatusIssue(scope=scope, message="ML system unavailable", severity="error")
+        )
 
     if not system_status.get("models_loaded", True):
-        issues.append(StatusIssue(scope=scope, message="Models not loaded", severity="error"))
+        issues.append(
+            StatusIssue(scope=scope, message="Models not loaded", severity="error")
+        )
 
     if not system_status.get("ensemble_active", True):
         issues.append(
@@ -221,7 +248,9 @@ def analyze_system(scope: str, system_status: Dict[str, Any], thresholds: Status
     return issues
 
 
-def analyze_performance(scope: str, performance: Dict[str, Any], thresholds: StatusThresholds) -> List[StatusIssue]:
+def analyze_performance(
+    scope: str, performance: Dict[str, Any], thresholds: StatusThresholds
+) -> List[StatusIssue]:
     issues: List[StatusIssue] = []
     if not performance:
         return issues
@@ -251,7 +280,9 @@ def analyze_performance(scope: str, performance: Dict[str, Any], thresholds: Sta
     return issues
 
 
-def analyze_status(payload: StatusPayload, thresholds: StatusThresholds) -> Tuple[List[StatusIssue], List[str]]:
+def analyze_status(
+    payload: StatusPayload, thresholds: StatusThresholds
+) -> Tuple[List[StatusIssue], List[str]]:
     """Return a tuple of (issues, summary_lines)."""
 
     issues: List[StatusIssue] = []
@@ -262,7 +293,9 @@ def analyze_status(payload: StatusPayload, thresholds: StatusThresholds) -> Tupl
         if not profile:
             continue
         profile_summary = profile.get("summary") or {}
-        avg_acc = profile_summary.get("avg_accuracy_percent") or profile_summary.get("avg_accuracy")
+        avg_acc = profile_summary.get("avg_accuracy_percent") or profile_summary.get(
+            "avg_accuracy"
+        )
         model_count = profile_summary.get("model_count")
         latest_training = profile_summary.get("latest_training_display")
         summaries.append(
@@ -278,7 +311,9 @@ def analyze_status(payload: StatusPayload, thresholds: StatusThresholds) -> Tupl
         if system_status is None:
             if payload.get(name):
                 issues.append(
-                    StatusIssue(scope=name, message="System status missing", severity="error")
+                    StatusIssue(
+                        scope=name, message="System status missing", severity="error"
+                    )
                 )
             continue
 
@@ -301,7 +336,9 @@ def analyze_status(payload: StatusPayload, thresholds: StatusThresholds) -> Tupl
     return issues, summaries
 
 
-def print_report(issues: List[StatusIssue], summaries: List[str], fail_on_warning: bool) -> int:
+def print_report(
+    issues: List[StatusIssue], summaries: List[str], fail_on_warning: bool
+) -> int:
     for line in summaries:
         print(line)
 
@@ -322,7 +359,9 @@ def print_report(issues: List[StatusIssue], summaries: List[str], fail_on_warnin
 
 
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Diagnose /api/status payload health checks.")
+    parser = argparse.ArgumentParser(
+        description="Diagnose /api/status payload health checks."
+    )
     parser.add_argument(
         "source",
         nargs="?",
@@ -370,7 +409,10 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
 def main(argv: Iterable[str]) -> int:
     args = parse_args(argv)
     if not args.source:
-        print("No status source provided. Pass a URL/file or set BOT_STATUS_SOURCE.", file=sys.stderr)
+        print(
+            "No status source provided. Pass a URL/file or set BOT_STATUS_SOURCE.",
+            file=sys.stderr,
+        )
         return 2
 
     thresholds = StatusThresholds(

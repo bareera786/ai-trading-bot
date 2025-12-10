@@ -33,7 +33,9 @@ BOT_STATE = PROJECT_ROOT / "bot_persistence" / "bot_state.json"
 
 def _make_backup(path: Path) -> Path:
     if not path.exists():
-        return path.with_name(f"{path.stem}_backup_{datetime.utcnow():%Y%m%dT%H%M%S}Z{path.suffix}")
+        return path.with_name(
+            f"{path.stem}_backup_{datetime.utcnow():%Y%m%dT%H%M%S}Z{path.suffix}"
+        )
     backup_path = path.with_name(
         f"{path.stem}_backup_{datetime.utcnow():%Y%m%dT%H%M%S}Z{path.suffix}"
     )

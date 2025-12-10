@@ -27,7 +27,9 @@ def _sanitize_profile(value: str | None) -> str:
     return sanitized or "default"
 
 
-def resolve_profile_path(relative_dir: str, *, ensure_exists: bool = True, allow_legacy: bool = True) -> str:
+def resolve_profile_path(
+    relative_dir: str, *, ensure_exists: bool = True, allow_legacy: bool = True
+) -> str:
     base = os.path.join(PROJECT_ROOT, relative_dir)
     profile = _sanitize_profile(os.getenv("BOT_PROFILE", "default"))
     profiled = os.path.join(base, profile)
@@ -46,18 +48,24 @@ def resolve_profile_path(relative_dir: str, *, ensure_exists: bool = True, allow
     return target
 
 
-def run(cmd: list[str], *, check: bool = True, capture: bool = True, env: dict | None = None) -> subprocess.CompletedProcess:
+def run(
+    cmd: list[str], *, check: bool = True, capture: bool = True, env: dict | None = None
+) -> subprocess.CompletedProcess:
     kwargs = {
         "cwd": PROJECT_ROOT,
         "env": env or os.environ,
     }
     if capture:
-        kwargs.update({"stdout": subprocess.PIPE, "stderr": subprocess.PIPE, "text": True})
+        kwargs.update(
+            {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE, "text": True}
+        )
     result = subprocess.run(cmd, **kwargs)
     if check and result.returncode != 0:
         stdout = result.stdout if capture else ""
         stderr = result.stderr if capture else ""
-        raise RuntimeError(f"Command {cmd} failed (code={result.returncode})\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}")
+        raise RuntimeError(
+            f"Command {cmd} failed (code={result.returncode})\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}"
+        )
     return result
 
 
@@ -74,7 +82,9 @@ def parse_channel(channel: str) -> Tuple[str, str]:
 def ensure_clean_tree() -> None:
     status = run(["git", "status", "--porcelain"], capture=True)
     if status.stdout.strip():
-        raise RuntimeError("Working tree is dirty. Commit or stash changes before updating.")
+        raise RuntimeError(
+            "Working tree is dirty. Commit or stash changes before updating."
+        )
 
 
 def get_current_commit() -> str:
@@ -155,11 +165,25 @@ def ensure_allowed_changes(changed: list[str], allowed_patterns: Iterable[str]) 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="AI bot updater")
-    parser.add_argument("--channel", default="origin/main", help="Remote/branch or remote:ref to deploy (default origin/main)")
-    parser.add_argument("--apply", action="store_true", help="Apply the update (default: dry-run)")
-    parser.add_argument("--restart", action="store_true", help="Restart systemd service after update")
-    parser.add_argument("--service-name", default="aibot.service", help="Systemd service name to restart")
-    parser.add_argument("--tail", action="store_true", help="Tail journal after restart")
+    parser.add_argument(
+        "--channel",
+        default="origin/main",
+        help="Remote/branch or remote:ref to deploy (default origin/main)",
+    )
+    parser.add_argument(
+        "--apply", action="store_true", help="Apply the update (default: dry-run)"
+    )
+    parser.add_argument(
+        "--restart", action="store_true", help="Restart systemd service after update"
+    )
+    parser.add_argument(
+        "--service-name",
+        default="aibot.service",
+        help="Systemd service name to restart",
+    )
+    parser.add_argument(
+        "--tail", action="store_true", help="Tail journal after restart"
+    )
     parser.add_argument(
         "--allow",
         action="append",
@@ -200,7 +224,10 @@ def main() -> None:
     ensure_allowed_changes(changed_files, args.allow)
 
     if not args.apply:
-        diff = run(["git", "log", "--oneline", f"{current_commit}..{remote_commit}"], capture=True)
+        diff = run(
+            ["git", "log", "--oneline", f"{current_commit}..{remote_commit}"],
+            capture=True,
+        )
         print("📌 Updates available (dry run):")
         print(diff.stdout)
         print("Run again with --apply to install.")

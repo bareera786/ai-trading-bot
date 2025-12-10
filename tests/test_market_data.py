@@ -3,11 +3,13 @@
 
 import sys
 import os
-sys.path.append('/Users/tahir/Desktop/ai-bot')
+
+sys.path.append("/Users/tahir/Desktop/ai-bot")
 
 # Import the function we want to test
 from app.services.binance_market import BinanceMarketDataHelper
 import logging
+
 
 def _safe_float(value, default=0.0):
     try:
@@ -15,15 +17,17 @@ def _safe_float(value, default=0.0):
     except:
         return float(default)
 
+
 helper = BinanceMarketDataHelper(
     bot_logger=logging.getLogger(),
     safe_float=_safe_float,
     testnet_detector=lambda: True,  # Use testnet for testing
 )
 
+
 def test_market_data():
     """Test fetching market data for a few symbols"""
-    symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT']
+    symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT"]
 
     print("Testing Binance testnet market data fetching...")
     print("=" * 50)
@@ -41,6 +45,7 @@ def test_market_data():
         except Exception as e:
             print(f"❌ {symbol}: Error - {e}")
             print()
+
 
 if __name__ == "__main__":
     test_market_data()

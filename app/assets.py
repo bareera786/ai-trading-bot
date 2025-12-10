@@ -8,32 +8,34 @@ from typing import Any, Dict, Optional
 from flask import current_app, url_for
 
 _MANIFEST_CACHE: Dict[str, Any] = {
-    'path': None,
-    'mtime': None,
-    'data': {},
+    "path": None,
+    "mtime": None,
+    "data": {},
 }
 
 
 def _load_manifest(manifest_path: Path) -> dict[str, str]:
-    cache_path = _MANIFEST_CACHE['path']
-    cache_mtime = _MANIFEST_CACHE['mtime']
+    cache_path = _MANIFEST_CACHE["path"]
+    cache_mtime = _MANIFEST_CACHE["mtime"]
 
     try:
         stat = manifest_path.stat()
     except FileNotFoundError:
-        _MANIFEST_CACHE.update({'path': manifest_path, 'mtime': None, 'data': {}})
+        _MANIFEST_CACHE.update({"path": manifest_path, "mtime": None, "data": {}})
         return {}
 
     if cache_path == manifest_path and cache_mtime == stat.st_mtime:
-        return _MANIFEST_CACHE['data']
+        return _MANIFEST_CACHE["data"]
 
     try:
-        with manifest_path.open('r', encoding='utf-8') as handle:
+        with manifest_path.open("r", encoding="utf-8") as handle:
             data = json.load(handle)
     except json.JSONDecodeError:
         data = {}
 
-    _MANIFEST_CACHE.update({'path': manifest_path, 'mtime': stat.st_mtime, 'data': data})
+    _MANIFEST_CACHE.update(
+        {"path": manifest_path, "mtime": stat.st_mtime, "data": data}
+    )
     return data
 
 
@@ -41,14 +43,14 @@ def _resolve_default_asset(logical_name: str) -> str:
     """Map logical asset keys to legacy static paths for fallback."""
     normalized = logical_name.strip()
     if not normalized:
-        return ''
+        return ""
 
-    if normalized.startswith(('css/', 'js/', 'dist/')):
+    if normalized.startswith(("css/", "js/", "dist/")):
         return normalized
 
-    if normalized.endswith('.css'):
+    if normalized.endswith(".css"):
         return f"css/{normalized}"
-    if normalized.endswith('.js'):
+    if normalized.endswith(".js"):
         return f"js/{normalized}"
 
     return normalized
@@ -70,21 +72,25 @@ def asset_url(logical_name: str, manifest: Optional[dict[str, str]] = None) -> s
     manifest = manifest or {}
     asset_path = manifest.get(logical_name)
     if asset_path and _asset_is_usable(asset_path):
-        return url_for('static', filename=asset_path)
+        return url_for("static", filename=asset_path)
 
-    fallbacks = current_app.config.get('ASSET_FALLBACKS', {})
+    fallbacks = current_app.config.get("ASSET_FALLBACKS", {})
     fallback_path = fallbacks.get(logical_name)
     if fallback_path:
-        return url_for('static', filename=fallback_path)
+        return url_for("static", filename=fallback_path)
 
     default_path = _resolve_default_asset(logical_name)
-    return url_for('static', filename=default_path)
+    return url_for("static", filename=default_path)
 
 
 def register_asset_helpers(app) -> None:
-    manifest_setting = app.config.get('ASSET_MANIFEST_PATH')
+    manifest_setting = app.config.get("ASSET_MANIFEST_PATH")
     static_folder = Path(app.static_folder)
-    manifest_path = Path(manifest_setting) if manifest_setting else static_folder / 'dist' / 'manifest.json'
+    manifest_path = (
+        Path(manifest_setting)
+        if manifest_setting
+        else static_folder / "dist" / "manifest.json"
+    )
 
     @app.context_processor
     def inject_asset_helpers():  # type: ignore[override]
@@ -93,4 +99,4 @@ def register_asset_helpers(app) -> None:
         def _asset_url(logical_name: str) -> str:
             return asset_url(logical_name, manifest=manifest)
 
-        return {'asset_url': _asset_url}
+        return {"asset_url": _asset_url}

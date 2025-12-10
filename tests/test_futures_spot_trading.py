@@ -14,6 +14,7 @@ BASE_URL = "http://151.243.171.80:5000"  # Your VPS URL
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 
+
 class TradingPlatformTest:
     def __init__(self, base_url=BASE_URL):
         self.base_url = base_url
@@ -33,7 +34,7 @@ class TradingPlatformTest:
         try:
             response = self.session.post(
                 f"{self.base_url}/login",
-                json={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD}
+                json={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD},
             )
             return response.status_code == 200
         except Exception as e:
@@ -46,11 +47,13 @@ class TradingPlatformTest:
             response = self.session.get(f"{self.base_url}/api/dashboard")
             if response.status_code == 200:
                 data = response.json()
-                system_status = data.get('system_status', {})
-                paper_trading = system_status.get('paper_trading', False)
+                system_status = data.get("system_status", {})
+                paper_trading = system_status.get("paper_trading", False)
                 return self.print_result("Paper Trading Enabled", paper_trading)
             else:
-                return self.print_result("Paper Trading Check", False, f"Status: {response.status_code}")
+                return self.print_result(
+                    "Paper Trading Check", False, f"Status: {response.status_code}"
+                )
         except Exception as e:
             return self.print_result("Paper Trading Check", False, f"Error: {e}")
 
@@ -62,22 +65,24 @@ class TradingPlatformTest:
         # Test enabling futures
         try:
             response = self.session.post(
-                f"{self.base_url}/api/futures/toggle",
-                json={"enable": True}
+                f"{self.base_url}/api/futures/toggle", json={"enable": True}
             )
             success = response.status_code == 200
-            self.print_result("Enable Futures Trading", success, f"Status: {response.status_code}")
+            self.print_result(
+                "Enable Futures Trading", success, f"Status: {response.status_code}"
+            )
         except Exception as e:
             self.print_result("Enable Futures Trading", False, f"Error: {e}")
 
         # Test disabling futures
         try:
             response = self.session.post(
-                f"{self.base_url}/api/futures/toggle",
-                json={"enable": False}
+                f"{self.base_url}/api/futures/toggle", json={"enable": False}
             )
             success = response.status_code == 200
-            self.print_result("Disable Futures Trading", success, f"Status: {response.status_code}")
+            self.print_result(
+                "Disable Futures Trading", success, f"Status: {response.status_code}"
+            )
         except Exception as e:
             self.print_result("Disable Futures Trading", False, f"Error: {e}")
 
@@ -90,7 +95,9 @@ class TradingPlatformTest:
         try:
             response = self.session.post(f"{self.base_url}/api/toggle_trading")
             success = response.status_code == 200
-            self.print_result("Enable Spot Trading", success, f"Status: {response.status_code}")
+            self.print_result(
+                "Enable Spot Trading", success, f"Status: {response.status_code}"
+            )
         except Exception as e:
             self.print_result("Enable Spot Trading", False, f"Error: {e}")
 
@@ -98,7 +105,9 @@ class TradingPlatformTest:
         try:
             response = self.session.post(f"{self.base_url}/api/toggle_trading")
             success = response.status_code == 200
-            self.print_result("Disable Spot Trading", success, f"Status: {response.status_code}")
+            self.print_result(
+                "Disable Spot Trading", success, f"Status: {response.status_code}"
+            )
         except Exception as e:
             self.print_result("Disable Spot Trading", False, f"Error: {e}")
 
@@ -108,19 +117,27 @@ class TradingPlatformTest:
             response = self.session.get(f"{self.base_url}/api/dashboard")
             if response.status_code == 200:
                 data = response.json()
-                system_status = data.get('system_status', {})
+                system_status = data.get("system_status", {})
 
-                futures_enabled = system_status.get('futures_trading_enabled', False)
-                trading_enabled = system_status.get('trading_enabled', False)
-                paper_trading = system_status.get('paper_trading', False)
+                futures_enabled = system_status.get("futures_trading_enabled", False)
+                trading_enabled = system_status.get("trading_enabled", False)
+                paper_trading = system_status.get("paper_trading", False)
 
-                self.print_result("Futures Status Check", True, f"Enabled: {futures_enabled}")
-                self.print_result("Spot Trading Status Check", True, f"Enabled: {trading_enabled}")
-                self.print_result("Paper Trading Status", True, f"Enabled: {paper_trading}")
+                self.print_result(
+                    "Futures Status Check", True, f"Enabled: {futures_enabled}"
+                )
+                self.print_result(
+                    "Spot Trading Status Check", True, f"Enabled: {trading_enabled}"
+                )
+                self.print_result(
+                    "Paper Trading Status", True, f"Enabled: {paper_trading}"
+                )
 
                 return True
             else:
-                return self.print_result("Trading Status Check", False, f"Status: {response.status_code}")
+                return self.print_result(
+                    "Trading Status Check", False, f"Status: {response.status_code}"
+                )
         except Exception as e:
             return self.print_result("Trading Status Check", False, f"Error: {e}")
 
@@ -135,20 +152,26 @@ class TradingPlatformTest:
             success = response.status_code == 200
             if success:
                 data = response.json()
-                symbol_count = len(data.get('symbols', []))
-                self.print_result("Get Symbols List", True, f"Found {symbol_count} symbols")
+                symbol_count = len(data.get("symbols", []))
+                self.print_result(
+                    "Get Symbols List", True, f"Found {symbol_count} symbols"
+                )
             else:
-                self.print_result("Get Symbols List", False, f"Status: {response.status_code}")
+                self.print_result(
+                    "Get Symbols List", False, f"Status: {response.status_code}"
+                )
         except Exception as e:
             self.print_result("Get Symbols List", False, f"Error: {e}")
 
         # Test adding a symbol
         try:
             response = self.session.post(
-                f"{self.base_url}/api/add_symbol",
-                json={"symbol": "ADAUSDT"}
+                f"{self.base_url}/api/add_symbol", json={"symbol": "ADAUSDT"}
             )
-            success = response.status_code in [200, 500]  # 500 might be expected if training fails
+            success = response.status_code in [
+                200,
+                500,
+            ]  # 500 might be expected if training fails
             self.print_result("Add Symbol", success, f"Status: {response.status_code}")
         except Exception as e:
             self.print_result("Add Symbol", False, f"Error: {e}")
@@ -188,6 +211,7 @@ class TradingPlatformTest:
         else:
             print("⚠️  Some tests failed")
             return False
+
 
 if __name__ == "__main__":
     # Allow custom URL via command line

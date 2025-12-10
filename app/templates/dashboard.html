@@ -18,6 +18,179 @@
 
             <nav class="sidebar-nav">
                 <div class="nav-section">
+                    <div class="nav-section-title" style="color:#f59e0b;font-weight:700;">Admin</div>
+                    <a href="#" class="nav-item" data-page="admin-dashboard">
+                        <span class="nav-icon">🛡️</span>
+                        <span class="nav-text">Admin Dashboard</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="user-management">
+                        <span class="nav-icon">👥</span>
+                        <span class="nav-text">User Management</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="symbols">
+                        <span class="nav-icon">🪙</span>
+                        <span class="nav-text">Symbol Management</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="backtest-lab">
+                        <span class="nav-icon">🧪</span>
+                        <span class="nav-text">Backtest Lab</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="admin-settings">
+                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-text">System Settings</span>
+                    </a>
+                </div>
+                                <!-- Admin Dashboard Page -->
+                                <section id="admin-dashboard" class="page-section">
+                                    <div class="section-header">
+                                        <h2 class="section-title">
+                                            <span class="section-icon">️</span>
+                                            Admin Dashboard
+                                        </h2>
+                                        <p class="section-helper">Industrial-grade overview and controls for administrators.</p>
+                                    </div>
+                                    <div class="dashboard-grid">
+                                        <div class="dashboard-card">
+                                            <div class="card-header"><span class="card-icon">👥</span><h3 class="card-title">Total Users</h3></div>
+                                            <div class="card-value" id="admin-total-users">0</div>
+                                            <p class="card-subtitle">All registered users</p>
+                                        </div>
+                                        <div class="dashboard-card">
+                                            <div class="card-header"><span class="card-icon">✅</span><h3 class="card-title">Active Users</h3></div>
+                                            <div class="card-value" id="admin-active-users">0</div>
+                                            <p class="card-subtitle">Currently active</p>
+                                        </div>
+                                        <div class="dashboard-card">
+                                            <div class="card-header"><span class="card-icon">💸</span><h3 class="card-title">Total Revenue</h3></div>
+                                            <div class="card-value" id="admin-total-revenue">$0.00</div>
+                                            <p class="card-subtitle">All-time subscription revenue</p>
+                                        </div>
+                                        <div class="dashboard-card">
+                                            <div class="card-header"><span class="card-icon">⚡</span><h3 class="card-title">System Health</h3></div>
+                                            <div class="card-value"><span class="status-indicator status-success" id="admin-system-health">ONLINE</span></div>
+                                            <p class="card-subtitle">All systems operational</p>
+                                        </div>
+                                    </div>
+                                    <div class="section-header" style="margin-top:2.5rem;">
+                                        <h3 class="section-title">Quick Admin Actions</h3>
+                                    </div>
+                                    <div style="display:flex;gap:2rem;flex-wrap:wrap;">
+                                        <a href="#" class="btn btn-primary" data-page="user-management" style="min-width:180px;">User Management</a>
+                                        <a href="#" class="btn btn-secondary" data-page="symbols" style="min-width:180px;">Symbol Management</a>
+                                        <a href="#" class="btn btn-secondary" data-page="backtest-lab" style="min-width:180px;">Backtest Lab</a>
+                                        <a href="#" class="btn btn-secondary" data-page="admin-settings" style="min-width:180px;">System Settings</a>
+                                    </div>
+
+                                    <!-- Self-Improvement System Dashboard -->
+                                    <div class="section-header" style="margin-top:3rem;">
+                                        <h3 class="section-title">
+                                            <span class="section-icon">🤖</span>
+                                            AI Self-Improvement System
+                                        </h3>
+                                        <p class="section-helper">Advanced autonomous optimization and predictive analytics.</p>
+                                    </div>
+
+                                    <!-- Self-Improvement Metrics Grid -->
+                                    <div class="dashboard-grid">
+                                        <div class="dashboard-card">
+                                            <div class="card-header"><span class="card-icon">📈</span><h3 class="card-title">Success Rate</h3></div>
+                                            <div class="card-value" id="si-success-rate">0.0%</div>
+                                            <p class="card-subtitle">Average improvement success</p>
+                                        </div>
+                                        <div class="dashboard-card">
+                                            <div class="card-header"><span class="card-icon">🔄</span><h3 class="card-title">Cycle Count</h3></div>
+                                            <div class="card-value" id="si-cycle-count">0</div>
+                                            <p class="card-subtitle">Total improvement cycles</p>
+                                        </div>
+                                        <div class="dashboard-card">
+                                            <div class="card-header"><span class="card-icon">⚡</span><h3 class="card-title">Improvement Velocity</h3></div>
+                                            <div class="card-value" id="si-velocity">0.00</div>
+                                            <p class="card-subtitle">Rate of performance change</p>
+                                        </div>
+                                        <div class="dashboard-card">
+                                            <div class="card-header"><span class="card-icon">🔮</span><h3 class="card-title">System Health</h3></div>
+                                            <div class="card-value"><span class="status-indicator" id="si-health">UNKNOWN</span></div>
+                                            <p class="card-subtitle" id="si-health-desc">Self-improvement status</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Performance Charts -->
+                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin:2rem 0;">
+                                        <div class="dashboard-card">
+                                            <div class="card-header"><h3 class="card-title">Success Rate Trend</h3></div>
+                                            <div style="height:200px;">
+                                                <canvas id="si-success-chart" style="width:100%;height:100%;"></canvas>
+                                            </div>
+                                        </div>
+                                        <div class="dashboard-card">
+                                            <div class="card-header"><h3 class="card-title">Model Accuracy History</h3></div>
+                                            <div style="height:200px;">
+                                                <canvas id="si-accuracy-chart" style="width:100%;height:100%;"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Predictive Analytics -->
+                                    <div class="dashboard-card" style="margin:2rem 0;">
+                                        <div class="card-header"><span class="card-icon">🔮</span><h3 class="card-title">Predictive Analytics</h3></div>
+                                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+                                            <div>
+                                                <strong>Next Cycle Prediction:</strong>
+                                                <div id="si-next-prediction">Calculating...</div>
+                                            </div>
+                                            <div>
+                                                <strong>Optimal Timing:</strong>
+                                                <div id="si-optimal-timing">Analyzing...</div>
+                                            </div>
+                                            <div>
+                                                <strong>Confidence Level:</strong>
+                                                <div id="si-confidence">0%</div>
+                                            </div>
+                                            <div>
+                                                <strong>Market Regime:</strong>
+                                                <div id="si-market-regime">Unknown</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Auto-Fix Actions -->
+                                    <div class="dashboard-card" style="margin:2rem 0;">
+                                        <div class="card-header"><span class="card-icon">🔧</span><h3 class="card-title">Auto-Fix System</h3></div>
+                                        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+                                            <button class="btn btn-secondary" id="si-trigger-cycle" style="min-width:150px;">🔄 Run Cycle Now</button>
+                                            <button class="btn btn-warning" id="si-model-retrain" style="min-width:150px;">🧠 Retrain Models</button>
+                                            <button class="btn btn-warning" id="si-optimize-indicators" style="min-width:150px;">📊 Optimize Indicators</button>
+                                            <button class="btn btn-danger" id="si-reset-config" style="min-width:150px;">⚙️ Reset Config</button>
+                                            <button class="btn btn-info" id="si-cleanup-memory" style="min-width:150px;">🧹 Memory Cleanup</button>
+                                        </div>
+                                        <div style="margin-top:1rem;">
+                                            <strong>Last Auto-Fix:</strong> <span id="si-last-autofix">None</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Performance Details Table -->
+                                    <div class="dashboard-card" style="margin:2rem 0;">
+                                        <div class="card-header"><h3 class="card-title">Recent Performance Details</h3></div>
+                                        <div style="overflow-x:auto;">
+                                            <table id="si-performance-table" style="width:100%;border-collapse:collapse;">
+                                                <thead>
+                                                    <tr style="background:#f8f9fa;">
+                                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Cycle #</th>
+                                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Timestamp</th>
+                                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Ultimate Rate</th>
+                                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Optimized Rate</th>
+                                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Average</th>
+                                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Duration</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="si-performance-body">
+                                                    <tr><td colspan="6" style="text-align:center;padding:2rem;color:#6c757d;">Loading performance data...</td></tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </section>
+                <div class="nav-section">
                     <div class="nav-section-title">Overview</div>
                     <a href="#" class="nav-item active" data-page="dashboard">
                         <span class="nav-icon">📊</span>
@@ -82,6 +255,10 @@
                     <a href="#" class="nav-item" data-page="user-management">
                         <span class="nav-icon">👥</span>
                         <span class="nav-text">User Management</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="admin-settings">
+                        <span class="nav-icon">💳</span>
+                        <span class="nav-text">Admin Settings</span>
                     </a>
                     <a href="#" class="nav-item" data-page="safety">
                         <span class="nav-icon">🛡️</span>
@@ -281,6 +458,43 @@
                     </div>
                 </section>
 
+                <!-- Symbols Page -->
+                <section id="symbols" class="page-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span class="section-icon">🪙</span>
+                            Premium Custom Symbols
+                        </h2>
+                        <p class="section-helper">Premium users can add custom USDT pairs for training and auto-trading.</p>
+                    </div>
+
+                    <div id="premium-guard" class="premium-guard" style="display: none;">
+                        <div>
+                            <h3>Premium Required</h3>
+                            <p>Upgrade to manage custom symbols and unlock training for any USDT pair.</p>
+                        </div>
+                    </div>
+
+                    <div id="premium-symbols-content" class="card-panel" style="display: none;">
+                        <div class="custom-symbols-grid">
+                            <div class="custom-symbols-left">
+                                <h3>Add Custom Symbols</h3>
+                                <p class="section-helper">Enter pairs like <code>ARBUSDT</code>, <code>PEPEUSDT</code>, <code>JTOUSDT</code>. Must end with USDT.</p>
+                                <div class="input-row">
+                                    <input id="custom-symbol-input" type="text" placeholder="e.g., ARBUSDT" aria-label="Custom symbol" />
+                                    <button id="custom-symbol-add" class="btn btn-secondary" type="button">Add</button>
+                                    <button id="custom-symbol-save" class="btn btn-primary" type="button">Save</button>
+                                </div>
+                                <div id="custom-symbol-status" class="status-pill status-neutral">Loading symbols...</div>
+                            </div>
+                            <div class="custom-symbols-right">
+                                <h3>Your Custom Symbols</h3>
+                                <div id="custom-symbols-list" class="pill-collection"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Market Data Page -->
                 <section id="market-data" class="page-section">
                     <div class="section-header">
@@ -340,6 +554,7 @@
                                     <th>Status</th>
                                     <th>Model Ready</th>
                                     <th>Last Trained</th>
+
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -347,6 +562,30 @@
                                 <!-- Symbols will be populated here -->
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Backtest Modal -->
+                    <div id="symbol-backtest-modal" class="modal" style="display:none;position:fixed;z-index:9999;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;">
+                        <div class="modal-content" style="background:#181f2e;padding:2rem 2.5rem;border-radius:16px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;">
+                            <button onclick="document.getElementById('symbol-backtest-modal').style.display='none'" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.5rem;color:#fff;cursor:pointer;">&times;</button>
+                            <h3 style="margin-bottom:1.2rem;">Run Backtest for <span id="backtest-modal-symbol"></span></h3>
+                            <form id="symbol-backtest-form" onsubmit="return false;">
+                                <div class="form-group">
+                                    <label for="backtest-date-range">Date Range</label>
+                                    <input type="text" id="backtest-date-range" class="form-input" placeholder="2024-01-01 to 2024-12-31" value="2024-01-01 to 2024-12-31" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="backtest-strategy">Strategy</label>
+                                    <select id="backtest-strategy" class="form-input">
+                                        <option>Ultimate Ensemble</option>
+                                        <option>Random Forest</option>
+                                        <option>Gradient Boosting</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary" id="run-symbol-backtest-btn">Run Backtest</button>
+                            </form>
+                            <div id="symbol-backtest-results" style="margin-top:1.5rem;"></div>
+                        </div>
                     </div>
                 </section>
 
@@ -358,7 +597,7 @@
                             Spot Trading
                         </h2>
                         <div style="display: flex; gap: var(--spacing-md);">
-                            <button class="btn btn-secondary" onclick="toggleSpotTrading()">Enable Spot Trading</button>
+                            <button id="spot-toggle-btn" class="btn btn-secondary" onclick="toggleSpotTrading()">Enable Spot Trading</button>
                             <button class="btn btn-primary">Manual Trade</button>
                         </div>
                     </div>
@@ -952,7 +1191,7 @@
                             <span class="section-icon">🧪</span>
                             Backtest Laboratory
                         </h2>
-                        <button class="btn btn-primary">Run Backtest</button>
+                        <button id="run-backtest-btn" class="btn btn-primary" onclick="runBacktest()">Run Backtest</button>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-xl);">
@@ -960,15 +1199,18 @@
                             <h3 style="margin-bottom: var(--spacing-lg);">Backtest Configuration</h3>
                             <div class="form-group">
                                 <label class="form-label">Symbols</label>
-                                <input type="text" class="form-input" placeholder="BTCUSDT,ETHUSDT" value="BTCUSDT">
+                                <select id="backtest-symbol" class="form-input">
+                                    <option value="BTCUSDT">BTCUSDT</option>
+                                </select>
+                                <div id="custom-symbol-hint" class="section-helper">Add custom symbols in the Symbols tab to use them here.</div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Date Range</label>
-                                <input type="text" class="form-input" placeholder="2024-01-01 to 2024-12-31">
+                                <input type="text" id="backtest-date-range" class="form-input" placeholder="2024-01-01 to 2024-12-31">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Strategy</label>
-                                <select class="form-input">
+                                <select id="backtest-strategy" class="form-input">
                                     <option>Ultimate Ensemble</option>
                                     <option>Optimized Model</option>
                                 </select>
@@ -1245,6 +1487,34 @@
                     </div>
                 </section>
 
+                <!-- Admin Settings Page -->
+                <section id="admin-settings" class="page-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span class="section-icon">💳</span>
+                            Admin Settings
+                        </h2>
+                        <div id="payment-address-status" style="color: var(--text-secondary); font-size: var(--font-size-sm);"></div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <h3 style="margin-bottom: var(--spacing-md);">Payment Address</h3>
+                        <p class="card-subtitle" style="margin-bottom: var(--spacing-lg);">Set the address where on-chain subscription payments should be received.</p>
+
+                        <div class="form-group">
+                            <label class="form-label" for="payment-address-input">Payment address</label>
+                            <input type="text" class="form-input" id="payment-address-input" placeholder="0x... or bc1..." autocomplete="off">
+                        </div>
+
+                        <div style="display: flex; gap: var(--spacing-md); margin-top: var(--spacing-md);">
+                            <button class="btn btn-secondary" onclick="loadPaymentSettings()">Reset</button>
+                            <button class="btn btn-primary" onclick="savePaymentAddress()">Save Address</button>
+                        </div>
+
+                        <p class="card-subtitle" style="margin-top: var(--spacing-md); color: var(--text-secondary);">Only administrators can update this setting. Save to make it available for checkout flows.</p>
+                    </div>
+                </section>
+
                 <!-- User Management Page -->
                 <section id="user-management" class="page-section">
                     <div class="section-header">
@@ -1310,6 +1580,7 @@
                                     <th>Username</th>
                                     <th>Role</th>
                                     <th>Status</th>
+                                    <th>Subscription</th>
                                     <th>Last Login</th>
                                     <th>Created</th>
                                     <th>Actions</th>
@@ -1320,11 +1591,15 @@
                                     <td>admin</td>
                                     <td>Administrator</td>
                                     <td><span class="status-indicator status-success">Active</span></td>
+                                    <td>Trial Plan</td>
                                     <td>2 minutes ago</td>
                                     <td>2024-01-01</td>
                                     <td>
                                         <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="editUser('admin')">
                                             Edit
+                                        </button>
+                                        <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="assignSubscriptionToUser('admin')">
+                                            Subscription
                                         </button>
                                         <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteUser('admin')">
                                             Delete
@@ -1369,12 +1644,111 @@
                             </div>
                         </div>
                     </div>
+
+                        <!-- Edit/View User Modal (Hidden by default) -->
+                        <div id="edit-user-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 2000; align-items: center; justify-content: center;">
+                            <div style="background: var(--bg-card); border-radius: var(--radius-xl); padding: var(--spacing-2xl); max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl);">
+                                    <h3>Edit/View User</h3>
+                                    <button onclick="closeEditUserModal()" style="background: none; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer;">×</button>
+                                </div>
+                                <div id="edit-user-content">
+                                    <div class="form-group">
+                                        <label class="form-label">Username</label>
+                                        <input type="text" class="form-input" id="edit-username" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" class="form-input" id="edit-email">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Role</label>
+                                        <select class="form-input" id="edit-user-role">
+                                            <option value="user">User</option>
+                                            <option value="admin">Administrator</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Status</label>
+                                        <select class="form-input" id="edit-user-status">
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Balance</label>
+                                        <input type="number" class="form-input" id="edit-user-balance" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Subscription Expiry</label>
+                                        <input type="text" class="form-input" id="edit-user-subscription-expiry" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Change Password</label>
+                                        <input type="password" class="form-input" id="edit-user-password" placeholder="Enter new password (optional)">
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: var(--spacing-md); margin-top: var(--spacing-xl);">
+                                    <button class="btn btn-secondary" onclick="closeEditUserModal()">Cancel</button>
+                                    <button class="btn btn-primary" onclick="saveUserEdit()">Save Changes</button>
+                                </div>
+                            </div>
+                        </div>
+
+                    <!-- Assign Subscription Modal (Hidden by default) -->
+                    <div id="assign-subscription-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 2000; align-items: center; justify-content: center;">
+                        <div style="background: var(--bg-card); border-radius: var(--radius-xl); padding: var(--spacing-2xl); max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl);">
+                                <h3>Assign Subscription to <span id="assign-user-username"></span></h3>
+                                <button onclick="closeAssignSubscriptionModal()" style="background: none; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer;">×</button>
+                            </div>
+                            <div id="assign-subscription-content">
+                                <div class="form-group">
+                                    <label class="form-label">Current Subscription</label>
+                                    <div id="current-subscription-info" style="padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
+                                        Loading...
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Select Plan</label>
+                                    <select class="form-input" id="subscription-plan-select">
+                                        <option value="">Loading plans...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Trial Days (Optional)</label>
+                                    <input type="number" class="form-input" id="trial-days-input" placeholder="0" min="0">
+                                    <small style="color: var(--text-secondary);">Number of free trial days to add</small>
+                                </div>
+                                <div class="form-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="auto-renew-checkbox" checked>
+                                        Auto-renew subscription
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="cancel-existing-checkbox" checked>
+                                        Cancel existing subscription
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Notes (Optional)</label>
+                                    <textarea class="form-input" id="subscription-notes" rows="3" placeholder="Optional notes about this assignment"></textarea>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: var(--spacing-md); margin-top: var(--spacing-xl);">
+                                <button class="btn btn-secondary" onclick="closeAssignSubscriptionModal()">Cancel</button>
+                                <button class="btn btn-primary" onclick="assignSubscription()">Assign Subscription</button>
+                            </div>
+                        </div>
+                    </div>
                 </section>
             </div>
         </main>
     </div>
 
-    
+
     <!-- SocketIO Client Library -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 

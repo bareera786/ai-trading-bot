@@ -4,6 +4,8 @@ from __future__ import annotations
 import signal
 from typing import Any, Mapping, MutableMapping, Sequence
 
+from flask import current_app
+
 
 def _safe_bool_mapping(value, default):
     if isinstance(value, MutableMapping):
@@ -14,27 +16,27 @@ def _safe_bool_mapping(value, default):
 def initialize_runtime_from_context(context: Mapping[str, Any]) -> None:
     """Run the legacy initialization sequence using an assembled context payload."""
 
-    dashboard_data: MutableMapping[str, Any] = context.get('dashboard_data') or {}
-    trade_history = context.get('trade_history')
-    persistence_manager = context.get('persistence_manager')
-    ultimate_trader = context.get('ultimate_trader')
-    optimized_trader = context.get('optimized_trader')
-    ultimate_ml_system = context.get('ultimate_ml_system')
-    optimized_ml_system = context.get('optimized_ml_system')
-    background_task_manager = context.get('background_task_manager')
-    trading_config: MutableMapping[str, Any] = context.get('trading_config') or {}
-    historical_data: MutableMapping[str, Any] = context.get('historical_data') or {}
-    top_symbols: Sequence[str] = context.get('top_symbols') or []
-    get_active_trading_universe = context.get('get_active_trading_universe')
-    get_real_market_data = context.get('get_real_market_data')
-    health_report_service = context.get('health_report_service')
-    signal_handler = context.get('signal_handler')
+    dashboard_data: MutableMapping[str, Any] = context.get("dashboard_data") or {}
+    trade_history = context.get("trade_history")
+    persistence_manager = context.get("persistence_manager")
+    ultimate_trader = context.get("ultimate_trader")
+    optimized_trader = context.get("optimized_trader")
+    ultimate_ml_system = context.get("ultimate_ml_system")
+    optimized_ml_system = context.get("optimized_ml_system")
+    background_task_manager = context.get("background_task_manager")
+    trading_config: MutableMapping[str, Any] = context.get("trading_config") or {}
+    historical_data: MutableMapping[str, Any] = context.get("historical_data") or {}
+    top_symbols: Sequence[str] = context.get("top_symbols") or []
+    get_active_trading_universe = context.get("get_active_trading_universe")
+    get_real_market_data = context.get("get_real_market_data")
+    health_report_service = context.get("health_report_service")
+    signal_handler = context.get("signal_handler")
 
     print("🚀 INITIALIZING ULTIMATE PROFESSIONAL AI TRADING BOT...")
     print("=" * 80)
 
     trades = []
-    if trade_history and hasattr(trade_history, 'load_trades'):
+    if trade_history and hasattr(trade_history, "load_trades"):
         try:
             trades = trade_history.load_trades()
         except Exception as exc:
@@ -45,7 +47,9 @@ def initialize_runtime_from_context(context: Mapping[str, Any]) -> None:
     state_loaded = False
     if persistence_manager and ultimate_trader and ultimate_ml_system:
         try:
-            state_loaded = persistence_manager.load_complete_state(ultimate_trader, ultimate_ml_system)
+            state_loaded = persistence_manager.load_complete_state(
+                ultimate_trader, ultimate_ml_system
+            )
         except Exception as exc:
             print(f"⚠️ Persistence restore failed: {exc}")
 
@@ -62,15 +66,17 @@ def initialize_runtime_from_context(context: Mapping[str, Any]) -> None:
         def safe_get_price(symbol):
             try:
                 payload = get_real_market_data(symbol) or {}
-                return payload.get('price', 100)
+                return payload.get("price", 100)
             except Exception as exc:  # pragma: no cover - defensive logging only
                 print(f"⚠️ Could not fetch market data for {symbol}: {exc}")
                 return 100
 
         try:
-            current_prices = {symbol: safe_get_price(symbol) for symbol in active_symbols}
+            current_prices = {
+                symbol: safe_get_price(symbol) for symbol in active_symbols
+            }
             portfolio_summary = ultimate_trader.get_portfolio_summary(current_prices)
-            dashboard_data['portfolio'] = portfolio_summary
+            dashboard_data["portfolio"] = portfolio_summary
         except Exception as exc:
             print(f"⚠️ Could not fetch market data for portfolio update: {exc}")
             print("ℹ️ Continuing with cached/default portfolio data")
@@ -78,35 +84,37 @@ def initialize_runtime_from_context(context: Mapping[str, Any]) -> None:
         print("🔶 Starting with fresh bot state")
 
     if dashboard_data and optimized_trader:
-        dashboard_data.setdefault('optimized_system_status', {})['trading_enabled'] = getattr(
-            optimized_trader, 'trading_enabled', False
-        )
+        dashboard_data.setdefault("optimized_system_status", {})[
+            "trading_enabled"
+        ] = getattr(optimized_trader, "trading_enabled", False)
 
     if background_task_manager:
         try:
             background_task_manager.start_background_tasks(
-                start_ultimate_training=not getattr(ultimate_ml_system, 'models', None),
-                start_optimized_training=not getattr(optimized_ml_system, 'models', None),
+                start_ultimate_training=not getattr(ultimate_ml_system, "models", None),
+                start_optimized_training=not getattr(
+                    optimized_ml_system, "models", None
+                ),
                 persistence_inputs={
-                    'trader': ultimate_trader,
-                    'ml_system': ultimate_ml_system,
-                    'config': trading_config,
-                    'symbols': top_symbols,
-                    'historical_data': historical_data,
+                    "trader": ultimate_trader,
+                    "ml_system": ultimate_ml_system,
+                    "config": trading_config,
+                    "symbols": top_symbols,
+                    "historical_data": historical_data,
                 },
             )
         except Exception as exc:
             print(f"⚠️ Failed to start background tasks: {exc}")
 
     if dashboard_data is not None:
-        system_status = dashboard_data.setdefault('system_status', {})
-        optimized_status = dashboard_data.setdefault('optimized_system_status', {})
-        if getattr(ultimate_ml_system, 'models', None):
-            system_status['models_loaded'] = True
-        if getattr(optimized_ml_system, 'models', None):
-            optimized_status['models_loaded'] = True
+        system_status = dashboard_data.setdefault("system_status", {})
+        optimized_status = dashboard_data.setdefault("optimized_system_status", {})
+        if getattr(ultimate_ml_system, "models", None):
+            system_status["models_loaded"] = True
+        if getattr(optimized_ml_system, "models", None):
+            optimized_status["models_loaded"] = True
 
-    if trading_config.get('continuous_training'):
+    if trading_config.get("continuous_training"):
         try:
             ultimate_ml_system.start_continuous_training_cycle()
             print("✅ Continuous training cycle started")
@@ -137,9 +145,21 @@ def initialize_runtime_from_context(context: Mapping[str, Any]) -> None:
     print("=" * 80)
     print("🎉 ULTIMATE AI TRADING BOT FULLY INITIALIZED AND READY!")
     print("💾 Professional Persistence: ACTIVE")
-    print("📍 Dashboard available at: http://localhost:5001")
-    print("📍 Health check at: http://localhost:5001/health")
+    
+    # Get the actual port from Flask app config or default to 5000
+    port = 5000  # Default port we're using
+    try:
+        if hasattr(current_app, 'config'):
+            # Try to get port from SERVER_NAME if set
+            server_name = current_app.config.get('SERVER_NAME')
+            if server_name and ':' in server_name:
+                port = int(server_name.split(':')[-1])
+    except Exception:
+        pass  # Fall back to default
+    
+    print(f"📍 Dashboard available at: http://localhost:{port}")
+    print(f"📍 Health check at: http://localhost:{port}/health")
     print("=" * 80)
 
 
-__all__ = ['initialize_runtime_from_context']
+__all__ = ["initialize_runtime_from_context"]

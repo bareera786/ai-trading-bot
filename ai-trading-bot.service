@@ -1,19 +1,23 @@
 [Unit]
 Description=AI Trading Bot Flask Application
-After=network.target
+After=network.target postgresql.service redis-server.service
 
 [Service]
 User=aibot
 WorkingDirectory=/home/aibot/ai-bot
-Environment="BOT_LOG_DIR=/home/aibot/ai-bot/logs"
-Environment="BOT_LOG_LEVEL=INFO"
-Environment="FLASK_RUN_PORT=5000"
-Environment="FLASK_ENV=production"
-ExecStart=/home/aibot/ai-bot/.venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 --threads 2 --timeout 120 wsgi:application
+EnvironmentFile=/home/aibot/ai-bot/config/deploy.env.production
+Environment="PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus"
+ExecStart=/bin/bash -lc 'cd /home/aibot/ai-bot && source .venv/bin/activate && exec python ai_ml_auto_bot_final.py'
 Restart=on-failure
-RestartSec=5
+RestartSec=10
 StandardOutput=journal
 StandardError=journal
+
+# Security hardening (allow home access for runtime files)
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=no
+ReadWritePaths=/home/aibot/ai-bot
 
 [Install]
 WantedBy=multi-user.target

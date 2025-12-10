@@ -42,9 +42,13 @@ class LivePortfolioScheduler:
             return
 
         self._stop_event.clear()
-        self._thread = threading.Thread(target=self._run_loop, name='LivePortfolioScheduler', daemon=True)
+        self._thread = threading.Thread(
+            target=self._run_loop, name="LivePortfolioScheduler", daemon=True
+        )
         self._thread.start()
-        self._log(f"💰 Live portfolio P&L updates started (every {self.update_interval:.0f} seconds)")
+        self._log(
+            f"💰 Live portfolio P&L updates started (every {self.update_interval:.0f} seconds)"
+        )
 
     def stop_live_updates(self) -> None:
         if not self.is_running:
@@ -82,8 +86,8 @@ class LivePortfolioScheduler:
                 result = _run_callback()
 
         if isinstance(result, dict):
-            if result.get('success'):
-                updated_count = result.get('updated_users', 0)
+            if result.get("success"):
+                updated_count = result.get("updated_users", 0)
                 if updated_count:
                     self._log(f"💰 Updated live P&L for {updated_count} users")
             else:

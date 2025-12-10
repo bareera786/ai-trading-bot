@@ -13,9 +13,9 @@ def admin_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         if not current_user.is_authenticated:
-            return jsonify({'error': 'Please login first'}), 401
+            return jsonify({"error": "Please login first"}), 401
         if not current_user.is_admin:
-            return jsonify({'error': 'Admin access required'}), 403
+            return jsonify({"error": "Admin access required"}), 403
         return func(*args, **kwargs)
 
     return wrapper
@@ -28,7 +28,7 @@ def user_required(func):
     @login_required
     def wrapper(*args, **kwargs):
         if current_user.is_admin:
-            return jsonify({'error': 'User access only'}), 403
+            return jsonify({"error": "User access only"}), 403
         return func(*args, **kwargs)
 
     return wrapper

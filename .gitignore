@@ -52,6 +52,9 @@ instance/
 *.key
 *.pem
 cookies.txt
+.env
+.env.local
+.env.*.local
 config/deploy.env
 config/*.env
 bot_persistence/

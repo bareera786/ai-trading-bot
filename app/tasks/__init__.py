@@ -6,7 +6,7 @@ from .model_training import ModelTrainingWorker
 from .self_improvement import SelfImprovementWorker
 
 __all__ = [
-    'BackgroundTaskManager',
-    'ModelTrainingWorker',
-    'SelfImprovementWorker',
+    "BackgroundTaskManager",
+    "ModelTrainingWorker",
+    "SelfImprovementWorker",
 ]

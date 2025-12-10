@@ -12,10 +12,15 @@ from app.services.binance import (
     BinanceCredentialStore,
     BinanceLogManager,
 )
-from app.services.pathing import BOT_PROFILE as DEFAULT_BOT_PROFILE, resolve_profile_path
+from app.services.pathing import (
+    BOT_PROFILE as DEFAULT_BOT_PROFILE,
+    resolve_profile_path,
+)
 from app.services.persistence import ProfessionalPersistence, PersistenceScheduler
 
-DashboardProvider = Union[Callable[[], MutableMapping[str, Any]], MutableMapping[str, Any]]
+DashboardProvider = Union[
+    Callable[[], MutableMapping[str, Any]], MutableMapping[str, Any]
+]
 
 
 @dataclass
@@ -73,7 +78,9 @@ def build_persistence_runtime(
 
     profile_name = bot_profile or DEFAULT_BOT_PROFILE
 
-    persistence_root = resolve_profile_path('bot_persistence', allow_legacy=False, migrate_legacy=True)
+    persistence_root = resolve_profile_path(
+        "bot_persistence", allow_legacy=False, migrate_legacy=True
+    )
     persistence_manager = ProfessionalPersistence(
         persistence_dir=persistence_root,
         market_cap_weights_provider=market_cap_weights_provider,
@@ -82,7 +89,7 @@ def build_persistence_runtime(
     )
     print("💾 Professional Persistence System Initialized")
 
-    log_dir = resolve_profile_path('logs', allow_legacy=False, migrate_legacy=True)
+    log_dir = resolve_profile_path("logs", allow_legacy=False, migrate_legacy=True)
     bot_logger = logger_factory(log_dir)
     bot_logger.info("Active bot profile: %s", profile_name)
 
@@ -94,7 +101,9 @@ def build_persistence_runtime(
         bot_logger=bot_logger,
     )
 
-    credential_vault_dir = resolve_profile_path('credentials', allow_legacy=False, migrate_legacy=True)
+    credential_vault_dir = resolve_profile_path(
+        "credentials", allow_legacy=False, migrate_legacy=True
+    )
     credential_vault_file = os.path.join(credential_vault_dir, f"{profile_name}.json")
     binance_credentials_store = BinanceCredentialStore(
         storage_dir=credential_vault_dir,
@@ -103,7 +112,7 @@ def build_persistence_runtime(
 
     binance_log_manager = BinanceLogManager()
     for trader in filter(None, (ultimate_trader, optimized_trader)):
-        real_trader = getattr(trader, 'real_trader', None)
+        real_trader = getattr(trader, "real_trader", None)
         if real_trader is None:
             continue
         real_trader.binance_log_manager = binance_log_manager
@@ -132,4 +141,4 @@ def build_persistence_runtime(
     )
 
 
-__all__ = ['PersistenceRuntime', 'build_persistence_runtime']
+__all__ = ["PersistenceRuntime", "build_persistence_runtime"]

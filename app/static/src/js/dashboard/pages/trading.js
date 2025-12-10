@@ -39,12 +39,22 @@ export async function toggleSpotTrading() {
     const data = await fetchJson('/api/spot/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enable: true }),
+      body: JSON.stringify({}),
     });
     alert(data.message || 'Spot trading updated');
+    // Update button text based on new state
+    updateSpotTradingButton(data.trading_enabled);
   } catch (error) {
     console.error('Failed to toggle spot trading:', error);
     alert('Failed to toggle spot trading');
+  }
+}
+
+function updateSpotTradingButton(enabled) {
+  const button = document.getElementById('spot-toggle-btn');
+  if (button) {
+    button.textContent = enabled ? 'Disable Spot Trading' : 'Enable Spot Trading';
+    button.className = enabled ? 'btn btn-danger' : 'btn btn-secondary';
   }
 }
 
@@ -95,7 +105,10 @@ export async function toggleFuturesTrading() {
 
 export async function refreshSpotData() {
   try {
-    await fetchJson('/api/spot/positions');
+    const dashboard = await fetchJson('/api/dashboard');
+    if (dashboard && dashboard.system_status) {
+      updateSpotTradingButton(dashboard.system_status.trading_enabled);
+    }
     console.log('Spot trading data refreshed');
   } catch (error) {
     console.error('Failed to refresh spot data:', error);
@@ -112,6 +125,10 @@ export async function refreshFuturesData() {
 }
 
 if (typeof window !== 'undefined') {
+  window.addEventListener('dashboard:spot-visible', () => {
+    refreshSpotData();
+  });
+
   Object.assign(window, {
     executeSpotTrade,
     toggleSpotTrading,

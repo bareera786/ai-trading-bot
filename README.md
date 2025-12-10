@@ -1,34 +1,46 @@
 # AI Trading Bot - Ultimate Professional Version
 
-A comprehensive AI-powered cryptocurrency trading bot with advanced machine learning, parallel processing, and enterprise-grade features.
+A comprehensive AI-powered cryptocurrency trading bot with advanced machine learning, parallel processing, enterprise-grade features, and self-improvement capabilities.
 
 ## 🚀 Features
 
 ### Core Capabilities
-- **Advanced ML Models**: Random Forest, Gradient Boosting, Voting Classifier
+- **Advanced ML Models**: Random Forest, Gradient Boosting, Voting Classifier with 43+ indicators
 - **Parallel Processing**: Joblib-based multi-core signal generation
-- **Real-time Trading**: Live Binance API integration with testnet support
-- **Comprehensive Indicators**: 20+ technical indicators with TA-Lib fallbacks
+- **Real-time Trading**: Live Binance API integration with testnet and futures support
+- **Comprehensive Indicators**: 43+ technical indicators with TA-Lib fallbacks
 - **Multi-timeframe Analysis**: 1h, 4h, 1d, 1w analysis
+- **Self-Improvement Worker**: Continuous model training and optimization (runs every 6 hours)
 
 ### Signal Generation Modules
 - **CRT (Composite Rhythm Trading)**: Multi-timeframe momentum analysis
 - **ICT (Inner Circle Trader)**: Institutional trading patterns
 - **SMC (Smart Money Concepts)**: Market structure analysis
-- **Quantum Fusion Momentum**: Advanced momentum indicators
+- **Quantum Fusion Momentum (QFM)**: Advanced momentum indicators with regime detection
 
 ### Safety & Risk Management
-- **Dynamic Position Sizing**: Risk-adjusted position management
+- **Dynamic Position Sizing**: Risk-adjusted position management with adaptive risk multipliers
 - **Circuit Breakers**: Automatic trading halts on loss streaks
-- **Volatility Filters**: Market stress detection
-- **API Failure Handling**: Robust error recovery
+- **Volatility Filters**: Market stress detection and regime-based adjustments
+- **API Failure Handling**: Robust error recovery and retry mechanisms
 
 ### Professional Features
-- **Comprehensive Trade History**: Detailed P&L tracking
-- **Backtesting Engine**: Historical performance analysis
-- **Web Dashboard**: Real-time monitoring interface
-- **Configurable Profiles**: Multiple trading strategies
-- **Logging & Monitoring**: Enterprise-grade logging
+- **Comprehensive Trade History**: Detailed P&L tracking with live portfolio updates
+- **Backtesting Engine**: Historical performance analysis with health monitoring
+- **Web Dashboard**: Real-time monitoring interface with admin controls
+- **Admin Dashboard**: User management, symbol management, backtest lab, system settings
+- **Configurable Profiles**: Multiple trading strategies with profile-scoped storage
+- **Logging & Monitoring**: Enterprise-grade logging with Prometheus metrics
+- **PostgreSQL Support**: Production-ready database with migrations
+- **Systemd Deployment**: Automated service management for VPS deployment
+- **Multi-User Support**: Tenant isolation with profile-based data separation
+- **Futures Trading**: Advanced leverage trading with risk controls
+
+### Advanced Analytics
+- **Correlation Matrix**: Real-time symbol correlation analysis
+- **Ensemble Predictions**: Multi-model voting for improved accuracy
+- **Live P&L Updates**: Real-time portfolio performance monitoring
+- **Marketing Analytics**: Optional Plausible-style tracking integration
 
 ## 📋 Requirements
 
@@ -199,24 +211,74 @@ python scripts/status_diagnostics.py
 
 ### Production deployment
 
-#### Option 1: Systemd service (recommended for VPS)
+#### VPS Deployment with PostgreSQL and Systemd
+
+1. **Prepare your VPS** (Ubuntu/Debian recommended):
+   ```bash
+   # Update system
+   sudo apt update && sudo apt upgrade -y
+
+   # Install PostgreSQL
+   sudo apt install -y postgresql postgresql-contrib
+
+   # Start and enable PostgreSQL
+   sudo systemctl enable postgresql
+   sudo systemctl start postgresql
+
+   # Create database and user
+   sudo -u postgres psql -c "CREATE USER aibot_test WITH PASSWORD 'test_password_123';"
+   sudo -u postgres psql -c "CREATE DATABASE ai_trading_bot_test OWNER aibot_test;"
+   ```
+
+2. **Deploy the application**:
+   ```bash
+   # Clone repository on VPS
+   git clone https://github.com/bareera786/ai-trading-bot.git
+   cd ai-trading-bot
+
+   # Install system dependencies
+   sudo apt install -y python3 python3-pip python3-venv build-essential ta-lib
+
+   # Create virtual environment
+   python3 -m venv .venv
+   source .venv/bin/activate
+
+   # Install Python dependencies
+   pip install -r requirements.txt
+
+   # Configure environment
+   cp config/deploy.env.example config/deploy.env.production
+   nano config/deploy.env.production  # Set DATABASE_URL and other configs
+
+   # Create admin user
+   python create_admin.py --username admin --password admin123 --email admin@example.com
+
+   # Setup systemd service
+   sudo cp ai-trading-bot.service /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl enable ai-trading-bot
+   sudo systemctl start ai-trading-bot
+   ```
+
+3. **Verify deployment**:
+   ```bash
+   # Check service status
+   sudo systemctl status ai-trading-bot
+
+   # View logs
+   sudo journalctl -u ai-trading-bot -f
+
+   # Test health endpoint
+   curl -s http://localhost:5000/health
+
+   # Access dashboard at http://your-vps-ip:5000
+   ```
+
+#### Alternative: Automated deployment script
 
 ```bash
-# 1. Copy files to your VPS
-scp -r . user@your-vps:/path/to/ai-bot/
-
-# 2. On your VPS, install system dependencies/venv as above, then run:
-cd /path/to/ai-bot
-sudo ./setup_systemd_service.sh
-
-# 3. Or from your local machine after editing VPS details:
+# From your local machine
 ./deploy_to_vps_complete.sh
-```
-
-#### Option 2: Deployment helper script
-
-```bash
-bash scripts/deploy_to_vps.sh
 ```
 
 ### Systemd service management

@@ -26,10 +26,10 @@ class QuantumFusionMomentumEngine:
             return {}
 
         # Extract price data
-        close_price = market_data.get('close', market_data.get('price', 0))
-        volume = market_data.get('volume', 0)
-        high = market_data.get('high', close_price)
-        low = market_data.get('low', close_price)
+        close_price = market_data.get("close", market_data.get("price", 0))
+        volume = market_data.get("volume", 0)
+        high = market_data.get("high", close_price)
+        low = market_data.get("low", close_price)
 
         # Initialize symbol history if needed
         if symbol not in self.feature_history:
@@ -42,12 +42,14 @@ class QuantumFusionMomentumEngine:
         features = self._calculate_qfm_features(symbol, close_price, volume, high, low)
 
         # Store in history
-        self.feature_history[symbol].append({
-            'timestamp': time.time(),
-            'features': features.copy(),
-            'price': close_price,
-            'volume': volume
-        })
+        self.feature_history[symbol].append(
+            {
+                "timestamp": time.time(),
+                "features": features.copy(),
+                "price": close_price,
+                "volume": volume,
+            }
+        )
 
         return features
 
@@ -56,40 +58,40 @@ class QuantumFusionMomentumEngine:
         features = {}
 
         # Basic momentum calculations
-        features['price'] = price
-        features['volume'] = volume
+        features["price"] = price
+        features["volume"] = volume
 
         # Calculate velocity (rate of price change)
         velocity = self._calculate_velocity(symbol, price)
-        features['velocity'] = velocity
+        features["velocity"] = velocity
 
         # Calculate acceleration (rate of velocity change)
         acceleration = self._calculate_acceleration(symbol, velocity)
-        features['acceleration'] = acceleration
+        features["acceleration"] = acceleration
 
         # Calculate jerk (rate of acceleration change)
         jerk = self._calculate_jerk(symbol, acceleration)
-        features['jerk'] = jerk
+        features["jerk"] = jerk
 
         # Volume pressure analysis
         volume_pressure = self._calculate_volume_pressure(symbol, volume, price)
-        features['volume_pressure'] = volume_pressure
+        features["volume_pressure"] = volume_pressure
 
         # Trend confidence based on momentum consistency
         trend_confidence = self._calculate_trend_confidence(symbol)
-        features['trend_confidence'] = trend_confidence
+        features["trend_confidence"] = trend_confidence
 
         # Market regime score (0-1, higher = more trending)
         regime_score = self._calculate_regime_score(features)
-        features['regime_score'] = regime_score
+        features["regime_score"] = regime_score
 
         # Entropy measure for market randomness
         entropy = self._calculate_market_entropy(symbol)
-        features['entropy'] = entropy
+        features["entropy"] = entropy
 
         # Volatility measure
         volatility = self._calculate_volatility(symbol, high, low)
-        features['volatility'] = volatility
+        features["volatility"] = volatility
 
         return features
 
@@ -101,13 +103,15 @@ class QuantumFusionMomentumEngine:
             return 0.0
 
         # Use exponential moving average for smoother velocity
-        prices = [h['price'] for h in history[-10:]]  # Last 10 points
+        prices = [h["price"] for h in history[-10:]]  # Last 10 points
 
         if len(prices) < 2:
             return 0.0
 
         # Calculate rate of change
-        recent_change = (current_price - prices[-2]) / prices[-2] if prices[-2] != 0 else 0
+        recent_change = (
+            (current_price - prices[-2]) / prices[-2] if prices[-2] != 0 else 0
+        )
 
         # Store velocity
         self.velocity_cache[symbol].append(recent_change)
@@ -152,7 +156,7 @@ class QuantumFusionMomentumEngine:
             return 0.0
 
         # Average volume over last 5 periods
-        avg_volume = np.mean([h['volume'] for h in history[-5:]])
+        avg_volume = np.mean([h["volume"] for h in history[-5:]])
 
         if avg_volume == 0:
             return 0.0
@@ -163,10 +167,10 @@ class QuantumFusionMomentumEngine:
         # Weight by price movement direction
         price_change = 0
         if len(history) >= 2:
-            price_change = (price - history[-2]['price']) / history[-2]['price']
+            price_change = (price - history[-2]["price"]) / history[-2]["price"]
 
         # Positive pressure when volume increases with price movement
-        volume_pressure *= (1 + abs(price_change))
+        volume_pressure *= 1 + abs(price_change)
 
         return volume_pressure
 
@@ -195,10 +199,10 @@ class QuantumFusionMomentumEngine:
 
     def _calculate_regime_score(self, features):
         """Calculate market regime score (0-1, higher = trending)."""
-        velocity = abs(features.get('velocity', 0))
-        acceleration = abs(features.get('acceleration', 0))
-        trend_confidence = features.get('trend_confidence', 0.5)
-        entropy = features.get('entropy', 0.5)
+        velocity = abs(features.get("velocity", 0))
+        acceleration = abs(features.get("acceleration", 0))
+        trend_confidence = features.get("trend_confidence", 0.5)
+        entropy = features.get("entropy", 0.5)
 
         # Regime score combines momentum strength and trend consistency
         momentum_strength = min(1.0, (velocity + acceleration) * 10)  # Scale and cap
@@ -207,7 +211,9 @@ class QuantumFusionMomentumEngine:
         order_factor = 1.0 - entropy
 
         # Combine factors
-        regime_score = (momentum_strength * 0.4 + trend_confidence * 0.4 + order_factor * 0.2)
+        regime_score = (
+            momentum_strength * 0.4 + trend_confidence * 0.4 + order_factor * 0.2
+        )
 
         return min(1.0, max(0.0, regime_score))
 
@@ -219,12 +225,12 @@ class QuantumFusionMomentumEngine:
             return 0.5
 
         # Calculate price return distribution
-        prices = [h['price'] for h in history[-20:]]
+        prices = [h["price"] for h in history[-20:]]
         returns = []
 
         for i in range(1, len(prices)):
-            if prices[i-1] != 0:
-                ret = (prices[i] - prices[i-1]) / prices[i-1]
+            if prices[i - 1] != 0:
+                ret = (prices[i] - prices[i - 1]) / prices[i - 1]
                 returns.append(ret)
 
         if len(returns) < 5:
@@ -260,7 +266,7 @@ class QuantumFusionMomentumEngine:
         # Historical volatility
         history = self.feature_history.get(symbol, [])
         if len(history) >= 5:
-            recent_prices = [h['price'] for h in history[-5:]]
+            recent_prices = [h["price"] for h in history[-5:]]
             price_std = np.std(recent_prices)
             price_mean = np.mean(recent_prices)
 
@@ -276,22 +282,22 @@ class QuantumFusionMomentumEngine:
         features = self.get_latest_features(symbol)
 
         if not features:
-            return 'unknown'
+            return "unknown"
 
-        regime_score = features.get('regime_score', 0.5)
-        trend_confidence = features.get('trend_confidence', 0.5)
-        jerk = abs(features.get('jerk', 0))
+        regime_score = features.get("regime_score", 0.5)
+        trend_confidence = features.get("trend_confidence", 0.5)
+        jerk = abs(features.get("jerk", 0))
 
         # Classify regime
         if regime_score > 0.7 and trend_confidence > 0.6:
-            velocity = features.get('velocity', 0)
-            return 'trending_bull' if velocity > 0 else 'trending_bear'
+            velocity = features.get("velocity", 0)
+            return "trending_bull" if velocity > 0 else "trending_bear"
         elif jerk > 0.5:
-            return 'volatile'
+            return "volatile"
         elif regime_score < 0.4:
-            return 'sideways'
+            return "sideways"
         else:
-            return 'calm'
+            return "calm"
 
     def get_latest_features(self, symbol):
         """Get latest QFM features for a symbol."""
@@ -300,7 +306,7 @@ class QuantumFusionMomentumEngine:
         if not history:
             return {}
 
-        return history[-1]['features']
+        return history[-1]["features"]
 
     def get_feature_history(self, symbol, limit=100):
         """Get historical QFM features for analysis."""
@@ -313,20 +319,20 @@ class QuantumFusionMomentumEngine:
         history = self.get_feature_history(symbol, 200)
 
         if len(history) < 20:
-            return {'error': 'Insufficient data for cycle analysis'}
+            return {"error": "Insufficient data for cycle analysis"}
 
         # Extract features over time
-        velocities = [h['features']['velocity'] for h in history]
-        accelerations = [h['features']['acceleration'] for h in history]
-        regime_scores = [h['features']['regime_score'] for h in history]
+        velocities = [h["features"]["velocity"] for h in history]
+        accelerations = [h["features"]["acceleration"] for h in history]
+        regime_scores = [h["features"]["regime_score"] for h in history]
 
         # Detect cycles using acceleration changes
         cycle_analysis = {
-            'cycle_length_avg': self._calculate_average_cycle_length(accelerations),
-            'current_phase': self._determine_current_cycle_phase(accelerations),
-            'cycle_strength': np.std(accelerations),
-            'regime_transitions': self._count_regime_transitions(regime_scores),
-            'momentum_cycles': self._analyze_momentum_cycles(velocities)
+            "cycle_length_avg": self._calculate_average_cycle_length(accelerations),
+            "current_phase": self._determine_current_cycle_phase(accelerations),
+            "cycle_strength": np.std(accelerations),
+            "regime_transitions": self._count_regime_transitions(regime_scores),
+            "momentum_cycles": self._analyze_momentum_cycles(velocities),
         }
 
         return cycle_analysis
@@ -339,7 +345,7 @@ class QuantumFusionMomentumEngine:
         # Find zero crossings in acceleration (cycle boundaries)
         zero_crossings = []
         for i in range(1, len(accelerations)):
-            if accelerations[i-1] * accelerations[i] < 0:  # Sign change
+            if accelerations[i - 1] * accelerations[i] < 0:  # Sign change
                 zero_crossings.append(i)
 
         if len(zero_crossings) < 2:
@@ -348,23 +354,23 @@ class QuantumFusionMomentumEngine:
         # Calculate cycle lengths
         cycle_lengths = []
         for i in range(1, len(zero_crossings)):
-            cycle_lengths.append(zero_crossings[i] - zero_crossings[i-1])
+            cycle_lengths.append(zero_crossings[i] - zero_crossings[i - 1])
 
         return float(np.mean(cycle_lengths)) if cycle_lengths else len(accelerations)
 
     def _determine_current_cycle_phase(self, accelerations):
         """Determine current position in market cycle."""
         if len(accelerations) < 5:
-            return 'unknown'
+            return "unknown"
 
         recent_acc = accelerations[-5:]
 
         # Analyze recent acceleration trend
         if all(a > 0 for a in recent_acc):
-            return 'acceleration_phase'
+            return "acceleration_phase"
         if all(a < 0 for a in recent_acc):
-            return 'deceleration_phase'
-        return 'transition_phase'
+            return "deceleration_phase"
+        return "transition_phase"
 
     def _count_regime_transitions(self, regime_scores):
         """Count regime transitions over time."""
@@ -376,8 +382,16 @@ class QuantumFusionMomentumEngine:
         threshold_low = 0.4
 
         for i in range(1, len(regime_scores)):
-            prev_regime = 'high' if regime_scores[i-1] > threshold_high else ('low' if regime_scores[i-1] < threshold_low else 'neutral')
-            curr_regime = 'high' if regime_scores[i] > threshold_high else ('low' if regime_scores[i] < threshold_low else 'neutral')
+            prev_regime = (
+                "high"
+                if regime_scores[i - 1] > threshold_high
+                else ("low" if regime_scores[i - 1] < threshold_low else "neutral")
+            )
+            curr_regime = (
+                "high"
+                if regime_scores[i] > threshold_high
+                else ("low" if regime_scores[i] < threshold_low else "neutral")
+            )
 
             if prev_regime != curr_regime:
                 transitions += 1
@@ -387,18 +401,20 @@ class QuantumFusionMomentumEngine:
     def _analyze_momentum_cycles(self, velocities):
         """Analyze momentum cycles."""
         if len(velocities) < 10:
-            return {'cycles': 0, 'strength': 0}
+            return {"cycles": 0, "strength": 0}
 
         # Find momentum cycles (direction changes)
         direction_changes = []
         for i in range(1, len(velocities)):
-            if velocities[i-1] * velocities[i] < 0:  # Direction change
+            if velocities[i - 1] * velocities[i] < 0:  # Direction change
                 direction_changes.append(i)
 
         cycle_info = {
-            'cycles': len(direction_changes),
-            'average_length': float(np.mean(np.diff(direction_changes))) if len(direction_changes) > 1 else 0,
-            'strength': float(np.std(velocities))
+            "cycles": len(direction_changes),
+            "average_length": float(np.mean(np.diff(direction_changes)))
+            if len(direction_changes) > 1
+            else 0,
+            "strength": float(np.std(velocities)),
         }
 
         return cycle_info

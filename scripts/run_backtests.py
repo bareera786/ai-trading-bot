@@ -113,7 +113,9 @@ def _summarize_result(result: Dict) -> Dict[str, float]:
         "sharpe_ratio": round(float(result.get("sharpe_ratio", 0.0)), 4),
         "max_drawdown_pct": round(float(result.get("max_drawdown", 0.0)) * 100, 2),
         "win_rate_pct": round(float(result.get("win_rate", 0.0)), 2),
-        "profit_factor": round(float(result.get("profit_factor", 0.0)), 3) if result.get("profit_factor") is not None else None,
+        "profit_factor": round(float(result.get("profit_factor", 0.0)), 3)
+        if result.get("profit_factor") is not None
+        else None,
         "trades": len(trades),
         "notes": result.get("notes", ""),
     }
@@ -121,13 +123,13 @@ def _summarize_result(result: Dict) -> Dict[str, float]:
 
 def main(argv: Optional[List[str]] = None) -> int:
     from app import create_app
-    from app.runtime.builder import build_runtime_context
+    from app.runtime.builder import assemble_runtime_context
     from app.runtime.symbols import TOP_SYMBOLS, normalize_symbol as _normalize_symbol
     from app.services.pathing import resolve_profile_path
 
     app = create_app()
     with app.app_context():
-        context = build_runtime_context()
+        context = assemble_runtime_context()
 
         parser = _build_arg_parser()
         args = parser.parse_args(argv)
@@ -135,7 +137,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.profile:
             os.environ["BOT_PROFILE"] = args.profile
 
-        system = context['optimized_ml_system'] if args.optimized else context['ultimate_ml_system']
+        system = (
+            context.payload["optimized_ml_system"]
+            if args.optimized
+            else context.payload["ultimate_ml_system"]
+        )
 
         target_symbols = _normalize_symbols(args.symbols, _normalize_symbol)
         if not target_symbols:
@@ -143,7 +149,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
         if not args.quiet:
             mode = "Optimized" if args.optimized else "Ultimate"
-            print(f"🚀 Running {mode} backtests | symbols={len(target_symbols)} | years={args.years} | interval={args.interval}\n")
+            print(
+                f"🚀 Running {mode} backtests | symbols={len(target_symbols)} | years={args.years} | interval={args.interval}\n"
+            )
 
     summary: Dict[str, Dict[str, float]] = {}
     failures: Dict[str, str] = {}
@@ -187,9 +195,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     if summary:
         aggregate = {
             "symbols": len(summary),
-            "average_return_pct": round(mean(v["total_return_pct"] for v in summary.values()), 2),
-            "average_sharpe": round(mean(v["sharpe_ratio"] for v in summary.values()), 4),
-            "average_win_rate_pct": round(mean(v["win_rate_pct"] for v in summary.values()), 2),
+            "average_return_pct": round(
+                mean(v["total_return_pct"] for v in summary.values()), 2
+            ),
+            "average_sharpe": round(
+                mean(v["sharpe_ratio"] for v in summary.values()), 4
+            ),
+            "average_win_rate_pct": round(
+                mean(v["win_rate_pct"] for v in summary.values()), 2
+            ),
         }
         if not args.quiet:
             print("=== Aggregate Summary ===")
@@ -202,7 +216,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             output_path = os.path.abspath(args.output)
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
         else:
-            backtest_dir = resolve_profile_path(os.path.join("bot_persistence", "backtests"))
+            backtest_dir = resolve_profile_path(
+                os.path.join("bot_persistence", "backtests")
+            )
             output_filename = f"backtest_{'optimized' if args.optimized else 'ultimate'}_{timestamp}.json"
             output_path = os.path.join(backtest_dir, output_filename)
 

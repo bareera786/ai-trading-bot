@@ -17,20 +17,20 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 
 class AdminViewTestConfig(Config):
     TESTING = True
-    SECRET_KEY = 'test-key'
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///'
+    SECRET_KEY = "test-key"
+    SQLALCHEMY_DATABASE_URI = "sqlite:///"
 
 
 @pytest.fixture()
 def client(tmp_path):
-    db_path = tmp_path / 'admin-leads.db'
+    db_path = tmp_path / "admin-leads.db"
     app = Flask(
         __name__,
-        template_folder=str(BASE_DIR / 'app' / 'templates'),
-        static_folder=str(BASE_DIR / 'app' / 'static'),
+        template_folder=str(BASE_DIR / "app" / "templates"),
+        static_folder=str(BASE_DIR / "app" / "static"),
     )
     app.config.from_object(AdminViewTestConfig)
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 
     init_extensions(app)
     app.register_blueprint(admin_views_bp)
@@ -48,22 +48,24 @@ def client(tmp_path):
 
 def login_admin(app: Flask, client) -> int:
     with app.app_context():
-        admin = User(username='admin', email='admin@example.com', is_admin=True)
-        admin.set_password('secret123')
+        admin = User(username="admin", email="admin@example.com", is_admin=True)
+        admin.set_password("secret123")
         db.session.add(admin)
-        db.session.add(Lead(name='Alice', email='alice@example.com', status='contacted'))
+        db.session.add(
+            Lead(name="Alice", email="alice@example.com", status="contacted")
+        )
         db.session.commit()
         admin_id = admin.id
 
     with client.session_transaction() as session:
-        session['_user_id'] = str(admin_id)
-        session['_fresh'] = True
+        session["_user_id"] = str(admin_id)
+        session["_fresh"] = True
 
     return admin_id
 
 
 def test_admin_leads_requires_auth(client):
-    response = client.get('/admin/leads')
+    response = client.get("/admin/leads")
     assert response.status_code == 401
 
 
@@ -71,9 +73,9 @@ def test_admin_leads_renders_table(client):
     app = client.application
     login_admin(app, client)
 
-    response = client.get('/admin/leads')
+    response = client.get("/admin/leads")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    assert 'Lead Inbox' in html
-    assert 'alice@example.com' in html
-    assert 'Download CSV' in html
+    assert "Lead Inbox" in html
+    assert "alice@example.com" in html
+    assert "Download CSV" in html

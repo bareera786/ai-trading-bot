@@ -55,10 +55,18 @@ def _load_qfm_summary(summary_path: Path) -> dict:
 
 
 def _build_manifest(models_dir: Path, artifacts_dir: Path, summary: dict) -> dict:
-    rel_models = os.path.relpath(models_dir, PROJECT_ROOT) if models_dir.exists() else None
-    rel_artifacts = os.path.relpath(artifacts_dir, PROJECT_ROOT) if artifacts_dir.exists() else None
+    rel_models = (
+        os.path.relpath(models_dir, PROJECT_ROOT) if models_dir.exists() else None
+    )
+    rel_artifacts = (
+        os.path.relpath(artifacts_dir, PROJECT_ROOT) if artifacts_dir.exists() else None
+    )
 
-    symbols = sorted(summary.get("symbols", {}).keys()) if isinstance(summary.get("symbols"), dict) else []
+    symbols = (
+        sorted(summary.get("symbols", {}).keys())
+        if isinstance(summary.get("symbols"), dict)
+        else []
+    )
 
     return {
         "generated_at": datetime.utcnow().isoformat(timespec="seconds"),
@@ -68,7 +76,9 @@ def _build_manifest(models_dir: Path, artifacts_dir: Path, summary: dict) -> dic
         "model_files": _collect_model_files(models_dir),
         "qfm_symbol_count": len(symbols),
         "qfm_symbols": symbols,
-        "qfm_summary_path": os.path.relpath(artifacts_dir / "qfm_artifacts_summary.json", PROJECT_ROOT)
+        "qfm_summary_path": os.path.relpath(
+            artifacts_dir / "qfm_artifacts_summary.json", PROJECT_ROOT
+        )
         if artifacts_dir.exists()
         else None,
     }
@@ -90,12 +100,16 @@ def _validate_include_paths(paths: Iterable[str]) -> List[Path]:
         try:
             candidate.relative_to(PROJECT_ROOT)
         except ValueError:
-            raise ValueError(f"Include path must live inside the project: {raw}") from None
+            raise ValueError(
+                f"Include path must live inside the project: {raw}"
+            ) from None
         resolved.append(candidate)
     return resolved
 
 
-def create_bundle(output_dir: Path, filename: Optional[str], include: Iterable[str]) -> Path:
+def create_bundle(
+    output_dir: Path, filename: Optional[str], include: Iterable[str]
+) -> Path:
     models_dir = PROJECT_ROOT / "ultimate_models"
     artifacts_dir = resolve_profile_path("artifacts/qfm")
     summary = _load_qfm_summary(artifacts_dir / "qfm_artifacts_summary.json")

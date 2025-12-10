@@ -11,53 +11,53 @@ from app.models import SubscriptionPlan, UserSubscription
 # Default plan definitions used when seeding new deployments
 DEFAULT_SUBSCRIPTION_PLAN_DEFINITIONS = [
     {
-        'name': '14 Day Trial',
-        'code': 'trial-14-day',
-        'plan_type': 'trial',
-        'price_usd': 0,
-        'currency': 'USD',
-        'duration_days': 14,
-        'trial_days': 0,
-        'description': 'Complimentary trial access for new tenants',
-        'is_active': True,
-        'is_featured': False,
+        "name": "14 Day Trial",
+        "code": "trial-14-day",
+        "plan_type": "trial",
+        "price_usd": 0,
+        "currency": "USD",
+        "duration_days": 14,
+        "trial_days": 0,
+        "description": "Complimentary trial access for new tenants",
+        "is_active": True,
+        "is_featured": False,
     },
     {
-        'name': 'Pro Monthly',
-        'code': 'pro-monthly',
-        'plan_type': 'monthly',
-        'price_usd': 149,
-        'currency': 'USD',
-        'duration_days': 30,
-        'trial_days': 7,
-        'description': 'Full platform access billed every month',
-        'is_active': True,
-        'is_featured': True,
+        "name": "Pro Monthly",
+        "code": "pro-monthly",
+        "plan_type": "monthly",
+        "price_usd": 149,
+        "currency": "USD",
+        "duration_days": 30,
+        "trial_days": 7,
+        "description": "Full platform access billed every month",
+        "is_active": True,
+        "is_featured": True,
     },
     {
-        'name': 'Pro Yearly',
-        'code': 'pro-yearly',
-        'plan_type': 'yearly',
-        'price_usd': 1490,
-        'currency': 'USD',
-        'duration_days': 365,
-        'trial_days': 14,
-        'description': 'Yearly commitment with two months free',
-        'is_active': True,
-        'is_featured': False,
+        "name": "Pro Yearly",
+        "code": "pro-yearly",
+        "plan_type": "yearly",
+        "price_usd": 1490,
+        "currency": "USD",
+        "duration_days": 365,
+        "trial_days": 14,
+        "description": "Yearly commitment with two months free",
+        "is_active": True,
+        "is_featured": False,
     },
 ]
 
-ALLOWED_SUBSCRIPTION_PLAN_TYPES = {'trial', 'monthly', 'yearly', 'lifetime'}
+ALLOWED_SUBSCRIPTION_PLAN_TYPES = {"trial", "monthly", "yearly", "lifetime"}
 
 
 def normalize_plan_code(raw_code: Optional[str]) -> str:
     """Normalize plan codes for uniqueness checks and references."""
-    raw = (raw_code or '').strip().lower()
+    raw = (raw_code or "").strip().lower()
     if not raw:
-        return ''
-    sanitized = ''.join(ch if ch.isalnum() or ch in {'-', '_'} else '-' for ch in raw)
-    sanitized = sanitized.strip('-')
+        return ""
+    sanitized = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "-" for ch in raw)
+    sanitized = sanitized.strip("-")
     return sanitized or raw
 
 
@@ -65,8 +65,8 @@ def coerce_decimal(value, *, default=0):
     try:
         quantized = Decimal(str(value if value is not None else default))
     except Exception as exc:  # pragma: no cover - validation path
-        raise ValueError('price_usd must be a valid number') from exc
-    return quantized.quantize(Decimal('0.01'))
+        raise ValueError("price_usd must be a valid number") from exc
+    return quantized.quantize(Decimal("0.01"))
 
 
 def coerce_bool(value, *, default=False):
@@ -76,7 +76,7 @@ def coerce_bool(value, *, default=False):
         return value
     if isinstance(value, (int, float)):
         return value != 0
-    return str(value).strip().lower() in {'1', 'true', 'yes', 'on'}
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def ensure_default_subscription_plans():
@@ -84,7 +84,7 @@ def ensure_default_subscription_plans():
     try:
         created = 0
         for plan_data in DEFAULT_SUBSCRIPTION_PLAN_DEFINITIONS:
-            code = plan_data['code']
+            code = plan_data["code"]
             existing = SubscriptionPlan.query.filter_by(code=code).first()
             if not existing:
                 plan = SubscriptionPlan(**plan_data)
@@ -105,22 +105,22 @@ def ensure_default_subscription_plans():
 def serialize_subscription(subscription):
     if not subscription:
         return {
-            'status': 'inactive',
-            'is_active': False,
-            'is_trial': False,
-            'plan': None,
+            "status": "inactive",
+            "is_active": False,
+            "is_trial": False,
+            "plan": None,
         }
     data = subscription.to_dict()
     data.update(
         {
-            'is_active': subscription.is_active,
-            'is_trial': subscription.is_trial,
+            "is_active": subscription.is_active,
+            "is_trial": subscription.is_trial,
         }
     )
     if subscription.plan:
-        data['plan_name'] = subscription.plan.name
-        data['plan_code'] = subscription.plan.code
-        data['plan_type'] = subscription.plan.plan_type
+        data["plan_name"] = subscription.plan.name
+        data["plan_code"] = subscription.plan.code
+        data["plan_type"] = subscription.plan.plan_type
     return data
 
 
@@ -132,7 +132,7 @@ def cancel_user_subscription(user, immediate=False, reason=None):
     subscription = user.active_subscription
     now = datetime.utcnow()
     if immediate:
-        subscription.status = 'canceled'
+        subscription.status = "canceled"
         subscription.canceled_at = now
         subscription.cancel_at_period_end = False
     else:
@@ -140,7 +140,9 @@ def cancel_user_subscription(user, immediate=False, reason=None):
 
     if reason:
         note = f"{now.isoformat()}: {reason}"
-        subscription.notes = f"{subscription.notes}\n{note}" if subscription.notes else note
+        subscription.notes = (
+            f"{subscription.notes}\n{note}" if subscription.notes else note
+        )
 
     db.session.commit()
     return subscription
@@ -157,23 +159,25 @@ def assign_subscription_to_user(
 ):
     """Assign or upgrade a user's subscription to a particular plan."""
     if not user or not plan:
-        raise ValueError('User and plan are required')
+        raise ValueError("User and plan are required")
 
     now = datetime.utcnow()
     if cancel_existing and user.active_subscription:
-        cancel_user_subscription(user, immediate=True, reason='Replaced with new plan')
+        cancel_user_subscription(user, immediate=True, reason="Replaced with new plan")
 
     plan_duration = max(1, plan.duration_days or 30)
-    effective_trial_days = plan.trial_days if trial_days is None else max(0, int(trial_days))
+    effective_trial_days = (
+        plan.trial_days if trial_days is None else max(0, int(trial_days))
+    )
     trial_end = None
     current_period_start = now
     current_period_end = now + timedelta(days=plan_duration)
     next_billing_date = None
-    normalized_plan_type = (plan.plan_type or 'monthly').lower()
-    status = 'active'
+    normalized_plan_type = (plan.plan_type or "monthly").lower()
+    status = "active"
 
-    if normalized_plan_type == 'trial':
-        status = 'trialing'
+    if normalized_plan_type == "trial":
+        status = "trialing"
         trial_end = now + timedelta(days=plan_duration)
         current_period_end = trial_end
         auto_renew = False
@@ -185,7 +189,7 @@ def assign_subscription_to_user(
             current_period_start = now
         current_period_end = current_period_start + timedelta(days=plan_duration)
         next_billing_date = trial_end if trial_end else current_period_start
-        status = 'trialing' if trial_end else 'active'
+        status = "trialing" if trial_end else "active"
 
     subscription = UserSubscription(
         user_id=user.id,
@@ -195,7 +199,7 @@ def assign_subscription_to_user(
         current_period_start=current_period_start,
         current_period_end=current_period_end,
         next_billing_date=next_billing_date,
-        auto_renew=auto_renew if normalized_plan_type != 'trial' else False,
+        auto_renew=auto_renew if normalized_plan_type != "trial" else False,
         cancel_at_period_end=False,
         notes=notes,
     )

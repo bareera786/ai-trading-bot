@@ -82,7 +82,7 @@ def build_trading_runtime_services(
 
 
 __all__ = [
-    'TradingRuntimeBundle',
-    'build_ml_runtime_services',
-    'build_trading_runtime_services',
+    "TradingRuntimeBundle",
+    "build_ml_runtime_services",
+    "build_trading_runtime_services",
 ]

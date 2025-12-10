@@ -8,19 +8,19 @@ import sys
 import pytest
 import requests
 
-pytestmark = pytest.mark.skip(reason="Manual futures toggle verification that depends on a running server.")
+pytestmark = pytest.mark.skip(
+    reason="Manual futures toggle verification that depends on a running server."
+)
 
 # Configuration
 BASE_URL = "http://localhost:5000"
 USERNAME = "admin"
 PASSWORD = "admin123"  # Update this with the correct password
 
+
 def login():
     """Login and get session cookie"""
-    login_data = {
-        "username": USERNAME,
-        "password": PASSWORD
-    }
+    login_data = {"username": USERNAME, "password": PASSWORD}
 
     response = requests.post(f"{BASE_URL}/login", json=login_data)
     if response.status_code == 200:
@@ -30,24 +30,24 @@ def login():
         print(f"❌ Login failed: {response.status_code} - {response.text}")
         return None
 
+
 def test_futures_toggle(cookies, enable=True):
     """Test futures trading toggle"""
     toggle_data = {"enable": enable}
 
     response = requests.post(
-        f"{BASE_URL}/api/futures/toggle",
-        json=toggle_data,
-        cookies=cookies
+        f"{BASE_URL}/api/futures/toggle", json=toggle_data, cookies=cookies
     )
 
     print(f"🔄 Futures toggle (enable={enable}): {response.status_code}")
     if response.status_code == 200:
         result = response.json()
         print(f"   Response: {json.dumps(result, indent=2)}")
-        return result.get('success', False)
+        return result.get("success", False)
     else:
         print(f"   Error: {response.text}")
         return False
+
 
 def get_dashboard_status(cookies):
     """Get dashboard status to check futures trading state"""
@@ -55,13 +55,14 @@ def get_dashboard_status(cookies):
 
     if response.status_code == 200:
         data = response.json()
-        system_status = data.get('system_status', {})
-        futures_enabled = system_status.get('futures_trading_enabled', False)
+        system_status = data.get("system_status", {})
+        futures_enabled = system_status.get("futures_trading_enabled", False)
         print(f"📊 Dashboard status - futures_trading_enabled: {futures_enabled}")
         return futures_enabled
     else:
         print(f"❌ Failed to get dashboard status: {response.status_code}")
         return None
+
 
 def main():
     print("🧪 Testing futures trading toggle API...")
@@ -111,6 +112,7 @@ def main():
     else:
         print("❌ FAILURE: Futures toggle persistence not working")
         return False
+
 
 if __name__ == "__main__":
     success = main()

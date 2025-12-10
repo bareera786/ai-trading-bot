@@ -16,8 +16,8 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
 
     app = Flask(
         __name__,
-        template_folder='templates',
-        static_folder='static',
+        template_folder="templates",
+        static_folder="static",
     )
     app.config.from_object(config_cls)
 

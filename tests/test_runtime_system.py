@@ -34,7 +34,7 @@ class DummyTrader:
 
     def get_portfolio_summary(self, prices: Dict[str, float]):
         self.portfolio_summary_calls.append(prices)
-        return {'value': sum(prices.values())}
+        return {"value": sum(prices.values())}
 
 
 class DummyMLSystem:
@@ -67,14 +67,14 @@ class DummyHealthReportService:
 
 
 def test_initialize_runtime_full_context_triggers_services(monkeypatch):
-    dashboard_data = {'bootstrap': {}}
+    dashboard_data = {"bootstrap": {}}
     background_manager = DummyBackgroundTaskManager()
-    trade_history = DummyTradeHistory([{'symbol': 'BTCUSDT'}])
+    trade_history = DummyTradeHistory([{"symbol": "BTCUSDT"}])
     persistence_manager = DummyPersistenceManager(return_value=True)
     ultimate_trader = DummyTrader()
     optimized_trader = DummyTrader()
-    ultimate_ml = DummyMLSystem(models={'ultimate': object()})
-    optimized_ml = DummyMLSystem(models={'optimized': object()})
+    ultimate_ml = DummyMLSystem(models={"ultimate": object()})
+    optimized_ml = DummyMLSystem(models={"optimized": object()})
     health_service = DummyHealthReportService()
 
     captured_signals = []
@@ -82,41 +82,41 @@ def test_initialize_runtime_full_context_triggers_services(monkeypatch):
     def fake_signal(sig, handler):
         captured_signals.append((sig, handler))
 
-    monkeypatch.setattr(runtime_system.signal, 'signal', fake_signal)
+    monkeypatch.setattr(runtime_system.signal, "signal", fake_signal)
 
     handler = lambda *args, **kwargs: None
 
     context = {
-        'dashboard_data': dashboard_data,
-        'trade_history': trade_history,
-        'persistence_manager': persistence_manager,
-        'ultimate_trader': ultimate_trader,
-        'optimized_trader': optimized_trader,
-        'ultimate_ml_system': ultimate_ml,
-        'optimized_ml_system': optimized_ml,
-        'background_task_manager': background_manager,
-        'trading_config': {'continuous_training': True},
-        'historical_data': {'prices': []},
-        'top_symbols': ['BTCUSDT'],
-        'get_active_trading_universe': lambda: ['BTCUSDT'],
-        'get_real_market_data': lambda symbol: {'price': 50},
-        'health_report_service': health_service,
-        'signal_handler': handler,
+        "dashboard_data": dashboard_data,
+        "trade_history": trade_history,
+        "persistence_manager": persistence_manager,
+        "ultimate_trader": ultimate_trader,
+        "optimized_trader": optimized_trader,
+        "ultimate_ml_system": ultimate_ml,
+        "optimized_ml_system": optimized_ml,
+        "background_task_manager": background_manager,
+        "trading_config": {"continuous_training": True},
+        "historical_data": {"prices": []},
+        "top_symbols": ["BTCUSDT"],
+        "get_active_trading_universe": lambda: ["BTCUSDT"],
+        "get_real_market_data": lambda symbol: {"price": 50},
+        "health_report_service": health_service,
+        "signal_handler": handler,
     }
 
     runtime_system.initialize_runtime_from_context(context)
 
-    dashboard_data = context['dashboard_data']
+    dashboard_data = context["dashboard_data"]
     assert trade_history.calls == 1
     assert persistence_manager.calls == [(ultimate_trader, ultimate_ml)]
-    assert ultimate_trader.portfolio_summary_calls == [{'BTCUSDT': 50}]
-    assert dashboard_data['portfolio'] == {'value': 50}
+    assert ultimate_trader.portfolio_summary_calls == [{"BTCUSDT": 50}]
+    assert dashboard_data["portfolio"] == {"value": 50}
 
     assert len(background_manager.calls) == 1
     task_call = background_manager.calls[0]
-    assert task_call['start_ultimate_training'] is False
-    assert task_call['start_optimized_training'] is False
-    assert task_call['persistence_inputs']['symbols'] == ['BTCUSDT']
+    assert task_call["start_ultimate_training"] is False
+    assert task_call["start_optimized_training"] is False
+    assert task_call["persistence_inputs"]["symbols"] == ["BTCUSDT"]
 
     assert ultimate_ml.continuous_calls == 1
     assert optimized_ml.continuous_calls == 1
@@ -127,16 +127,16 @@ def test_initialize_runtime_full_context_triggers_services(monkeypatch):
         (signal.SIGTERM, handler),
     ]
 
-    assert dashboard_data['system_status']['models_loaded'] is True
-    assert dashboard_data['optimized_system_status']['models_loaded'] is True
+    assert dashboard_data["system_status"]["models_loaded"] is True
+    assert dashboard_data["optimized_system_status"]["models_loaded"] is True
     assert (
-        dashboard_data['optimized_system_status']['trading_enabled']
+        dashboard_data["optimized_system_status"]["trading_enabled"]
         is optimized_trader.trading_enabled
     )
 
 
 def test_initialize_runtime_handles_sparse_context():
-    dashboard_data = {'existing': {}}
+    dashboard_data = {"existing": {}}
     ultimate_trader = DummyTrader()
     optimized_trader = DummyTrader(enabled=False)
     ultimate_ml = DummyMLSystem()
@@ -144,14 +144,14 @@ def test_initialize_runtime_handles_sparse_context():
 
     runtime_system.initialize_runtime_from_context(
         {
-            'dashboard_data': dashboard_data,
-            'ultimate_trader': ultimate_trader,
-            'optimized_trader': optimized_trader,
-            'ultimate_ml_system': ultimate_ml,
-            'optimized_ml_system': optimized_ml,
+            "dashboard_data": dashboard_data,
+            "ultimate_trader": ultimate_trader,
+            "optimized_trader": optimized_trader,
+            "ultimate_ml_system": ultimate_ml,
+            "optimized_ml_system": optimized_ml,
         }
     )
 
-    assert 'portfolio' not in dashboard_data
-    assert dashboard_data['system_status'] == {}
-    assert dashboard_data['optimized_system_status']['trading_enabled'] is False
+    assert "portfolio" not in dashboard_data
+    assert dashboard_data["system_status"] == {}
+    assert dashboard_data["optimized_system_status"]["trading_enabled"] is False

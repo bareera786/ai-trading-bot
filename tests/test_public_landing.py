@@ -17,8 +17,8 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 
 class PublicLandingTestConfig(Config):
     TESTING = True
-    SECRET_KEY = 'test-key'
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///'
+    SECRET_KEY = "test-key"
+    SQLALCHEMY_DATABASE_URI = "sqlite:///"
     SHOW_PUBLIC_LANDING = True
 
 
@@ -26,8 +26,8 @@ class PublicLandingTestConfig(Config):
 def client():
     app = Flask(
         __name__,
-        template_folder=str(BASE_DIR / 'app' / 'templates'),
-        static_folder=str(BASE_DIR / 'app' / 'static'),
+        template_folder=str(BASE_DIR / "app" / "templates"),
+        static_folder=str(BASE_DIR / "app" / "static"),
     )
     app.config.from_object(PublicLandingTestConfig)
 
@@ -38,37 +38,37 @@ def client():
     app.register_blueprint(marketing_bp)
     register_asset_helpers(app)
 
-    @app.route('/dashboard')
+    @app.route("/dashboard")
     def dashboard():  # pragma: no cover - stub for redirect target
-        return 'dashboard'
+        return "dashboard"
 
     with app.test_client() as test_client:
         yield test_client
 
 
 def test_marketing_page_loads(client):
-    response = client.get('/marketing')
+    response = client.get("/marketing")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     lower_html = html.lower()
-    assert 'request white-glove onboarding' in lower_html
-    assert 'start pilot' in lower_html
+    assert "ai trading pro" in lower_html
+    assert "start free trial" in lower_html
 
 
 def test_root_redirects_to_marketing(client):
-    response = client.get('/', follow_redirects=False)
+    response = client.get("/", follow_redirects=False)
     assert response.status_code in (302, 301)
-    assert '/marketing' in response.headers['Location']
+    assert "/marketing" in response.headers["Location"]
 
 
 def test_marketing_includes_analytics_snippet_when_enabled(client):
     app = client.application
-    app.config['ENABLE_MARKETING_ANALYTICS'] = True
-    app.config['MARKETING_ANALYTICS_SRC'] = 'https://analytics.example/js/script.js'
-    app.config['MARKETING_ANALYTICS_DOMAIN'] = 'ai-bot.local'
+    app.config["ENABLE_MARKETING_ANALYTICS"] = True
+    app.config["MARKETING_ANALYTICS_SRC"] = "https://analytics.example/js/script.js"
+    app.config["MARKETING_ANALYTICS_DOMAIN"] = "ai-bot.local"
 
-    response = client.get('/marketing')
+    response = client.get("/marketing")
     html = response.get_data(as_text=True)
 
-    assert 'analytics.example/js/script.js' in html
+    assert "analytics.example/js/script.js" in html
     assert 'data-domain="ai-bot.local"' in html

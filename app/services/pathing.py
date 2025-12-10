@@ -15,20 +15,22 @@ _LOGGER = logging.getLogger(__name__)
 
 def _sanitize_profile(value: Optional[str]) -> str:
     if not value:
-        return 'default'
+        return "default"
     stripped = value.strip()
-    sanitized = ''.join(ch if ch.isalnum() or ch in {'-', '_'} else '-' for ch in stripped)
+    sanitized = "".join(
+        ch if ch.isalnum() or ch in {"-", "_"} else "-" for ch in stripped
+    )
     sanitized = sanitized.lower()
-    return sanitized or 'default'
+    return sanitized or "default"
 
 
-BOT_PROFILE = _sanitize_profile(os.getenv('BOT_PROFILE', 'default'))
+BOT_PROFILE = _sanitize_profile(os.getenv("BOT_PROFILE", "default"))
 
 
 def _migrate_legacy_directory(base: Path, profiled: Path) -> None:
     """Move legacy single-tenant data into the profile-specific folder."""
 
-    if BOT_PROFILE != 'default':
+    if BOT_PROFILE != "default":
         return
     if not base.exists():
         return
@@ -47,10 +49,14 @@ def _migrate_legacy_directory(base: Path, profiled: Path) -> None:
         if moved_any:
             _LOGGER.info("Migrated legacy data from %s into %s", base, profiled)
     except Exception as exc:  # pragma: no cover - best effort
-        _LOGGER.warning("Legacy migration from %s to %s failed: %s", base, profiled, exc)
+        _LOGGER.warning(
+            "Legacy migration from %s to %s failed: %s", base, profiled, exc
+        )
 
 
-def migrate_file_to_profile(source: Union[str, Path], destination: Union[str, Path]) -> bool:
+def migrate_file_to_profile(
+    source: Union[str, Path], destination: Union[str, Path]
+) -> bool:
     """Move a legacy file into the profile-aware destination if needed."""
 
     src = Path(source)
@@ -81,7 +87,7 @@ def resolve_profile_path(
         _migrate_legacy_directory(base, profiled)
 
     use_legacy = (
-        BOT_PROFILE == 'default'
+        BOT_PROFILE == "default"
         and allow_legacy
         and base.exists()
         and not profiled.exists()

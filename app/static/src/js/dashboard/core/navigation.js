@@ -23,6 +23,8 @@ export function initNavigation() {
     journal: { title: 'Journal', subtitle: 'Trading journal and notes' },
     persistence: { title: 'Persistence', subtitle: 'Data backup and persistence' },
     'user-management': { title: 'User Management', subtitle: 'Manage user accounts and permissions' },
+    'admin-settings': { title: 'Admin Settings', subtitle: 'Configure admin-only settings and payment address' },
+    'admin-dashboard': { title: 'Admin Dashboard', subtitle: 'Industrial-grade overview and controls for administrators.' },
   };
 
   navItems.forEach((item) => {
@@ -43,6 +45,18 @@ export function initNavigation() {
         }
         if (pageId === 'user-management') {
           window.dispatchEvent(new CustomEvent('dashboard:user-management-visible'));
+        }
+        if (pageId === 'spot') {
+          window.dispatchEvent(new CustomEvent('dashboard:spot-visible'));
+        }
+        if (pageId === 'symbols') {
+          window.dispatchEvent(new CustomEvent('dashboard:symbols-visible'));
+        }
+        if (pageId === 'admin-settings') {
+          window.dispatchEvent(new CustomEvent('dashboard:admin-settings-visible'));
+        }
+        if (pageId === 'backtest-lab') {
+          window.dispatchEvent(new CustomEvent('dashboard:backtest-lab-visible'));
         }
       }
     });

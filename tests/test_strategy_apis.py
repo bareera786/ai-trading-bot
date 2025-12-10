@@ -9,19 +9,22 @@ import threading
 import os
 import sys
 
+
 def start_test_server():
     """Start the Flask app in test mode in a separate thread"""
     # Set test mode
-    os.environ['AI_BOT_TEST_MODE'] = 'true'
+    os.environ["AI_BOT_TEST_MODE"] = "true"
 
     # Import and start the app
-    sys.path.insert(0, '.')
+    sys.path.insert(0, ".")
     from app import create_app
 
     # Start the app in a thread
     def run_app():
         app = create_app()
-        app.run(host='0.0.0.0', port=5000, debug=False, threaded=True, use_reloader=False)
+        app.run(
+            host="0.0.0.0", port=5000, debug=False, threaded=True, use_reloader=False
+        )
 
     server_thread = threading.Thread(target=run_app, daemon=True)
     server_thread.start()
@@ -29,6 +32,7 @@ def start_test_server():
     # Wait for server to start
     time.sleep(3)
     return server_thread
+
 
 def test_strategy_apis():
     """Test the newly added strategy API endpoints"""
@@ -39,11 +43,11 @@ def test_strategy_apis():
 
     # Test endpoints that don't require authentication
     endpoints = [
-        '/api/qfm/status',
-        '/api/qfm/signals',
-        '/api/crt/status',
-        '/api/ml/status',
-        '/api/trading/status'
+        "/api/qfm/status",
+        "/api/qfm/signals",
+        "/api/crt/status",
+        "/api/ml/status",
+        "/api/trading/status",
     ]
 
     results = {}
@@ -58,7 +62,9 @@ def test_strategy_apis():
                 # Print a bit of the response to verify it's working
                 try:
                     data = response.json()
-                    print(f"    Response keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
+                    print(
+                        f"    Response keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}"
+                    )
                 except:
                     print(f"    Response: {response.text[:100]}...")
             else:
@@ -84,6 +90,7 @@ def test_strategy_apis():
     else:
         print("⚠️ Some endpoints need attention")
         return False
+
 
 if __name__ == "__main__":
     print("🚀 Starting test server...")

@@ -1,37 +1,74 @@
-#!/usr/bin/env python3
-import requests
-import json
+import os
+import tempfile
 
-# First, authenticate as admin
-auth_url = "http://localhost:5000/auth/login"
-auth_data = {
-    "username": "admin",
-    "password": "admin123"
-}
+import pytest
+from unittest.mock import patch
 
-print("Authenticating as admin...")
-auth_response = requests.post(auth_url, json=auth_data)
-print(f"Auth status: {auth_response.status_code}")
+os.environ["AI_BOT_TEST_MODE"] = "true"
 
-if auth_response.status_code == 200:
-    auth_json = auth_response.json()
-    token = auth_json.get('access_token')
-    print(f"Got token: {token[:20]}...")
+from app import create_app
+from app.extensions import db
+from app.models import User
 
-    # Now toggle trading
-    toggle_url = "http://localhost:5000/api/toggle_trading"
-    headers = {"Authorization": f"Bearer {token}"}
 
-    print("Toggling trading...")
-    toggle_response = requests.post(toggle_url, headers=headers)
-    print(f"Toggle status: {toggle_response.status_code}")
-    print(f"Toggle response: {toggle_response.text}")
+@pytest.fixture
+def app():
+    """Create and configure a test app instance."""
+    db_fd, db_path = tempfile.mkstemp()
+    app = create_app()
+    app.config["TESTING"] = True
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+    app.config["SECRET_KEY"] = "test-secret-key"
 
-    # Toggle again
-    print("Toggling trading again...")
-    toggle_response2 = requests.post(toggle_url, headers=headers)
-    print(f"Toggle status: {toggle_response2.status_code}")
-    print(f"Toggle response: {toggle_response2.text}")
+    with app.app_context():
+        db.create_all()
 
-else:
-    print(f"Auth failed: {auth_response.text}")
+        # Create admin user if not exists
+        admin_user = User.query.filter_by(username="admin").first()
+        if not admin_user:
+            admin_user = User(
+                username="admin", email="admin@example.com", is_admin=True
+            )
+            admin_user.set_password("admin123")
+            db.session.add(admin_user)
+            db.session.commit()
+
+    yield app
+
+    os.close(db_fd)
+    os.unlink(db_path)
+
+
+@pytest.fixture
+def client(app):
+    """A test client for the app."""
+    return app.test_client()
+
+
+def test_toggle_trading(client):
+    """Test toggling trading on and off."""
+    with client.application.app_context():
+        # First, authenticate
+        auth_response = client.post(
+            "/login", json={"username": "admin", "password": "admin123"}
+        )
+        assert auth_response.status_code == 200
+
+        # Mock the context for the toggle
+        mock_ctx = {
+            "ultimate_trader": type('MockTrader', (), {'trading_enabled': False})(),
+            "optimized_trader": None,
+            "dashboard_data": {}
+        }
+        with patch('app.routes.system_ops._ctx', return_value=mock_ctx):
+            # Toggle trading on
+            toggle_response = client.post("/api/toggle_trading")
+            assert toggle_response.status_code == 200
+            toggle_json = toggle_response.get_json()
+            assert "message" in toggle_json
+
+            # Toggle trading off
+            toggle_response2 = client.post("/api/toggle_trading")
+            assert toggle_response2.status_code == 200
+            toggle_json2 = toggle_response2.get_json()
+            assert "message" in toggle_json2

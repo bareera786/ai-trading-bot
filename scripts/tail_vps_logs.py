@@ -9,7 +9,9 @@ import subprocess
 from pathlib import Path
 
 
-def build_ssh_command(host: str, log_path: str, lines: int, identity: str | None, ssh_port: int) -> list[str]:
+def build_ssh_command(
+    host: str, log_path: str, lines: int, identity: str | None, ssh_port: int
+) -> list[str]:
     cmd = ["ssh", "-p", str(ssh_port)]
     if identity:
         cmd.extend(["-i", identity])
@@ -27,7 +29,9 @@ def main() -> int:
         default="/var/log/ai-trading-bot/trades.log",
         help="Remote log file to tail",
     )
-    parser.add_argument("--lines", type=int, default=200, help="Number of log lines to fetch")
+    parser.add_argument(
+        "--lines", type=int, default=200, help="Number of log lines to fetch"
+    )
     parser.add_argument("--identity", help="Path to SSH private key to use")
     parser.add_argument("--port", type=int, default=22, help="SSH port (default 22)")
 

@@ -61,10 +61,14 @@ def build_background_runtime(
         bot_logger=bot_logger,
     )
 
+    # Set global reference for API access
+    from app.tasks.manager import set_background_task_manager
+    set_background_task_manager(manager)
+
     return BackgroundRuntime(
         live_portfolio_scheduler=scheduler,
         background_task_manager=manager,
     )
 
 
-__all__ = ['BackgroundRuntime', 'build_background_runtime']
+__all__ = ["BackgroundRuntime", "build_background_runtime"]

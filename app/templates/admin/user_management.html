@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid py-4">
+    <h2 class="mb-4" style="font-weight:700;letter-spacing:1px;">Institution-Grade User Management</h2>
+    <div class="card mb-4">
+        <div class="card-body">
+            <input type="text" id="userSearch" class="form-control mb-3" placeholder="Search users by name, email, or ID...">
+            <div id="userList" class="table-responsive"></div>
+        </div>
+    </div>
+    <div id="userDetails" style="display:none;">
+        <!-- User details will be loaded here -->
+    </div>
+</div>
+<script src="{{ url_for('static', filename='src/js/admin/user-management.js') }}"></script>
+{% endblock %}

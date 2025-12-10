@@ -3,180 +3,1216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Trading Bot — Institutional Automation</title>
+    <title>AI Trading Bot — Professional Cryptocurrency Automation</title>
     <link rel="stylesheet" href="{{ asset_url('auth.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Enhanced live-price styling for professional look */
+        .live-prices {
+            padding: 5rem 0;
+            background: linear-gradient(135deg, rgba(0, 212, 170, 0.05), rgba(9, 132, 227, 0.05), rgba(255, 77, 77, 0.02));
+            position: relative;
+            overflow: hidden;
+        }
+
+        .live-prices::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 80%, rgba(0, 212, 170, 0.1), transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(9, 132, 227, 0.1), transparent 50%),
+                        radial-gradient(circle at 40% 40%, rgba(255, 77, 77, 0.05), transparent 50%);
+            z-index: 1;
+        }
+
+        .live-prices .container {
+            position: relative;
+            z-index: 2;
+        }
+
+        .live-prices .section-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            color: #e5f7f3;
+        }
+
+        .live-prices .section-header h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #00d4aa, #0984e3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 800;
+        }
+
+        .live-prices .section-header p {
+            color: #b2bec3;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .prices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .price-card {
+            background: linear-gradient(145deg, rgba(26, 26, 46, 0.95), rgba(22, 33, 62, 0.95));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            color: #e5f7f3;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .price-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #00d4aa, #0984e3, #ff4d4d);
+        }
+
+        .price-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+            border-color: rgba(0, 212, 170, 0.3);
+        }
+
+        .price-card h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .price-card .symbol-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .price-card .symbol-icon.btc { background: linear-gradient(135deg, #f7931a, #ff9514); }
+        .price-card .symbol-icon.eth { background: linear-gradient(135deg, #627eea, #4c63d2); }
+        .price-card .symbol-icon.other { background: linear-gradient(135deg, #00d4aa, #0984e3); }
+
+        .price-value {
+            font-size: 1.8rem;
+            margin: 0.5rem 0;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .price-change {
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 0.5rem;
+        }
+
+        .price-change.positive {
+            color: #00d4aa;
+            background: rgba(0, 212, 170, 0.1);
+            border: 1px solid rgba(0, 212, 170, 0.3);
+        }
+        .price-change.negative {
+            color: #ff7675;
+            background: rgba(255, 118, 117, 0.1);
+            border: 1px solid rgba(255, 118, 117, 0.3);
+        }
+
+        .price-empty {
+            color: #b2bec3;
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+
+        .prices-note {
+            color: #8aa1ac;
+            margin-top: 2rem;
+            font-size: 0.95rem;
+            text-align: center;
+            opacity: 0.8;
+        }
+
+        /* Enhanced animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .price-card {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        .price-card:nth-child(1) { animation-delay: 0.1s; }
+        .price-card:nth-child(2) { animation-delay: 0.2s; }
+        .price-card:nth-child(3) { animation-delay: 0.3s; }
+        .price-card:nth-child(4) { animation-delay: 0.4s; }
+        .price-card:nth-child(5) { animation-delay: 0.5s; }
+        .price-card:nth-child(6) { animation-delay: 0.6s; }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .live-prices .section-header h2 {
+                font-size: 2rem;
+            }
+
+            .prices-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .price-card {
+                padding: 1.25rem;
+            }
+
+            .price-value {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Enhanced Navbar Styles */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 15, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            transition: all 0.3s ease;
+            padding: 0;
+        }
+
+        .navbar.scrolled {
+            background: rgba(10, 15, 25, 0.98);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 70px;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #00d4aa;
+            text-decoration: none;
+        }
+
+        .nav-brand i {
+            font-size: 1.8rem;
+            color: #0984e3;
+        }
+
+        .nav-brand:hover {
+            color: #0984e3;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: #e5f7f3;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            color: #00d4aa;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #00d4aa, #0984e3);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .status-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .status-link:hover {
+            color: #00d4aa !important;
+        }
+
+        .nav-cta {
+            background: linear-gradient(135deg, #00d4aa, #0984e3);
+            color: white !important;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 212, 170, 0.3);
+        }
+
+        .nav-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 212, 170, 0.4);
+            color: white !important;
+        }
+
+        .nav-cta::after {
+            display: none;
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            gap: 4px;
+        }
+
+        .mobile-menu-toggle span {
+            width: 25px;
+            height: 3px;
+            background: #e5f7f3;
+            transition: all 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .mobile-menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+
+        .mobile-menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .mobile-menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+
+        .mobile-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(10, 15, 25, 0.98);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .mobile-menu.active {
+            display: flex;
+        }
+
+        .mobile-menu a {
+            color: #e5f7f3;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1rem;
+            padding: 0.5rem 0;
+            transition: color 0.3s ease;
+        }
+
+        .mobile-menu a:hover {
+            color: #00d4aa;
+        }
+
+        .mobile-menu .nav-cta {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        /* Enhanced Footer Styles */
+        .footer {
+            background: linear-gradient(135deg, rgba(10, 15, 25, 0.98), rgba(15, 20, 35, 0.98));
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 4rem 0 2rem;
+            margin-top: 5rem;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #00d4aa;
+            margin-bottom: 1rem;
+        }
+
+        .footer-brand i {
+            font-size: 1.8rem;
+            color: #0984e3;
+        }
+
+        .footer-brand p {
+            color: #b2bec3;
+            font-size: 0.95rem;
+            margin: 0.5rem 0 0 0;
+            line-height: 1.6;
+        }
+
+        .footer-links {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .footer-links h4 {
+            color: #e5f7f3;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            grid-column: 1 / -1;
+        }
+
+        .footer-links a {
+            color: #b2bec3;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            padding: 0.25rem 0;
+        }
+
+        .footer-links a:hover {
+            color: #00d4aa;
+            transform: translateX(5px);
+        }
+
+        .footer-social {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .footer-social h4 {
+            color: #e5f7f3;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .footer-social a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            color: #b2bec3;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .footer-social a:hover {
+            background: linear-gradient(135deg, #00d4aa, #0984e3);
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 212, 170, 0.3);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 2rem;
+            text-align: center;
+        }
+
+        .footer-bottom p {
+            color: #8aa1ac;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .footer-bottom .version {
+            color: #00d4aa;
+            font-weight: 600;
+        }
+
+        /* Mobile responsiveness for navbar and footer */
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 0 1rem;
+                height: 60px;
+            }
+
+            .nav-brand {
+                font-size: 1.3rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .mobile-menu-toggle {
+                display: flex;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                text-align: center;
+            }
+
+            .footer-links {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-social {
+                justify-content: center;
+            }
+        }
+    </style>
 </head>
 <body class="auth-body auth-landing marketing-landing" data-subscription-plans-url="{{ url_for('subscriptions.api_public_subscription_plans') }}">
-    <main class="marketing-wrapper">
-        <section class="landing-layout marketing-layout">
-            <div class="hero-section marketing-hero">
-                <div class="hero-badge">{{ version_label }} • FINAL_HAMMER ready</div>
-                <h1 class="hero-title">Institutional AI trading desks without rebuilding tooling</h1>
-                <p class="hero-description">
-                    Keep your existing compliance stack, colors, and workflow while we supply the automation fabric:
-                    tenant isolation, FINAL_HAMMER safeguards, and 24/7 ML-powered execution.
-                </p>
-                <div class="hero-cta">
-                    <a class="btn" href="{{ url_for('auth.register') }}">Start free pilot</a>
-                    <a class="btn ghost" href="{{ url_for('auth.login') }}">View live dashboard</a>
-                </div>
-                <div class="stats-grid">
-                    <div class="stats-card">
-                        <div class="value">1,280+</div>
-                        <div class="label">Signals / day</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="value">99.95%</div>
-                        <div class="label">Uptime SLA</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="value">65+</div>
-                        <div class="label">Curated symbols</div>
-                    </div>
-                </div>
-                <div class="pill-row">
-                    <span class="pill">Tenant isolation</span>
-                    <span class="pill">Dual-operator approvals</span>
-                    <span class="pill">FINAL_HAMMER enforcement</span>
-                    <span class="pill">Audit-grade logging</span>
-                </div>
+    <div style="padding-top: 80px;"></div>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container" style="max-width:1200px;margin:0 auto;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:70px;">
+            <a class="nav-brand" href="/" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;">
+                <i class="fas fa-robot" style="font-size:1.7rem;color:#00d4aa;"></i>
+                <span style="font-size:1.25rem;font-weight:700;color:#e5f7f3;letter-spacing:0.7px;line-height:1.1;">AI Trading Pro</span>
+            </a>
+            <div class="nav-links" style="display:flex;align-items:center;gap:2.2rem;">
+                <a href="#features" style="font-size:1.08rem;font-weight:600;color:#e5f7f3;padding:0 0.5rem;">Features</a>
+                <a href="#performance" style="font-size:1.08rem;font-weight:600;color:#e5f7f3;padding:0 0.5rem;">Performance</a>
+                <a href="#pricing" style="font-size:1.08rem;font-weight:600;color:#e5f7f3;padding:0 0.5rem;">Pricing</a>
+                <a href="#contact" style="font-size:1.08rem;font-weight:600;color:#e5f7f3;padding:0 0.5rem;">Contact</a>
+                <a href="/health" class="status-link" style="display:flex;align-items:center;gap:0.5rem;font-size:1.08rem;color:#00d4aa;padding:0 0.5rem;">
+                    <i class="fas fa-circle" style="color:#00d4aa;font-size:10px;"></i>
+                    <span style="font-weight:600;">System Status</span>
+                </a>
+                <a href="{{ url_for('auth.login') }}" class="nav-cta" style="background:linear-gradient(135deg,#00d4aa,#0984e3);color:white;padding:0.9rem 2.2rem;border-radius:32px;font-weight:700;font-size:1.12rem;box-shadow:0 6px 18px rgba(0,212,170,0.18);display:flex;align-items:center;gap:0.7rem;letter-spacing:0.6px;">
+                    <i class="fas fa-gauge-high"></i>
+                    <span style="font-size:1.12rem;font-weight:700;letter-spacing:0.6px;">Go to Dashboard</span>
+                </a>
             </div>
-            <div class="marketing-aside">
-                <article class="subscription-card marketing-plan" data-subscription-card data-plan-code="foundation">
-                    <div class="plan-header">
-                        <h3 data-plan-name>Foundation</h3>
-                        <span class="plan-badge" data-plan-badge>Launch teams</span>
-                    </div>
-                    <div class="plan-price">
-                        <span class="price" data-plan-price>$149</span>
-                        <span class="term" data-plan-term>/month</span>
-                    </div>
-                    <p class="plan-subtext" data-plan-subtext>14-day pilot, cancel anytime.</p>
-                    <ul class="plan-features">
-                        <li><span>✓</span> Tenant-isolated dashboard</li>
-                        <li><span>✓</span> Paper & spot automation</li>
-                        <li><span>✓</span> Compliance-grade auditing</li>
-                    </ul>
-                    <div class="plan-meta">
-                        <span data-plan-duration>30-day cycles</span>
-                        <span data-plan-trial>14-day pilot</span>
-                    </div>
-                    <a href="{{ url_for('auth.register') }}" class="plan-cta">Start pilot</a>
-                </article>
-                <article class="subscription-card marketing-plan" data-subscription-card data-plan-code="elite">
-                    <div class="plan-header">
-                        <h3 data-plan-name>Elite Automation</h3>
-                        <span class="plan-badge" data-plan-badge>Most popular</span>
-                    </div>
-                    <div class="plan-price">
-                        <span class="price" data-plan-price>$249</span>
-                        <span class="term" data-plan-term>/month</span>
-                    </div>
-                    <p class="plan-subtext" data-plan-subtext>Ultimate + Optimized ML stacks unlocked.</p>
-                    <ul class="plan-features">
-                        <li><span>✓</span> Multi-profile signal orchestration</li>
-                        <li><span>✓</span> Dedicated reliability engineer</li>
-                        <li><span>✓</span> 24/7 automated runbooks</li>
-                    </ul>
-                    <div class="plan-meta">
-                        <span data-plan-duration>30-day cycles</span>
-                        <span data-plan-trial>14-day pilot</span>
-                    </div>
-                    <div class="dual-cta">
-                        <a href="{{ url_for('auth.register') }}" class="plan-cta">Book review</a>
-                        <a href="{{ url_for('auth.login') }}" class="secondary-link">Already onboard? <span>Access desk</span></a>
-                    </div>
-                </article>
-                <article class="subscription-card marketing-plan" data-subscription-card data-plan-code="enterprise">
-                    <div class="plan-header">
-                        <h3 data-plan-name>Enterprise Desk</h3>
-                        <span class="plan-badge" data-plan-badge>Custom scope</span>
-                    </div>
-                    <div class="plan-price">
-                        <span class="price" data-plan-price>$799</span>
-                        <span class="term" data-plan-term>/month</span>
-                    </div>
-                    <p class="plan-subtext" data-plan-subtext>Dedicated infrastructure pods & SLAs.</p>
-                    <ul class="plan-features">
-                        <li><span>✓</span> Futures + spot FINAL_HAMMER workflows</li>
-                        <li><span>✓</span> Change-management trail & RBAC granularity</li>
-                        <li><span>✓</span> Embedded quant + compliance partner</li>
-                    </ul>
-                    <div class="plan-meta">
-                        <span data-plan-duration>Quarterly cycles</span>
-                        <span data-plan-trial>Custom pilot</span>
-                    </div>
-                    <a href="{{ url_for('auth.register') }}" class="plan-cta">Schedule brief</a>
-                </article>
+            <div class="mobile-menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
             </div>
-        </section>
+        </div>
+        <div class="mobile-menu">
+            <a href="#features">Features</a>
+            <a href="#performance">Performance</a>
+            <a href="#pricing">Pricing</a>
+            <a href="#contact">Contact</a>
+            <a href="/health">
+                <i class="fas fa-circle" style="color: #00d4aa; font-size: 10px;"></i>
+                System Status
+            </a>
+            <a href="{{ url_for('auth.login') }}" class="nav-cta">
+                <i class="fas fa-gauge-high"></i>
+                <span style="font-size: 1.08rem; font-weight: 700; letter-spacing: 0.5px;">Go to Dashboard</span>
+            </a>
+        </div>
+    </nav>
 
-        <section class="marketing-panels wide">
-            <article class="login-container marketing-panel">
-                <div class="panel-heading">
-                    <h2>Live desk snapshot</h2>
-                    <span class="live-dot" aria-label="Live feed"></span>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <i class="fas fa-crown"></i>
+                    <span>Professional Grade</span>
                 </div>
-                <ul class="telemetry-list">
-                    <li>
-                        <span>Signals (24h)</span>
-                        <strong data-telemetry-signals>1,284</strong>
-                    </li>
-                    <li>
-                        <span>Risk incidents</span>
-                        <strong data-telemetry-incidents>0</strong>
-                    </li>
-                    <li>
-                        <span>Desk latency</span>
-                        <strong data-telemetry-latency>3.2 ms</strong>
-                    </li>
-                    <li>
-                        <span>Active tenants</span>
-                        <strong data-telemetry-tenants>42</strong>
-                    </li>
-                </ul>
-                <p class="plan-subtext">CRT + QFM telemetry mirrored hourly from production.</p>
-            </article>
-            <article class="login-container marketing-panel">
-                <div class="panel-heading">
-                    <h2>Deployment playbook</h2>
-                    <a href="{{ url_for('subscriptions.api_public_subscription_plans') }}" class="secondary-link" target="_blank" rel="noreferrer">View API response →</a>
+                <h1 class="hero-title">
+                    <span style="font-size:2.2rem;line-height:1.15;letter-spacing:0.5px;display:block;">Advanced AI-Powered</span><br>
+                    <span class="highlight" style="font-size:2rem;display:block;">Cryptocurrency Trading</span>
+                </h1>
+                <p class="hero-subtitle">
+                    Institutional-grade automated trading with machine learning, real-time analysis,
+                    and professional risk management. Trade smarter, not harder.
+                </p>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">15+</div>
+                        <div class="stat-label">Trading Pairs</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">99.9%</div>
+                        <div class="stat-label">Uptime</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">24/7</div>
+                        <div class="stat-label">Monitoring</div>
+                    </div>
                 </div>
-                <ul class="timeline">
-                    <li><strong>Week 0</strong> — compliance intake, exchange credential rotation, sandbox deploy.</li>
-                    <li><strong>Week 1</strong> — connect funds, calibrate signal guardrails, train ML on top symbols.</li>
-                    <li><strong>Week 2</strong> — shadow trading, human-in-loop overrides, finalize FINAL_HAMMER checklist.</li>
-                    <li><strong>Week 3+</strong> — production turnover with incident rehearsal + automation runbooks.</li>
-                </ul>
-            </article>
-            <article class="login-container marketing-panel">
-                <h2>Request white-glove onboarding</h2>
-                <form method="POST" data-lead-form data-lead-endpoint="{{ url_for('leads.capture_lead') }}">
-                    <div class="form-group">
-                        <label class="form-label" for="lead-name">Name</label>
-                        <input id="lead-name" name="name" type="text" class="form-input" placeholder="Jane Doe" required>
+                <div class="hero-actions">
+                    <a href="{{ url_for('auth.register') }}" class="btn-primary" style="margin-right:1rem;min-width:170px;text-align:center;">
+                        <i class="fas fa-rocket"></i>
+                        <span style="font-size:1.15rem;">Start Trading</span>
+                    </a>
+                    <a href="#demo" class="btn-secondary" style="min-width:170px;text-align:center;">
+                        <i class="fas fa-play"></i>
+                        <span style="font-size:1.15rem;">Watch Demo</span>
+                    </a>
+                    {% if current_user.is_authenticated and current_user.is_admin %}
+                    <a href="{{ url_for('admin_users.api_get_users') }}" class="btn-primary" style="background:linear-gradient(135deg,#0984e3,#00d4aa);margin-left:1rem;min-width:170px;text-align:center;">
+                        <i class="fas fa-users-cog"></i>
+                        <span style="font-size:1.15rem;">Admin User Management</span>
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="hero-features">
+                    <span><i class="fas fa-shield-alt"></i> Risk Management</span>
+                    <span><i class="fas fa-brain"></i> AI-Powered</span>
+                    <span><i class="fas fa-chart-line"></i> Real-time Analytics</span>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="dashboard-preview">
+                    <div class="preview-header">
+                        <div class="preview-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <div class="preview-title">Live Trading Dashboard</div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label" for="lead-email">Work Email</label>
-                        <input id="lead-email" name="email" type="email" class="form-input" placeholder="you@firm.com" required>
+                    <div class="preview-content">
+                        <div class="chart-placeholder" id="dashboard-chart-demo">
+                            <i class="fas fa-chart-area"></i>
+                            <div class="price-display" id="dashboard-price-demo">Loading...</div>
+                            <div class="change-indicator" id="dashboard-change-demo">Loading...</div>
+                        </div>
+                        <div class="signals-list" id="dashboard-signals-demo">
+                            <div class="signal-item">
+                                <div class="signal-symbol">BTC/USDT</div>
+                                <div class="signal-type buy">BUY</div>
+                                <div class="signal-strength">
+                                    <span class="strength-bar" style="width: 85%"></span>
+                                </div>
+                            </div>
+                            <div class="signal-item">
+                                <div class="signal-symbol">ETH/USDT</div>
+                                <div class="signal-type sell">SELL</div>
+                                <div class="signal-strength">
+                                    <span class="strength-bar" style="width: 72%"></span>
+                                </div>
+                            </div>
+                            <div class="signal-item">
+                                <div class="signal-symbol">ADA/USDT</div>
+                                <div class="signal-type hold">HOLD</div>
+                                <div class="signal-strength">
+                                    <span class="strength-bar" style="width: 45%"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <script>
+                        // Demo dynamic data for dashboard preview
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const priceEl = document.getElementById('dashboard-price-demo');
+                            const changeEl = document.getElementById('dashboard-change-demo');
+                            function updateDemo() {
+                                const price = 43000 + Math.random() * 1000;
+                                const change = (Math.random() - 0.5) * 5;
+                                priceEl.textContent = `$${price.toFixed(2)}`;
+                                changeEl.textContent = `${change > 0 ? '+' : ''}${change.toFixed(2)}%`;
+                                changeEl.className = 'change-indicator ' + (change >= 0 ? 'positive' : 'negative');
+                            }
+                            updateDemo();
+                            setInterval(updateDemo, 3000);
+                        });
+                        </script>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label" for="lead-company">Company</label>
-                        <input id="lead-company" name="company" type="text" class="form-input" placeholder="Fund or desk name">
+                </div>
+            </div>
+        </div>
+        <div class="hero-bg-pattern"></div>
+    </section>
+
+    <!-- Enhanced Live Prices Section -->
+    <section class="live-prices" id="live-prices">
+        <div class="container">
+            <div class="section-header">
+                <h2>🚀 Live Market Data</h2>
+                <p>Real-time cryptocurrency prices from our advanced trading algorithms. Stay ahead with live market intelligence.</p>
+            </div>
+            <div class="prices-grid" data-live-prices>
+                <!-- Priority cards for BTC and ETH -->
+                <div class="price-card priority-card">
+                    <h3>
+                        <span class="symbol-icon btc">₿</span>
+                        Bitcoin (BTC)
+                    </h3>
+                    <div class="price-value" data-price="BTCUSDT">$—</div>
+                    <div class="price-change" data-change="BTCUSDT">Loading...</div>
+                </div>
+                <div class="price-card priority-card">
+                    <h3>
+                        <span class="symbol-icon eth">Ξ</span>
+                        Ethereum (ETH)
+                    </h3>
+                    <div class="price-value" data-price="ETHUSDT">$—</div>
+                    <div class="price-change" data-change="ETHUSDT">Loading...</div>
+                </div>
+                <!-- Dynamic cards for other symbols -->
+                <div class="price-card price-empty">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+                    Connecting to live data feed...
+                </div>
+            </div>
+            <div class="prices-note" data-live-prices-note>
+                <i class="fas fa-clock"></i> Data updates every 30 seconds • Powered by real-time market analysis
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Advanced Trading Features</h2>
+                <p>Built for serious traders who demand professional-grade automation</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label" for="lead-notes">What do you need help with?</label>
-                        <textarea id="lead-notes" name="message" class="form-input" rows="3" placeholder="Tell us about your mandate"></textarea>
+                    <h3>AI & Machine Learning</h3>
+                    <p>Advanced algorithms trained on 2+ years of market data with 65%+ accuracy rates</p>
+                    <ul class="feature-list">
+                        <li>Random Forest & Gradient Boosting models</li>
+                        <li>Real-time model retraining</li>
+                        <li>Multi-timeframe analysis</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
                     </div>
-                    <button class="btn" type="submit">Request contact</button>
-                    <p class="plan-subtext">We respond within one business day.</p>
-                    <div class="lead-status" data-lead-status aria-live="polite"></div>
-                </form>
-            </article>
-        </section>
-    </main>
+                    <h3>Risk Management</h3>
+                    <p>Professional risk controls with dynamic position sizing and automated stop-losses</p>
+                    <ul class="feature-list">
+                        <li>Dynamic position sizing</li>
+                        <li>Volatility-based risk adjustment</li>
+                        <li>Circuit breaker protection</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Technical Analysis</h3>
+                    <p>27+ technical indicators with advanced signal generation and market analysis</p>
+                    <ul class="feature-list">
+                        <li>RSI, MACD, Bollinger Bands</li>
+                        <li>Ichimoku Cloud analysis</li>
+                        <li>Volume profile analysis</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3>24/7 Automation</h3>
+                    <p>Continuous monitoring and trading execution with professional-grade reliability</p>
+                    <ul class="feature-list">
+                        <li>Round-the-clock operation</li>
+                        <li>Automated trade execution</li>
+                        <li>Real-time performance monitoring</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h3>Data & Analytics</h3>
+                    <p>Comprehensive trading history, performance analytics, and detailed reporting</p>
+                    <ul class="feature-list">
+                        <li>Detailed trade history</li>
+                        <li>Performance analytics</li>
+                        <li>Profit & loss tracking</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <h3>Security First</h3>
+                    <p>Enterprise-grade security with encrypted credentials and secure API connections</p>
+                    <ul class="feature-list">
+                        <li>Encrypted API credentials</li>
+                        <li>Secure connection protocols</li>
+                        <li>Audit-grade logging</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Performance Section -->
+    <section id="performance" class="performance">
+        <div class="container">
+            <div class="section-header">
+                <h2>Proven Performance</h2>
+                <p>Backtested results across multiple market conditions</p>
+            </div>
+            <div class="performance-grid">
+                <div class="performance-card">
+                    <div class="performance-header">
+                        <h3>BTC/USDT</h3>
+                        <div class="performance-badge positive">+5.96%</div>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="metric">
+                            <span class="metric-label">Sharpe Ratio</span>
+                            <span class="metric-value">0.57</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Win Rate</span>
+                            <span class="metric-value">81.8%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Max Drawdown</span>
+                            <span class="metric-value">17.8%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="performance-card">
+                    <div class="performance-header">
+                        <h3>ETH/USDT</h3>
+                        <div class="performance-badge positive">+4.98%</div>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="metric">
+                            <span class="metric-label">Sharpe Ratio</span>
+                            <span class="metric-value">0.44</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Win Rate</span>
+                            <span class="metric-value">58.3%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Max Drawdown</span>
+                            <span class="metric-value">8.6%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="performance-card">
+                    <div class="performance-header">
+                        <h3>XRP/USDT</h3>
+                        <div class="performance-badge positive">+25.83%</div>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="metric">
+                            <span class="metric-label">Sharpe Ratio</span>
+                            <span class="metric-value">1.20</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Win Rate</span>
+                            <span class="metric-value">60.0%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Max Drawdown</span>
+                            <span class="metric-value">16.0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="performance-summary">
+                <div class="summary-stat">
+                    <div class="summary-number">15.12%</div>
+                    <div class="summary-label">Average Return</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-number">0.74</div>
+                    <div class="summary-label">Average Sharpe</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-number">57.4%</div>
+                    <div class="summary-label">Average Win Rate</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing">
+        <div class="container">
+            <div class="section-header">
+                <h2>Choose Your Plan</h2>
+                <p>Start with our free trial and scale as you grow</p>
+            </div>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Starter</h3>
+                        <div class="pricing-price">
+                            <span class="price">$0</span>
+                            <span class="period">/month</span>
+                        </div>
+                        <p>Perfect for getting started</p>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Paper trading mode</li>
+                        <li><i class="fas fa-check"></i> 5 trading pairs</li>
+                        <li><i class="fas fa-check"></i> Basic analytics</li>
+                        <li><i class="fas fa-check"></i> Email support</li>
+                    </ul>
+                    <a href="{{ url_for('auth.register') }}" class="pricing-btn">Start Free</a>
+                </div>
+                <div class="pricing-card featured">
+                    <div class="pricing-badge">Most Popular</div>
+                    <div class="pricing-header">
+                        <h3>Professional</h3>
+                        <div class="pricing-price">
+                            <span class="price">$49</span>
+                            <span class="period">/month</span>
+                        </div>
+                        <p>For serious traders</p>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Live trading enabled</li>
+                        <li><i class="fas fa-check"></i> 15+ trading pairs</li>
+                        <li><i class="fas fa-check"></i> Advanced analytics</li>
+                        <li><i class="fas fa-check"></i> Priority support</li>
+                        <li><i class="fas fa-check"></i> Risk management</li>
+                        <li><i class="fas fa-check"></i> API access</li>
+                    </ul>
+                    <a href="{{ url_for('auth.register') }}" class="pricing-btn">Start Trial</a>
+                </div>
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Enterprise</h3>
+                        <div class="pricing-price">
+                            <span class="price">$199</span>
+                            <span class="period">/month</span>
+                        </div>
+                        <p>For institutions</p>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Everything in Professional</li>
+                        <li><i class="fas fa-check"></i> Custom strategies</li>
+                        <li><i class="fas fa-check"></i> White-label option</li>
+                        <li><i class="fas fa-check"></i> Dedicated support</li>
+                        <li><i class="fas fa-check"></i> Advanced reporting</li>
+                        <li><i class="fas fa-check"></i> SLA guarantee</li>
+                    </ul>
+                    <a href="{{ url_for('auth.register') }}" class="pricing-btn">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Ready to Start Trading Smarter?</h2>
+                <p>Join thousands of traders who have automated their success with our AI-powered platform.</p>
+                <div class="cta-actions">
+                    <a href="{{ url_for('auth.register') }}" class="btn-primary">
+                        <i class="fas fa-rocket"></i>
+                        Start Free Trial
+                    </a>
+                    <a href="{{ url_for('auth.login') }}" class="btn-secondary">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Access Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <i class="fas fa-robot"></i>
+                    <span>AI Trading Pro</span>
+                    <p>Professional-grade automated cryptocurrency trading with institutional-level AI algorithms and risk management.</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Product</h4>
+                    <a href="#features">Features</a>
+                    <a href="#performance">Performance</a>
+                    <a href="#pricing">Pricing</a>
+                    <a href="/health">System Status</a>
+                    <a href="#demo">Live Demo</a>
+                </div>
+                <div class="footer-links">
+                    <h4>Company</h4>
+                    <a href="#about">About Us</a>
+                    <a href="#contact">Contact</a>
+                    <a href="#careers">Careers</a>
+                    <a href="#blog">Blog</a>
+                    <a href="#press">Press Kit</a>
+                </div>
+                <div class="footer-links">
+                    <h4>Resources</h4>
+                    <a href="#docs">Documentation</a>
+                    <a href="#api">API Reference</a>
+                    <a href="#support">Support Center</a>
+                    <a href="#community">Community</a>
+                    <a href="#security">Security</a>
+                </div>
+                <div class="footer-social">
+                    <h4>Connect</h4>
+                    <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+                    <a href="#" title="Discord"><i class="fab fa-discord"></i></a>
+                    <a href="#" title="GitHub"><i class="fab fa-github"></i></a>
+                    <a href="#" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                    <a href="#" title="Telegram"><i class="fab fa-telegram"></i></a>
+                    <a href="#" title="YouTube"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 AI Trading Pro. All rights reserved. | <span class="version">Version {{ version_label }}</span> | Built with ❤️ for traders</p>
+            </div>
+        </div>
+    </footer>
+
     <script type="module" src="{{ asset_url('subscription-card.js') }}" defer></script>
     <script type="module" src="{{ asset_url('lead-capture.js') }}" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const grid = document.querySelector('[data-live-prices]');
+            const note = document.querySelector('[data-live-prices-note]');
+
+            const formatPrice = (value) => {
+                const num = Number(value);
+                if (Number.isFinite(num)) {
+                    if (num >= 1000) {
+                        return '$' + num.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                    } else if (num >= 1) {
+                        return '$' + num.toFixed(2);
+                    } else {
+                        return '$' + num.toFixed(4);
+                    }
+                }
+                return '$—';
+            };
+
+            const formatChange = (value) => {
+                const num = Number(value);
+                if (!Number.isFinite(num)) return '—';
+                const sign = num >= 0 ? '+' : '';
+                return `${sign}${num.toFixed(2)}%`;
+            };
+
+            const updatePriorityCards = (marketData) => {
+                // Update BTC
+                const btcPrice = document.querySelector('[data-price="BTCUSDT"]');
+                const btcChange = document.querySelector('[data-change="BTCUSDT"]');
+                if (btcPrice && btcChange && marketData.BTCUSDT) {
+                    const data = marketData.BTCUSDT;
+                    const price = data.price ?? data.last_price ?? data.close ?? data.last ?? null;
+                    const change = data.price_change_percent ?? data.change_percent ?? data.change ?? null;
+
+                    btcPrice.textContent = formatPrice(price);
+                    btcChange.textContent = formatChange(change);
+                    btcChange.className = `price-change ${Number(change) >= 0 ? 'positive' : 'negative'}`;
+                }
+
+                // Update ETH
+                const ethPrice = document.querySelector('[data-price="ETHUSDT"]');
+                const ethChange = document.querySelector('[data-change="ETHUSDT"]');
+                if (ethPrice && ethChange && marketData.ETHUSDT) {
+                    const data = marketData.ETHUSDT;
+                    const price = data.price ?? data.last_price ?? data.close ?? data.last ?? null;
+                    const change = data.price_change_percent ?? data.change_percent ?? data.change ?? null;
+
+                    ethPrice.textContent = formatPrice(price);
+                    ethChange.textContent = formatChange(change);
+                    ethChange.className = `price-change ${Number(change) >= 0 ? 'positive' : 'negative'}`;
+                }
+            };
+
+            const renderDynamicCards = (marketData = {}) => {
+                const symbols = Object.keys(marketData).filter(symbol => symbol !== 'BTCUSDT' && symbol !== 'ETHUSDT');
+
+                if (!symbols.length) {
+                    // Keep the loading card if no data
+                    return;
+                }
+
+                // Remove loading card and add dynamic cards
+                const existingCards = grid.querySelectorAll('.price-card:not(.priority-card)');
+                existingCards.forEach(card => card.remove());
+
+                const topSymbols = symbols.slice(0, 4); // Show top 4 additional symbols
+
+                topSymbols.forEach((symbol, index) => {
+                    const payload = marketData[symbol] || {};
+                    const price = payload.price ?? payload.last_price ?? payload.close ?? payload.last ?? null;
+                    const change = payload.price_change_percent ?? payload.change_percent ?? payload.change ?? null;
+                    const dir = Number(change) >= 0 ? 'positive' : 'negative';
+
+                    const card = document.createElement('div');
+                    card.className = 'price-card';
+                    card.style.animationDelay = `${0.7 + index * 0.1}s`;
+                    card.innerHTML = `
+                        <h3>
+                            <span class="symbol-icon other">${symbol.charAt(0)}</span>
+                            ${symbol.replace('USDT', '')}
+                        </h3>
+                        <div class="price-value">${formatPrice(price)}</div>
+                        <div class="price-change ${dir}">${formatChange(change)}</div>
+                    `;
+                    grid.appendChild(card);
+                });
+            };
+
+            const loadPrices = async () => {
+                try {
+                    const res = await fetch('/api/market_data');
+                    if (!res.ok) throw new Error('Failed to load market data');
+
+                    const data = await res.json();
+                    const marketData = data.market_data || {};
+
+                    updatePriorityCards(marketData);
+                    renderDynamicCards(marketData);
+
+                    if (note) note.innerHTML = '<i class="fas fa-check-circle"></i> Live data updated • Next refresh in 30s';
+                } catch (err) {
+                    console.error('Failed to load market data:', err);
+
+                    // Show error state
+                    const btcChange = document.querySelector('[data-change="BTCUSDT"]');
+                    const ethChange = document.querySelector('[data-change="ETHUSDT"]');
+                    if (btcChange) btcChange.textContent = 'Offline';
+                    if (ethChange) ethChange.textContent = 'Offline';
+
+                    if (note) note.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Live data temporarily unavailable';
+                }
+            };
+
+            loadPrices();
+            setInterval(loadPrices, 30000);
+        });
+
+        // Mobile menu toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+            const mobileMenu = document.querySelector('.mobile-menu');
+            const navbar = document.querySelector('.navbar');
+
+            if (mobileMenuToggle && mobileMenu) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    mobileMenu.classList.toggle('active');
+                    mobileMenuToggle.classList.toggle('active');
+                    navbar.classList.toggle('mobile-menu-open');
+                });
+
+                // Close mobile menu when clicking on a link
+                mobileMenu.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', function() {
+                        mobileMenu.classList.remove('active');
+                        mobileMenuToggle.classList.remove('active');
+                        navbar.classList.remove('mobile-menu-open');
+                    });
+                });
+
+                // Close mobile menu when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!navbar.contains(e.target)) {
+                        mobileMenu.classList.remove('active');
+                        mobileMenuToggle.classList.remove('active');
+                        navbar.classList.remove('mobile-menu-open');
+                    }
+                });
+            }
+
+            // Navbar scroll effect
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 50) {
+                    navbar.classList.add('scrolled');
+                } else {
+                    navbar.classList.remove('scrolled');
+                }
+            });
+
+            // Smooth scrolling for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        const headerOffset = 80;
+                        const elementPosition = target.offsetTop;
+                        const offsetPosition = elementPosition - headerOffset;
+
+                        window.scrollTo({
+                            top: offsetPosition,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
     {% if analytics and analytics.enabled and analytics.script_src %}
         <script defer src="{{ analytics.script_src }}"{% if analytics.domain %} data-domain="{{ analytics.domain }}"{% endif %}{% if analytics.api_host %} data-api="{{ analytics.api_host }}"{% endif %}></script>
     {% endif %}

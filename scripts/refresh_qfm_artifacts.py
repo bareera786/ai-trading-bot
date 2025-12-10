@@ -65,7 +65,7 @@ def main() -> int:
     app = create_app()
     with app.app_context():
         context = build_runtime_context()
-        ultimate_ml_system = context['ultimate_ml_system']
+        ultimate_ml_system = context["ultimate_ml_system"]
 
         parser = argparse.ArgumentParser(description=__doc__)
         parser.add_argument(
@@ -103,19 +103,25 @@ def main() -> int:
 
         results = []
         failures = 0
-        print(f"🔁 Refreshing QFM artifacts for {len(symbols)} symbols from {dataset_root}")
+        print(
+            f"🔁 Refreshing QFM artifacts for {len(symbols)} symbols from {dataset_root}"
+        )
 
         for idx, symbol in enumerate(symbols, start=1):
-            dataset_file = _dataset_path(dataset_root, symbol, args.interval, args.years)
+            dataset_file = _dataset_path(
+                dataset_root, symbol, args.interval, args.years
+            )
             print(f"[{idx}/{len(symbols)}] {symbol}:", end=" ")
             if not dataset_file.exists():
                 failures += 1
                 print(f"❌ missing dataset {dataset_file.name}")
-                results.append({
-                    "symbol": symbol,
-                    "status": "missing_dataset",
-                    "dataset": str(dataset_file),
-                })
+                results.append(
+                    {
+                        "symbol": symbol,
+                        "status": "missing_dataset",
+                        "dataset": str(dataset_file),
+                    }
+                )
                 continue
 
             try:
@@ -129,23 +135,30 @@ def main() -> int:
                 )
                 if not entry:
                     raise RuntimeError("artifact entry not returned")
-                results.append({
-                    "symbol": symbol,
-                    "rows": entry.get("rows"),
-                    "feature_matrix": entry.get("feature_matrix"),
-                    "updated_at": entry.get("updated_at"),
-                })
+                results.append(
+                    {
+                        "symbol": symbol,
+                        "rows": entry.get("rows"),
+                        "feature_matrix": entry.get("feature_matrix"),
+                        "updated_at": entry.get("updated_at"),
+                    }
+                )
                 print("✅ artifact refreshed")
             except Exception as exc:  # pylint: disable=broad-except
                 failures += 1
                 print(f"❌ failed ({exc})")
-                results.append({
-                    "symbol": symbol,
-                    "status": "error",
-                    "error": str(exc),
-                })
+                results.append(
+                    {
+                        "symbol": symbol,
+                        "status": "error",
+                        "error": str(exc),
+                    }
+                )
 
-        summary_path = dataset_root / f"qfm_refresh_summary_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.json"
+        summary_path = (
+            dataset_root
+            / f"qfm_refresh_summary_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.json"
+        )
         with summary_path.open("w", encoding="utf-8") as handle:
             json.dump(results, handle, indent=2)
 

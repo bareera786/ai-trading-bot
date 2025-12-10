@@ -25,9 +25,21 @@ def list_users():
                 "id": u.id,
                 "username": u.username,
                 "email": u.email,
-                "balance": getattr(u, "balance", None),
+                "balance": getattr(u, "balance", 0.0),  # Default to 0 if not set
+                "portfolio_value": getattr(u, "portfolio_value", 0.0),  # Add if available
+                "trade_count": len(u.trades) if u.trades else 0,
                 "subscription_expiry": getattr(u.active_subscription, "expiry", None),
+                "subscription_history": [
+                    {
+                        "plan": s.plan.code if s.plan else "unknown",
+                        "start": s.created_at.isoformat() if s.created_at else None,
+                        "end": s.expiry.isoformat() if s.expiry else None,
+                        "is_active": s.is_active
+                    } for s in u.subscriptions
+                ] if u.subscriptions else [],
                 "is_active": u.is_active,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+                "last_login": u.last_login.isoformat() if u.last_login else None,
             } for u in users
         ]
     })
@@ -42,9 +54,21 @@ def get_user(user_id):
         "id": user.id,
         "username": user.username,
         "email": user.email,
-        "balance": getattr(user, "balance", None),
+        "balance": getattr(user, "balance", 0.0),
+        "portfolio_value": getattr(user, "portfolio_value", 0.0),
+        "trade_count": len(user.trades) if user.trades else 0,
         "subscription_expiry": getattr(user.active_subscription, "expiry", None),
+        "subscription_history": [
+            {
+                "plan": s.plan.code if s.plan else "unknown",
+                "start": s.created_at.isoformat() if s.created_at else None,
+                "end": s.expiry.isoformat() if s.expiry else None,
+                "is_active": s.is_active
+            } for s in user.subscriptions
+        ] if user.subscriptions else [],
         "is_active": user.is_active,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+        "last_login": user.last_login.isoformat() if user.last_login else None,
     })
 
 @admin_user_api_bp.route("/<int:user_id>/toggle", methods=["POST"])
@@ -68,7 +92,9 @@ def edit_user(user_id):
     user.username = data.get("username", user.username)
     user.email = data.get("email", user.email)
     if "balance" in data:
-        user.balance = data["balance"]
+        user.balance = float(data["balance"]) if data["balance"] else 0.0
+    if "portfolio_value" in data:
+        user.portfolio_value = float(data["portfolio_value"]) if data["portfolio_value"] else 0.0
     # Subscription expiry update (if applicable)
     if "subscription_expiry" in data and hasattr(user, "active_subscription") and user.active_subscription:
         user.active_subscription.expiry = data["subscription_expiry"]

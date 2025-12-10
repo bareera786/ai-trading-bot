@@ -109,10 +109,84 @@ export async function refreshSpotData() {
     if (dashboard && dashboard.system_status) {
       updateSpotTradingButton(dashboard.system_status.trading_enabled);
     }
+
+    // Fetch portfolio data for spot trading display
+    const portfolio = await fetchJson('/api/portfolio');
+    if (portfolio && portfolio.ultimate) {
+      updateSpotPortfolioDisplay(portfolio.ultimate, dashboard.system_status.trading_enabled);
+    }
+
     console.log('Spot trading data refreshed');
   } catch (error) {
     console.error('Failed to refresh spot data:', error);
   }
+}
+
+function updateSpotPortfolioDisplay(portfolioData, tradingEnabled) {
+  // Update spot balance card
+  const balanceElement = document.querySelector('#spot .dashboard-card:nth-child(1) .card-value');
+  if (balanceElement) {
+    balanceElement.textContent = `$${portfolioData.available_balance.toFixed(2)}`;
+  }
+
+  // Update open positions count
+  const positionsCountElement = document.querySelector('#spot .dashboard-card:nth-child(2) .card-value');
+  if (positionsCountElement) {
+    const positionsCount = Object.keys(portfolioData.open_positions || {}).length;
+    positionsCountElement.textContent = positionsCount;
+  }
+
+  // Update today's P&L
+  const pnlElement = document.querySelector('#spot .dashboard-card:nth-child(3) .card-value');
+  if (pnlElement) {
+    const pnl = portfolioData.total_pnl || 0;
+    const isPositive = pnl >= 0;
+    pnlElement.textContent = `${isPositive ? '+' : ''}$${Math.abs(pnl).toFixed(2)}`;
+    pnlElement.style.color = isPositive ? 'var(--success)' : 'var(--danger)';
+  }
+
+  // Update trading status
+  const statusElement = document.querySelector('#spot .dashboard-card:nth-child(4) .card-value .status-indicator');
+  if (statusElement) {
+    statusElement.className = `status-indicator ${tradingEnabled ? 'status-success' : 'status-warning'}`;
+    statusElement.textContent = tradingEnabled ? 'ACTIVE' : 'INACTIVE';
+  }
+
+  // Update positions table
+  const positionsTable = document.getElementById('spot-positions');
+  if (positionsTable) {
+    positionsTable.innerHTML = '';
+    const positions = portfolioData.open_positions || {};
+
+    if (Object.keys(positions).length === 0) {
+      const emptyRow = document.createElement('tr');
+      emptyRow.innerHTML = '<td colspan="8" style="text-align: center; padding: var(--spacing-lg);">No open positions</td>';
+      positionsTable.appendChild(emptyRow);
+    } else {
+      Object.entries(positions).forEach(([symbol, position]) => {
+        const row = document.createElement('tr');
+        const currentPrice = position.current_price || position.avg_price || 0;
+        const pnl = position.pnl || 0;
+        const pnlPercent = position.pnl_percent || 0;
+
+        row.innerHTML = `
+          <td>${symbol}</td>
+          <td>${position.side || 'N/A'}</td>
+          <td>${position.quantity || 0}</td>
+          <td>$${position.avg_price ? position.avg_price.toFixed(2) : '0.00'}</td>
+          <td>$${currentPrice.toFixed(2)}</td>
+          <td style="color: ${pnl >= 0 ? 'var(--success)' : 'var(--danger)'}">${pnl >= 0 ? '+' : ''}$${Math.abs(pnl).toFixed(2)}</td>
+          <td style="color: ${pnlPercent >= 0 ? 'var(--success)' : 'var(--danger)'}">${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%</td>
+          <td><button class="btn btn-sm btn-danger" onclick="closeSpotPosition('${symbol}')">Close</button></td>
+        `;
+        positionsTable.appendChild(row);
+      });
+    }
+  }
+}
+
+export async function closeSpotPosition(symbol) {
+  alert(`Close position feature for ${symbol} is not yet implemented. Please use manual trading to close positions.`);
 }
 
 export async function refreshFuturesData() {
@@ -136,5 +210,6 @@ if (typeof window !== 'undefined') {
     toggleFuturesTrading,
     refreshSpotData,
     refreshFuturesData,
+    closeSpotPosition,
   });
 }

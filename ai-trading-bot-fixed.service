@@ -1,0 +1,23 @@
+[Unit]
+Description=AI Trading Bot Flask Application
+After=network.target postgresql.service redis-server.service
+
+[Service]
+User=aibot
+WorkingDirectory=/home/aibot/ai-bot
+EnvironmentFile=/home/aibot/ai-bot/config/deploy.env.production
+Environment="PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus"
+ExecStart=/home/aibot/ai-bot/startup.sh
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening (allow home access for runtime files)
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=no
+ReadWritePaths=/home/aibot/ai-bot
+
+[Install]
+WantedBy=multi-user.target

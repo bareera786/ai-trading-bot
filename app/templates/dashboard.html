@@ -138,6 +138,11 @@
         <main class="main-content">
             <header class="content-header">
                 <div>
+                    <button class="mobile-menu-toggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+                        <span>☰</span>
+                    </button>
+                </div>
+                <div>
                     <h1 id="page-title">Dashboard</h1>
                     <p id="page-subtitle">Overview of your trading bot performance</p>
                 </div>
@@ -715,7 +720,7 @@
                             Futures Trading
                         </h2>
                         <div style="display: flex; gap: var(--spacing-md);">
-                            <button class="btn btn-secondary" onclick="toggleFuturesTrading()">Enable Futures</button>
+                            <button id="futures-toggle-btn" class="btn btn-secondary" onclick="toggleFuturesTrading()">Enable Futures</button>
                             <button class="btn btn-primary">Manual Trade</button>
                         </div>
                     </div>

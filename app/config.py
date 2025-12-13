@@ -50,6 +50,21 @@ class Config:
     MARKETING_ANALYTICS_DOMAIN = os.getenv("MARKETING_ANALYTICS_DOMAIN", "")
     MARKETING_ANALYTICS_API_HOST = os.getenv("MARKETING_ANALYTICS_API_HOST", "")
 
+    # Email configuration for password reset and verification
+    MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+    MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
+    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "1") == "1"
+    MAIL_USE_SSL = os.getenv("MAIL_USE_SSL", "0") == "1"
+    MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
+    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "noreply@ai-trading-bot.com")
+    MAIL_MAX_EMAILS = int(os.getenv("MAIL_MAX_EMAILS", "10"))
+    MAIL_SUPPRESS_SEND = os.getenv("MAIL_SUPPRESS_SEND", "0") == "1"
+
+    # CSRF protection
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_SECRET_KEY = os.getenv("WTF_CSRF_SECRET_KEY", SECRET_KEY)
+
 
 class DevelopmentConfig(Config):
     DEBUG = True

@@ -43,20 +43,10 @@ export function initNavigation() {
           pageTitle.textContent = pageInfo[pageId].title;
           pageSubtitle.textContent = pageInfo[pageId].subtitle;
         }
-        
-        // Scroll to top when switching pages, or scroll to section for long content
-        if (pageId === 'admin-dashboard') {
-          // For admin dashboard, scroll to the section itself
-          setTimeout(() => {
-            const rect = targetSection.getBoundingClientRect();
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            const targetTop = rect.top + scrollTop - 100; // Add some offset from top
-            window.scrollTo({ top: targetTop, behavior: 'smooth' });
-          }, 150);
-        } else {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        
+
+        // Keep navigation consistent: always scroll to top when switching pages
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
         if (pageId === 'user-management') {
           window.dispatchEvent(new CustomEvent('dashboard:user-management-visible'));
         }
@@ -75,7 +65,22 @@ export function initNavigation() {
         if (pageId === 'crt-signals') {
           window.dispatchEvent(new CustomEvent('dashboard:crt-signals-visible'));
         }
+        if (pageId === 'futures') {
+          window.dispatchEvent(new CustomEvent('dashboard:futures-visible'));
+        }
       }
     });
   });
+}
+
+export function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) {
+    sidebar.classList.toggle('open');
+  }
+}
+
+// Make toggleSidebar available globally
+if (typeof window !== 'undefined') {
+  window.toggleSidebar = toggleSidebar;
 }

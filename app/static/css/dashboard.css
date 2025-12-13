@@ -693,6 +693,226 @@
             .data-table-container {
                 overflow-x: auto;
             }
+
+            /* Mobile sidebar improvements */
+            .sidebar {
+                width: 100%;
+                max-width: 320px;
+            }
+
+            .sidebar-header {
+                padding: var(--spacing-lg);
+            }
+
+            .sidebar-header h1 {
+                font-size: var(--font-size-md);
+            }
+
+            /* Mobile navigation */
+            .nav-item {
+                padding: var(--spacing-md) var(--spacing-lg);
+                font-size: var(--font-size-sm);
+            }
+
+            .nav-icon {
+                font-size: var(--font-size-md);
+                margin-right: var(--spacing-sm);
+            }
+
+            /* Mobile content header */
+            .content-header {
+                padding: var(--spacing-lg);
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-md);
+            }
+
+            .content-header h1 {
+                font-size: var(--font-size-xl);
+            }
+
+            /* Mobile dashboard cards */
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-lg);
+            }
+
+            .dashboard-card {
+                padding: var(--spacing-lg);
+            }
+
+            .card-header {
+                margin-bottom: var(--spacing-md);
+            }
+
+            .card-icon {
+                font-size: var(--font-size-xl);
+                margin-right: var(--spacing-sm);
+            }
+
+            .card-title {
+                font-size: var(--font-size-base);
+            }
+
+            .card-value {
+                font-size: var(--font-size-2xl);
+            }
+
+            /* Mobile data tables */
+            .data-table-container {
+                border-radius: var(--radius-md);
+                margin: 0 -var(--spacing-lg);
+                width: calc(100% + 2 * var(--spacing-lg));
+            }
+
+            .data-table {
+                min-width: 600px; /* Ensure table doesn't get too cramped */
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: var(--spacing-sm) var(--spacing-md);
+                font-size: var(--font-size-xs);
+            }
+
+            /* Mobile buttons */
+            .btn {
+                padding: var(--spacing-sm) var(--spacing-md);
+                font-size: var(--font-size-xs);
+                width: 100%;
+                justify-content: center;
+            }
+
+            /* Mobile form elements */
+            .form-input {
+                padding: var(--spacing-sm);
+                font-size: var(--font-size-sm);
+            }
+
+            /* Mobile section headers */
+            .section-header {
+                margin-bottom: var(--spacing-lg);
+                padding-bottom: var(--spacing-md);
+            }
+
+            .section-title {
+                font-size: var(--font-size-lg);
+            }
+
+            /* Mobile custom symbols grid */
+            .custom-symbols-grid {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-lg);
+            }
+
+            .input-row {
+                flex-direction: column;
+                gap: var(--spacing-sm);
+            }
+
+            .input-row input,
+            .input-row button {
+                width: 100%;
+            }
+
+            /* Mobile pill collections */
+            .pill-collection {
+                gap: var(--spacing-xs);
+            }
+
+            .symbol-pill {
+                padding: var(--spacing-xs) var(--spacing-sm);
+                font-size: var(--font-size-xs);
+            }
+
+            /* Mobile status indicators */
+            .status-indicator {
+                padding: var(--spacing-xs) var(--spacing-sm);
+                font-size: var(--font-size-xs);
+            }
+
+            /* Mobile page sections */
+            .page-section {
+                padding: var(--spacing-lg);
+                margin-bottom: var(--spacing-lg);
+            }
+
+            /* Mobile admin dashboard */
+            .admin-dashboard-page .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            /* Mobile premium guard */
+            .premium-guard {
+                flex-direction: column;
+                text-align: center;
+                gap: var(--spacing-md);
+            }
+
+            /* Mobile hero stats */
+            .hero-stats {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-md);
+            }
+
+            /* Mobile navigation toggle */
+            .mobile-menu-toggle {
+                display: block;
+                position: fixed;
+                top: var(--spacing-lg);
+                left: var(--spacing-lg);
+                z-index: 1001;
+                background: var(--bg-card);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius-md);
+                padding: var(--spacing-sm);
+                cursor: pointer;
+                color: var(--text-primary);
+            }
+
+            .mobile-menu-toggle:hover {
+                background: var(--bg-hover);
+            }
+        }
+
+        @media (max-width: 480px) {
+            /* Extra small screens */
+            .content-body {
+                padding: var(--spacing-md);
+            }
+
+            .sidebar {
+                max-width: 280px;
+            }
+
+            .sidebar-header {
+                padding: var(--spacing-md);
+            }
+
+            .content-header {
+                padding: var(--spacing-md);
+            }
+
+            .dashboard-card {
+                padding: var(--spacing-md);
+            }
+
+            .card-value {
+                font-size: var(--font-size-xl);
+            }
+
+            .section-title {
+                font-size: var(--font-size-base);
+            }
+
+            .data-table-container {
+                margin: 0 -var(--spacing-md);
+                width: calc(100% + 2 * var(--spacing-md));
+            }
+
+            .page-section {
+                padding: var(--spacing-md);
+            }
         }
 
         /* Animations */

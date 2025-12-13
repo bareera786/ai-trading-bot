@@ -97,9 +97,19 @@ export async function toggleFuturesTrading() {
       body: JSON.stringify({ enable: true }),
     });
     alert(data.message || 'Futures trading updated');
+    // Update button text based on new state
+    updateFuturesTradingButton(data.futures_trading_enabled);
   } catch (error) {
     console.error('Failed to toggle futures trading:', error);
     alert('Failed to toggle futures trading');
+  }
+}
+
+function updateFuturesTradingButton(enabled) {
+  const button = document.getElementById('futures-toggle-btn');
+  if (button) {
+    button.textContent = enabled ? 'Disable Futures' : 'Enable Futures';
+    button.className = enabled ? 'btn btn-danger' : 'btn btn-secondary';
   }
 }
 
@@ -191,7 +201,13 @@ export async function closeSpotPosition(symbol) {
 
 export async function refreshFuturesData() {
   try {
-    await fetchJson('/api/futures/positions');
+    const dashboard = await fetchJson('/api/dashboard');
+    if (dashboard && dashboard.system_status) {
+      updateFuturesTradingButton(dashboard.system_status.futures_trading_enabled);
+    }
+
+    // Fetch futures positions data
+    const positions = await fetchJson('/api/futures/positions');
     console.log('Futures trading data refreshed');
   } catch (error) {
     console.error('Failed to refresh futures data:', error);
@@ -201,6 +217,10 @@ export async function refreshFuturesData() {
 if (typeof window !== 'undefined') {
   window.addEventListener('dashboard:spot-visible', () => {
     refreshSpotData();
+  });
+
+  window.addEventListener('dashboard:futures-visible', () => {
+    refreshFuturesData();
   });
 
   Object.assign(window, {

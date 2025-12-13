@@ -5,6 +5,7 @@ import redis
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_login import LoginManager
+from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
@@ -17,9 +18,10 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 migrate = Migrate()
 socketio = SocketIO()
+mail = Mail()
 
 # Configure Redis storage for rate limiting
-redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+redis_client = redis.Redis(host="localhost", port=6379, decode_responses=True)
 limiter = Limiter(key_func=get_remote_address, storage_uri="redis://localhost:6379")
 
 
@@ -29,7 +31,7 @@ def init_extensions(app):
     db.init_app(app)
 
     # Flask-Migrate
-    migrate.init_app(app, db, directory=app.config.get('MIGRATE_DIRECTORY'))
+    migrate.init_app(app, db, directory=app.config.get("MIGRATE_DIRECTORY"))
 
     # Flask-Login
     login_manager.init_app(app)
@@ -44,6 +46,9 @@ def init_extensions(app):
 
     # Flask-Limiter
     limiter.init_app(app)
+
+    # Flask-Mail
+    mail.init_app(app)
 
     # Ensure asset helpers are always registered, even for ad-hoc Flask apps in tests
     register_asset_helpers(app)

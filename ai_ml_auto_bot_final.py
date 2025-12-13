@@ -3889,6 +3889,25 @@ OPTIMIZED_TRADING_CONFIG = {
 
 TRADING_CONFIG.update(OPTIMIZED_TRADING_CONFIG)
 
+# Override configuration from environment variables
+import os
+
+TRADING_CONFIG["futures_enabled"] = os.getenv(
+    "ENABLE_FUTURES_TRADING", "0"
+).lower() in ("1", "true", "yes")
+TRADING_CONFIG["auto_trade_enabled"] = os.getenv(
+    "ENABLE_AUTO_TRADING", "0"
+).lower() in ("1", "true", "yes")
+TRADING_CONFIG["futures_manual_auto_trade"] = os.getenv(
+    "ENABLE_AUTO_TRADING", "0"
+).lower() in ("1", "true", "yes")
+
+# Set testnet mode from environment
+testnet_override = os.getenv("USE_TESTNET", "").lower()
+if testnet_override in ("0", "false", "no"):
+    # Force live trading
+    pass  # Keep default testnet=True for safety, but this will be overridden in trader initialization
+
 indicator_selection_manager = IndicatorSelectionManager()
 
 
@@ -8568,7 +8587,9 @@ class UltimateMLTrainingSystem:
                                 0,
                             )
                         else:
-                            self.log_training("SYSTEM", f"❌ Error loading {file}: {e}", 0)
+                            self.log_training(
+                                "SYSTEM", f"❌ Error loading {file}: {e}", 0
+                            )
 
                 self.log_training(
                     "SYSTEM", f"📊 Total ultimate models loaded: {models_loaded}", 100
@@ -10305,10 +10326,11 @@ class UltimateAIAutoTrader:
         self.positions = {}
         # NEW: Use ComprehensiveTradeHistory instead of EnhancedTradeHistory
         self.trade_history = ComprehensiveTradeHistory(log_callback=log_component_event)
-        self.trading_enabled = False
+        self.trading_enabled = TRADING_CONFIG.get("auto_trade_enabled", False)
         self.paper_trading = False
         self.real_trader = RealBinanceTrader(
             account_type="spot",
+            testnet=_coerce_bool(os.getenv("USE_TESTNET", "1"), default=True),
             binance_client_cls=BinanceClient,
             api_exception_cls=BinanceAPIException,
             binance_log_manager=globals().get("binance_log_manager"),
@@ -10489,7 +10511,7 @@ class UltimateAIAutoTrader:
             )
             return False
 
-        testnet = _coerce_bool(testnet, default=True)
+        testnet = _coerce_bool(os.getenv("USE_TESTNET", "1"), default=True)
 
         # Safety guard for futures: require FINAL_HAMMER env or explicit force
         final_hammer = os.getenv("FINAL_HAMMER", "false").lower() in (
@@ -14074,11 +14096,38 @@ dashboard_data["system_status"]["futures_trading_ready"] = bool(
     getattr(ultimate_trader, "futures_trading_enabled", False)
 )
 
+# Auto-enable futures trading if environment variables are set
+if TRADING_CONFIG.get("futures_enabled", False):
+    final_hammer = os.getenv("FINAL_HAMMER", "false").lower() in ("1", "true", "yes")
+    if final_hammer:
+        try:
+            print(
+                "🔄 Auto-enabling futures trading based on environment configuration..."
+            )
+            ultimate_trader.futures_trading_enabled = True
+            optimized_trader.futures_trading_enabled = True
+            dashboard_data["system_status"]["futures_trading_enabled"] = True
+            dashboard_data["system_status"]["futures_trading_ready"] = True
+            dashboard_data["optimized_system_status"]["futures_trading_enabled"] = True
+            dashboard_data["optimized_system_status"]["futures_trading_ready"] = True
+            print("✅ Futures trading auto-enabled successfully")
+        except Exception as exc:
+            print(f"⚠️ Failed to auto-enable futures trading: {exc}")
+    else:
+        print(
+            "⚠️ Futures trading not auto-enabled: FINAL_HAMMER environment variable not set"
+        )
+
 # Add circuit breaker status to system status
-if hasattr(ultimate_trader, 'get_circuit_breaker_status'):
-    dashboard_data["system_status"]["circuit_breaker"] = ultimate_trader.get_circuit_breaker_status()
+if hasattr(ultimate_trader, "get_circuit_breaker_status"):
+    dashboard_data["system_status"][
+        "circuit_breaker"
+    ] = ultimate_trader.get_circuit_breaker_status()
 else:
-    dashboard_data["system_status"]["circuit_breaker"] = {"state": "UNKNOWN", "is_open": False}
+    dashboard_data["system_status"]["circuit_breaker"] = {
+        "state": "UNKNOWN",
+        "is_open": False,
+    }
 
 health_report_service = HealthReportService(
     config=HEALTH_CHECK_CONFIG,
@@ -14715,6 +14764,7 @@ try:
     print("✅ AI bot context initialized successfully for Flask routes")
 except Exception as e:
     import traceback
+
     print(f"❌ Failed to initialize AI bot context: {e}")
     print("Full traceback:")
     traceback.print_exc()

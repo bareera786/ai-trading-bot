@@ -48,7 +48,13 @@ def create_or_update_admin(
                 )
             return
 
-        admin = User(username=username, email=email, is_admin=True, is_active=True)
+        admin = User(
+            username=username,
+            email=email,
+            is_admin=True,
+            is_active=True,
+            email_verified=True,
+        )
         admin.set_password(password)
         db.session.add(admin)
         db.session.commit()

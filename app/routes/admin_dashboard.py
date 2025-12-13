@@ -1,19 +1,24 @@
 from flask import Blueprint, render_template, jsonify, request
 from flask_login import login_required, current_user
 from app.tasks.manager import get_self_improvement_worker
+from app.extensions import limiter
 
 admin_dashboard_bp = Blueprint("admin_dashboard", __name__, url_prefix="/admin")
 
+
 @admin_dashboard_bp.route("/users", methods=["GET"], endpoint="user_management")
 @login_required
+@limiter.exempt
 def user_management():
     if not getattr(current_user, "is_admin", False):
         return "Forbidden", 403
     return render_template("admin/user_management.html")
 
+
 # Self-Improvement API Endpoints
 @admin_dashboard_bp.route("/api/self-improvement/status", methods=["GET"])
 @login_required
+@limiter.exempt
 def get_self_improvement_status():
     """Get current self-improvement system status."""
     if not getattr(current_user, "is_admin", False):
@@ -31,8 +36,10 @@ def get_self_improvement_status():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @admin_dashboard_bp.route("/api/self-improvement/trigger-cycle", methods=["POST"])
 @login_required
+@limiter.exempt
 def trigger_self_improvement_cycle():
     """Manually trigger a self-improvement cycle."""
     if not getattr(current_user, "is_admin", False):
@@ -50,8 +57,10 @@ def trigger_self_improvement_cycle():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @admin_dashboard_bp.route("/api/self-improvement/auto-fix", methods=["POST"])
 @login_required
+@limiter.exempt
 def trigger_auto_fix():
     """Trigger a specific auto-fix action."""
     if not getattr(current_user, "is_admin", False):
@@ -75,6 +84,8 @@ def trigger_auto_fix():
         # Trigger the specific auto-fix
         worker.auto_fix_handlers[action]()
 
-        return jsonify({"message": f"Auto-fix action '{action}' completed successfully"})
+        return jsonify(
+            {"message": f"Auto-fix action '{action}' completed successfully"}
+        )
     except Exception as e:
         return jsonify({"error": str(e)}), 500

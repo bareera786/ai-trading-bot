@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from itsdangerous import URLSafeTimedSerializer
+from flask import current_app
 
 from .extensions import db, login_manager
 
@@ -22,7 +24,16 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, default=None)
     selected_symbols = db.Column(db.Text, default="[]")  # JSON list of symbols
-    custom_symbols = db.Column(db.Text, default="[]")  # JSON list of custom symbols for premium users
+    custom_symbols = db.Column(
+        db.Text, default="[]"
+    )  # JSON list of custom symbols for premium users
+    email_verified = db.Column(db.Boolean, default=False)
+    email_verification_token = db.Column(db.String(100), unique=True, nullable=True)
+    email_verification_expires = db.Column(db.DateTime, nullable=True)
+    password_reset_token = db.Column(db.String(100), unique=True, nullable=True)
+    password_reset_expires = db.Column(db.DateTime, nullable=True)
+    failed_login_attempts = db.Column(db.Integer, default=0)
+    locked_until = db.Column(db.DateTime, nullable=True)
 
     trades = db.relationship("app.models.UserTrade", backref="user", lazy=True)
     subscriptions = db.relationship(
@@ -37,6 +48,35 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.password_hash, password)
+
+    def generate_email_verification_token(self) -> str:
+        """Generate a token for email verification."""
+        serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+        return serializer.dumps(self.email, salt="email-verification")
+
+    def verify_email_verification_token(self, token: str, max_age: int = 86400) -> bool:
+        """Verify email verification token."""
+        serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+        try:
+            email = serializer.loads(token, salt="email-verification", max_age=max_age)
+            return email == self.email
+        except Exception:
+            return False
+
+    def generate_password_reset_token(self) -> str:
+        """Generate a token for password reset."""
+        serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+        return serializer.dumps(self.id, salt="password-reset")
+
+    @staticmethod
+    def verify_password_reset_token(token: str, max_age: int = 3600) -> User | None:
+        """Verify password reset token and return user."""
+        serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+        try:
+            user_id = serializer.loads(token, salt="password-reset", max_age=max_age)
+            return User.query.get(user_id)
+        except Exception:
+            return None
 
     @property
     def active_subscription(self):

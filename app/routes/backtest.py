@@ -1,13 +1,19 @@
 """Blueprint containing backtest endpoints."""
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from flask_login import current_user
 
 from app.auth.decorators import login_required
 from app.runtime.symbols import get_active_trading_universe
 
 backtest_bp = Blueprint("backtest", __name__, url_prefix="/api")
+
+def _ctx() -> dict:
+    ctx = current_app.extensions.get("ai_bot_context")
+    if not ctx:
+        raise RuntimeError("AI bot context is not initialized")
+    return ctx
 
 @backtest_bp.route("/backtest/run", methods=["POST"])
 @login_required
@@ -26,16 +32,40 @@ def api_run_backtest():
         if symbol not in allowed_symbols:
             return jsonify({"error": f"Symbol {symbol} not allowed for this user."}), 403
 
-        # Placeholder for actual backtest logic
-        # In a real implementation, this would call the bot's backtesting functions
-        # For now, return mock results
+        # Get the bot instance from the runtime context
+        ctx = _ctx()
+        ultimate_ml_system = ctx.get("ultimate_ml_system")
+        if not ultimate_ml_system:
+            return jsonify({"error": "AI bot system is not available"}), 503
+
+        # Parse date range for backtest parameters
+        # For now, we'll use default parameters, but this could be enhanced
+        # to parse the date_range string and calculate years accordingly
+        years = 0.5  # Default to 6 months for faster testing
+        interval = "1d"  # Daily data
+
+        # Run the real backtest
+        backtest_result = ultimate_ml_system.comprehensive_backtest(
+            symbol=symbol,
+            years=years,
+            interval=interval,
+            initial_balance=1000.0,
+            use_real_data=True
+        )
+
+        if not backtest_result or backtest_result.get("notes") == "insufficient data":
+            return jsonify({"error": "Insufficient data for backtest"}), 400
+
+        # Format results for the frontend
         results = [
-            {"metric": "Total Trades", "value": "150"},
-            {"metric": "Win Rate", "value": "68.5%"},
-            {"metric": "Profit Factor", "value": "1.45"},
-            {"metric": "Max Drawdown", "value": "12.3%"},
-            {"metric": "Sharpe Ratio", "value": "1.23"},
-            {"metric": "Total Return", "value": "45.6%"},
+            {"metric": "Total Trades", "value": str(len(backtest_result.get("trades", [])))},
+            {"metric": "Win Rate", "value": f"{backtest_result.get('win_rate', 0):.1f}%"},
+            {"metric": "Profit Factor", "value": f"{backtest_result.get('profit_factor', 0):.2f}" if backtest_result.get('profit_factor') else "N/A"},
+            {"metric": "Max Drawdown", "value": f"{backtest_result.get('max_drawdown', 0):.1%}"},
+            {"metric": "Sharpe Ratio", "value": f"{backtest_result.get('sharpe_ratio', 0):.2f}"},
+            {"metric": "Total Return", "value": f"{backtest_result.get('total_return', 0):.1%}"},
+            {"metric": "Final Balance", "value": f"${backtest_result.get('final_balance', 0):.2f}"},
+            {"metric": "Model Accuracy", "value": f"{backtest_result.get('accuracy', 0):.1%}"},
         ]
 
         return jsonify({"results": results})

@@ -149,6 +149,37 @@ flask run --host=0.0.0.0 --port=5000
 
 ## 🧩 Runtime architecture
 
+```mermaid
+graph TB
+    A[Flask App] --> B[bootstrap_runtime]
+    B --> C[Runtime Builder]
+    C --> D[Indicators Runtime]
+    C --> E[Symbols Runtime]
+    C --> F[Persistence Runtime]
+    C --> G[Background Runtime]
+    C --> H[Services Runtime]
+
+    D --> I[TA-Lib/pandas-ta]
+    E --> J[Binance API]
+    F --> K[PostgreSQL/Redis]
+    G --> L[Background Tasks]
+    H --> M[ML Models]
+
+    B --> N[initialize_runtime_from_context]
+    N --> O[Live Portfolio Scheduler]
+    N --> P[Background Task Manager]
+    N --> Q[Health Monitoring]
+
+    A --> R[Web Dashboard]
+    R --> S[Real-time Updates]
+    R --> T[Admin Controls]
+
+    M --> U[CRT Signals]
+    M --> V[ICT Patterns]
+    M --> W[SMC Analysis]
+    M --> X[QFM Momentum]
+```
+
 The legacy monolith has been decomposed into typed runtime modules so the Flask factory (and tests) can wire everything without importing `ai_ml_auto_bot_final.py` directly:
 
 - `app/runtime/context.py` – typed wrapper around the dashboard payload plus helpers for attaching to Flask apps.

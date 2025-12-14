@@ -1,6 +1,7 @@
 """Runtime/bootstrap helpers for the modularized AI bot."""
 from __future__ import annotations
 
+import glob
 import os
 from threading import Lock
 from typing import Any, Optional
@@ -15,6 +16,35 @@ BootstrapContext = dict[str, Any]
 _bootstrap_lock = Lock()
 _runtime_started = False
 _TEST_MODE = os.getenv("AI_BOT_TEST_MODE", "").lower() in ("1", "true", "yes")
+
+
+def _check_ui_assets(app) -> None:
+    """Check for missing hashed UI assets and warn if build is needed."""
+    static_dir = os.path.join(app.root_path, "static")
+    if not os.path.exists(static_dir):
+        app.logger.warning("Static directory not found: %s", static_dir)
+        return
+
+    # Check for hashed CSS files (common pattern: app-*.css)
+    css_files = glob.glob(os.path.join(static_dir, "**", "app-*.css"), recursive=True)
+    if not css_files:
+        app.logger.warning(
+            "No hashed CSS assets found. Run 'npm run build' or 'yarn build' to build UI assets."
+        )
+
+    # Check for hashed JS files (common pattern: app-*.js)
+    js_files = glob.glob(os.path.join(static_dir, "**", "app-*.js"), recursive=True)
+    if not js_files:
+        app.logger.warning(
+            "No hashed JS assets found. Run 'npm run build' or 'yarn build' to build UI assets."
+        )
+
+    # Check for source maps (optional but good indicator of built assets)
+    map_files = glob.glob(os.path.join(static_dir, "**", "*.map"), recursive=True)
+    if not map_files:
+        app.logger.info(
+            "No source maps found. Consider enabling source maps in development."
+        )
 
 
 def bootstrap_runtime(app) -> Optional[BootstrapContext]:
@@ -94,5 +124,8 @@ def bootstrap_runtime(app) -> Optional[BootstrapContext]:
                         "Live portfolio scheduler failed to start: %s", exc
                     )
             _runtime_started = True
+
+    # Check for UI asset build status
+    _check_ui_assets(app)
 
     return context

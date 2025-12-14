@@ -727,3 +727,109 @@ class BinanceCredentialService:
             except Exception:
                 return None
         return provider
+
+    def rotate_credentials(
+        self, account_type: str = "spot", reason: str = "scheduled"
+    ) -> bool:
+        """
+        Rotate Binance API credentials for security.
+
+        This method should be called periodically to renew API keys
+        and maintain security best practices.
+
+        Args:
+            account_type: Type of account ("spot" or "futures")
+            reason: Reason for rotation (e.g., "scheduled", "compromised", "expired")
+
+        Returns:
+            bool: True if rotation was successful, False otherwise
+        """
+        try:
+            # Get current credentials
+            creds_map = self.credentials_store.get_credentials()
+            account_key = self.credentials_store._normalize_account_type(account_type)
+            current_creds = (
+                creds_map.get(account_key) if isinstance(creds_map, dict) else {}
+            )
+
+            if not current_creds or not current_creds.get("api_key"):
+                self._log_event(
+                    "ROTATION_FAILED",
+                    f"No credentials found for {account_type} account",
+                    severity="warning",
+                    account_type=account_key,
+                    details={"reason": reason, "rotation_type": "credential_rotation"},
+                )
+                return False
+
+            # Log rotation attempt
+            masked_key = self.mask_api_key(current_creds.get("api_key"))
+            self._log_event(
+                "ROTATION_STARTED",
+                f"Starting credential rotation for {account_type} account ({masked_key})",
+                severity="info",
+                account_type=account_key,
+                details={
+                    "reason": reason,
+                    "rotation_type": "credential_rotation",
+                    "old_key_masked": masked_key,
+                },
+            )
+
+            # Note: In a production system, this would integrate with
+            # Binance's API key management endpoints to automatically
+            # generate new keys. For now, we log the rotation event
+            # and mark the credentials as needing manual renewal.
+
+            # Update the credential metadata to indicate rotation needed
+            updated_creds = current_creds.copy()
+            updated_creds["rotation_needed"] = True
+            updated_creds["last_rotation_check"] = datetime.utcnow().isoformat()
+            updated_creds["rotation_reason"] = reason
+
+            # Save updated credentials
+            success = self.credentials_store.save_credentials(
+                api_key=current_creds["api_key"],
+                api_secret=current_creds["api_secret"],
+                testnet=current_creds.get("testnet", True),
+                account_type=account_type,
+                note=f"Rotation needed: {reason} - {current_creds.get('note', '')}",
+                extra_data=updated_creds,
+            )
+
+            if success:
+                self._log_event(
+                    "ROTATION_COMPLETED",
+                    f"Credential rotation metadata updated for {account_type} account",
+                    severity="info",
+                    account_type=account_key,
+                    details={
+                        "reason": reason,
+                        "rotation_type": "credential_rotation",
+                        "action": "metadata_updated",
+                    },
+                )
+                return True
+            else:
+                self._log_event(
+                    "ROTATION_FAILED",
+                    f"Failed to update rotation metadata for {account_type} account",
+                    severity="error",
+                    account_type=account_key,
+                    details={"reason": reason, "rotation_type": "credential_rotation"},
+                )
+                return False
+
+        except Exception as e:
+            self._log_event(
+                "ROTATION_ERROR",
+                f"Unexpected error during credential rotation: {str(e)}",
+                severity="error",
+                account_type=account_type,
+                details={
+                    "reason": reason,
+                    "rotation_type": "credential_rotation",
+                    "error_type": type(e).__name__,
+                },
+            )
+            return False

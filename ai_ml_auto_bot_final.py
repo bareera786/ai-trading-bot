@@ -128,10 +128,196 @@ from app.runtime.symbols import normalize_symbol as _normalize_symbol
 try:
     import talib  # type: ignore
 
+    _TALIB_AVAILABLE = True
     _TALIB_IMPORT_ERROR = None
-except Exception as _talib_exc:  # Optional dependency fallback
+except ImportError as _talib_exc:
+    _TALIB_AVAILABLE = False
     _TALIB_IMPORT_ERROR = str(_talib_exc)
-    talib = SimpleNamespace()
+    try:
+        import pandas_ta as ta
+
+        # Define fallback functions for common TA-Lib indicators using pandas-ta
+        # Note: pandas-ta returns pandas Series; convert to numpy arrays to match TA-Lib behavior
+        def _rsi_fallback(prices, timeperiod=14):
+            return ta.rsi(pd.Series(prices), length=timeperiod).fillna(0).values
+
+        def _macd_fallback(prices, fastperiod=12, slowperiod=26, signalperiod=9):
+            macd_df = ta.macd(
+                pd.Series(prices), fast=fastperiod, slow=slowperiod, signal=signalperiod
+            )
+            return (
+                macd_df["MACD"].fillna(0).values,
+                macd_df["SIGNAL"].fillna(0).values,
+                macd_df["HIST"].fillna(0).values,
+            )
+
+        def _sma_fallback(prices, timeperiod=30):
+            return ta.sma(pd.Series(prices), length=timeperiod).fillna(0).values
+
+        def _stoch_fallback(
+            high, low, close, fastk_period=5, slowk_period=3, slowd_period=3
+        ):
+            stoch_df = ta.stoch(
+                pd.Series(high),
+                pd.Series(low),
+                pd.Series(close),
+                k=fastk_period,
+                d=slowk_period,
+                smooth_k=slowd_period,
+            )
+            return (
+                stoch_df["STOCHk"].fillna(0).values,
+                stoch_df["STOCHd"].fillna(0).values,
+            )
+
+        def _adx_fallback(high, low, close, timeperiod=14):
+            return (
+                ta.adx(
+                    pd.Series(high), pd.Series(low), pd.Series(close), length=timeperiod
+                )
+                .fillna(0)
+                .values
+            )
+
+        def _atr_fallback(high, low, close, timeperiod=14):
+            return (
+                ta.atr(
+                    pd.Series(high), pd.Series(low), pd.Series(close), length=timeperiod
+                )
+                .fillna(0)
+                .values
+            )
+
+        def _obv_fallback(close, volume):
+            return ta.obv(pd.Series(close), pd.Series(volume)).fillna(0).values
+
+        def _bbands_fallback(close, timeperiod=5, nbdevup=2, nbdevdn=2, matype=0):
+            bb_df = ta.bbands(pd.Series(close), length=timeperiod, std=nbdevup)
+            return (
+                bb_df["BBU"].fillna(0).values,
+                bb_df["BBM"].fillna(0).values,
+                bb_df["BBL"].fillna(0).values,
+            )
+
+        def _ema_fallback(close, timeperiod=30):
+            return ta.ema(pd.Series(close), length=timeperiod).fillna(0).values
+
+        def _mfi_fallback(high, low, close, volume, timeperiod=14):
+            return (
+                ta.mfi(
+                    pd.Series(high),
+                    pd.Series(low),
+                    pd.Series(close),
+                    pd.Series(volume),
+                    length=timeperiod,
+                )
+                .fillna(0)
+                .values
+            )
+
+        def _cci_fallback(high, low, close, timeperiod=14):
+            return (
+                ta.cci(
+                    pd.Series(high), pd.Series(low), pd.Series(close), length=timeperiod
+                )
+                .fillna(0)
+                .values
+            )
+
+        # Candlestick patterns (return last value as int, matching TA-Lib)
+        def _cdlhammer_fallback(open, high, low, close):
+            return (
+                ta.cdl_pattern(
+                    pd.Series(open),
+                    pd.Series(high),
+                    pd.Series(low),
+                    pd.Series(close),
+                    name="hammer",
+                )
+                .fillna(0)
+                .astype(int)
+                .values
+            )
+
+        def _cdlengulfing_fallback(open, high, low, close):
+            return (
+                ta.cdl_pattern(
+                    pd.Series(open),
+                    pd.Series(high),
+                    pd.Series(low),
+                    pd.Series(close),
+                    name="engulfing",
+                )
+                .fillna(0)
+                .astype(int)
+                .values
+            )
+
+        def _cdlmorningstar_fallback(open, high, low, close):
+            return (
+                ta.cdl_pattern(
+                    pd.Series(open),
+                    pd.Series(high),
+                    pd.Series(low),
+                    pd.Series(close),
+                    name="morningstar",
+                )
+                .fillna(0)
+                .astype(int)
+                .values
+            )
+
+        def _cdlhangingman_fallback(open, high, low, close):
+            return (
+                ta.cdl_pattern(
+                    pd.Series(open),
+                    pd.Series(high),
+                    pd.Series(low),
+                    pd.Series(close),
+                    name="hangingman",
+                )
+                .fillna(0)
+                .astype(int)
+                .values
+            )
+
+        def _cdleveningstar_fallback(open, high, low, close):
+            return (
+                ta.cdl_pattern(
+                    pd.Series(open),
+                    pd.Series(high),
+                    pd.Series(low),
+                    pd.Series(close),
+                    name="eveningstar",
+                )
+                .fillna(0)
+                .astype(int)
+                .values
+            )
+
+        # Assign to talib namespace for seamless fallback
+        talib = SimpleNamespace()
+        talib.RSI = _rsi_fallback
+        talib.MACD = _macd_fallback
+        talib.SMA = _sma_fallback
+        talib.STOCH = _stoch_fallback
+        talib.ADX = _adx_fallback
+        talib.ATR = _atr_fallback
+        talib.OBV = _obv_fallback
+        talib.BBANDS = _bbands_fallback
+        talib.EMA = _ema_fallback
+        talib.MFI = _mfi_fallback
+        talib.CCI = _cci_fallback
+        talib.CDLHAMMER = _cdlhammer_fallback
+        talib.CDLENGULFING = _cdlengulfing_fallback
+        talib.CDLMORNINGSTAR = _cdlmorningstar_fallback
+        talib.CDLHANGINGMAN = _cdlhangingman_fallback
+        talib.CDLEVENINGSTAR = _cdleveningstar_fallback
+    except ImportError:
+        raise ImportError(
+            "TA-Lib is not available and pandas-ta fallback failed. Please install TA-Lib or pandas-ta."
+        )
+
 from scipy import stats
 from sklearn.ensemble import (
     RandomForestClassifier,
@@ -3723,26 +3909,58 @@ def setup_application_logging(log_dir):
     resolved_level = getattr(logging, LOGGING_LEVEL, logging.INFO)
     root_logger.setLevel(min(resolved_level, logging.DEBUG))
 
-    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    # Structured JSON formatter for better log analysis
+    class StructuredFormatter(logging.Formatter):
+        def format(self, record):
+            # Add structured fields
+            if not hasattr(record, "component"):
+                record.component = getattr(record, "name", "unknown").split(".")[-1]
+
+            # Create base log entry
+            log_entry = {
+                "timestamp": self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%fZ"),
+                "level": record.levelname,
+                "component": record.component,
+                "message": record.getMessage(),
+                "logger": record.name,
+            }
+
+            # Add extra fields if present
+            if hasattr(record, "extra") and record.extra:
+                log_entry.update(record.extra)
+
+            # Add exception info if present
+            if record.exc_info:
+                log_entry["exception"] = self.formatException(record.exc_info)
+
+            return json.dumps(log_entry, default=str)
+
+    # Human-readable formatter for console
+    console_formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
+
+    # Use structured formatter for files
+    structured_formatter = StructuredFormatter()
 
     info_handler = RotatingFileHandler(
         log_path, maxBytes=LOGGING_MAX_BYTES, backupCount=LOGGING_BACKUP_COUNT
     )
     info_handler.setLevel(resolved_level)
-    info_handler.setFormatter(formatter)
+    info_handler.setFormatter(structured_formatter)
     root_logger.addHandler(info_handler)
 
     debug_handler = RotatingFileHandler(
         debug_path, maxBytes=LOGGING_MAX_BYTES, backupCount=LOGGING_BACKUP_COUNT
     )
     debug_handler.setLevel(logging.DEBUG)
-    debug_handler.setFormatter(formatter)
+    debug_handler.setFormatter(structured_formatter)
     root_logger.addHandler(debug_handler)
 
     if LOGGING_ENABLE_CONSOLE:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(resolved_level)
-        console_handler.setFormatter(formatter)
+        console_handler.setFormatter(console_formatter)  # Human-readable for console
         root_logger.addHandler(console_handler)
 
     logging.getLogger("werkzeug").setLevel(logging.WARNING)
@@ -3759,8 +3977,14 @@ def setup_application_logging(log_dir):
     else:
         sys.stderr = _StdoutTee(sys.stderr, logger_instance, level=logging.ERROR)
 
-    logger_instance.debug(
-        "Logging initialized (level=%s, dir=%s)", LOGGING_LEVEL, log_dir
+    logger_instance.info(
+        "Logging initialized",
+        extra={
+            "level": LOGGING_LEVEL,
+            "log_dir": log_dir,
+            "structured_logging": True,
+            "console_enabled": LOGGING_ENABLE_CONSOLE,
+        },
     )
     return logger_instance
 
@@ -4155,6 +4379,9 @@ class CRTSignalGenerator:
         """Generate comprehensive CRT signals"""
         try:
             if len(historical_prices) < 50:
+                self.logger.warning(
+                    f"Insufficient data for {symbol}: {len(historical_prices)} candles < 50 minimum"
+                )
                 return self._get_default_signal(symbol)
 
             signals = {}
@@ -4202,7 +4429,19 @@ class CRTSignalGenerator:
             return composite_signal
 
         except Exception as e:
-            print(f"❌ CRT signal generation error for {symbol}: {e}")
+            self.logger.error(
+                f"CRT signal generation failed for {symbol}: {str(e)}",
+                extra={
+                    "symbol": symbol,
+                    "data_points": len(historical_prices)
+                    if "historical_prices" in locals()
+                    else 0,
+                    "market_data_keys": list(market_data.keys())
+                    if "market_data" in locals()
+                    else [],
+                    "error_type": type(e).__name__,
+                },
+            )
             return self._get_default_signal(symbol)
 
     def _multi_timeframe_analysis(self, prices):
@@ -5655,11 +5894,25 @@ class ParallelPredictionEngine:
         try:
 
             def predict_single(symbol):
-                if symbol in market_data:
-                    return symbol, ml_system.predict_professional(
-                        symbol, market_data[symbol]
+                try:
+                    if symbol in market_data:
+                        prediction = ml_system.predict_professional(
+                            symbol, market_data[symbol]
+                        )
+                        return symbol, prediction
+                    else:
+                        self.logger.warning(f"Symbol {symbol} not found in market data")
+                        return symbol, None
+                except Exception as e:
+                    self.logger.error(
+                        f"Prediction failed for {symbol}: {str(e)}",
+                        extra={
+                            "symbol": symbol,
+                            "error_type": type(e).__name__,
+                            "market_data_available": symbol in market_data,
+                        },
                     )
-                return symbol, None
+                    return symbol, None
 
             results = Parallel(n_jobs=self.max_workers, backend=self.parallel_backend)(
                 delayed(predict_single)(symbol) for symbol in symbols
@@ -5667,11 +5920,23 @@ class ParallelPredictionEngine:
 
             # Convert to dictionary
             predictions = {symbol: pred for symbol, pred in results if pred is not None}
-            print(f"📊 Parallel predictions completed: {len(predictions)} symbols")
+            successful_predictions = len(predictions)
+            total_symbols = len(symbols)
+
+            self.logger.info(
+                f"Parallel predictions completed: {successful_predictions}/{total_symbols} symbols successful"
+            )
+
+            if successful_predictions == 0:
+                self.logger.warning("No successful predictions in parallel batch")
+
             return predictions
 
         except Exception as e:
-            print(f"❌ Parallel prediction error: {e}")
+            self.logger.error(
+                f"Parallel prediction system failed: {str(e)}",
+                extra={"total_symbols": len(symbols), "error_type": type(e).__name__},
+            )
             # Fallback to sequential processing
             return self.sequential_predict(symbols, market_data, ml_system)
 

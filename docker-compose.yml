@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/trading_bot
+      # Add other env vars as needed (e.g., from deploy.env.example)
+    depends_on:
+      - db
+    volumes:
+      - ./logs:/app/logs  # Mount logs if needed
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: trading_bot
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

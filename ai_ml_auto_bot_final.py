@@ -314,9 +314,253 @@ except ImportError as _talib_exc:
         talib.CDLHANGINGMAN = _cdlhangingman_fallback
         talib.CDLEVENINGSTAR = _cdleveningstar_fallback
     except ImportError:
-        raise ImportError(
-            "TA-Lib is not available and pandas-ta fallback failed. Please install TA-Lib or pandas-ta."
+        # pandas-ta not available, create basic fallback implementations
+        import warnings
+
+        warnings.warn(
+            "pandas-ta not available, using basic TA-Lib fallbacks. Some indicators may be less accurate."
         )
+
+        def _rsi_fallback(prices, timeperiod=14):
+            """Basic RSI implementation using pandas"""
+            if len(prices) < timeperiod + 1:
+                return np.zeros(len(prices))
+
+            prices_series = pd.Series(prices)
+            delta = prices_series.diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=timeperiod).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=timeperiod).mean()
+            rs = gain / loss
+            rsi = 100 - (100 / (1 + rs))
+            return rsi.fillna(0).values
+
+        def _macd_fallback(prices, fastperiod=12, slowperiod=26, signalperiod=9):
+            """Basic MACD implementation"""
+            prices_series = pd.Series(prices)
+            fast_ema = prices_series.ewm(span=fastperiod).mean()
+            slow_ema = prices_series.ewm(span=slowperiod).mean()
+            macd = fast_ema - slow_ema
+            signal = macd.ewm(span=signalperiod).mean()
+            hist = macd - signal
+            return macd.fillna(0).values, signal.fillna(0).values, hist.fillna(0).values
+
+        def _sma_fallback(prices, timeperiod=30):
+            """Simple moving average"""
+            return pd.Series(prices).rolling(window=timeperiod).mean().fillna(0).values
+
+        def _stoch_fallback(
+            high, low, close, fastk_period=5, slowk_period=3, slowd_period=3
+        ):
+            """Basic stochastic oscillator"""
+            high_series = pd.Series(high)
+            low_series = pd.Series(low)
+            close_series = pd.Series(close)
+
+            lowest_low = low_series.rolling(window=fastk_period).min()
+            highest_high = high_series.rolling(window=fastk_period).max()
+
+            k = 100 * ((close_series - lowest_low) / (highest_high - lowest_low))
+            d = k.rolling(window=slowd_period).mean()
+
+            return k.fillna(0).values, d.fillna(0).values
+
+        def _adx_fallback(high, low, close, timeperiod=14):
+            """Basic ADX implementation (simplified)"""
+            # This is a very basic ADX approximation
+            high_series = pd.Series(high)
+            low_series = pd.Series(low)
+            close_series = pd.Series(close)
+
+            tr = pd.concat(
+                [
+                    high_series - low_series,
+                    (high_series - close_series.shift(1)).abs(),
+                    (low_series - close_series.shift(1)).abs(),
+                ],
+                axis=1,
+            ).max(axis=1)
+
+            atr = tr.rolling(window=timeperiod).mean()
+            adx = (atr / close_series * 100).rolling(window=timeperiod).mean()
+            return adx.fillna(0).values
+
+        def _atr_fallback(high, low, close, timeperiod=14):
+            """Average True Range"""
+            high_series = pd.Series(high)
+            low_series = pd.Series(low)
+            close_series = pd.Series(close)
+
+            tr = pd.concat(
+                [
+                    high_series - low_series,
+                    (high_series - close_series.shift(1)).abs(),
+                    (low_series - close_series.shift(1)).abs(),
+                ],
+                axis=1,
+            ).max(axis=1)
+
+            return tr.rolling(window=timeperiod).mean().fillna(0).values
+
+        def _obv_fallback(close, volume):
+            """On Balance Volume"""
+            close_series = pd.Series(close)
+            volume_series = pd.Series(volume)
+
+            obv = pd.Series(index=close_series.index, dtype=float)
+            obv.iloc[0] = volume_series.iloc[0]
+
+            for i in range(1, len(close_series)):
+                if close_series.iloc[i] > close_series.iloc[i - 1]:
+                    obv.iloc[i] = obv.iloc[i - 1] + volume_series.iloc[i]
+                elif close_series.iloc[i] < close_series.iloc[i - 1]:
+                    obv.iloc[i] = obv.iloc[i - 1] - volume_series.iloc[i]
+                else:
+                    obv.iloc[i] = obv.iloc[i - 1]
+
+            return obv.fillna(0).values
+
+        def _bbands_fallback(close, timeperiod=5, nbdevup=2, nbdevdn=2, matype=0):
+            """Bollinger Bands"""
+            close_series = pd.Series(close)
+            sma = close_series.rolling(window=timeperiod).mean()
+            std = close_series.rolling(window=timeperiod).std()
+
+            upper = sma + (std * nbdevup)
+            lower = sma - (std * nbdevdn)
+
+            return upper.fillna(0).values, sma.fillna(0).values, lower.fillna(0).values
+
+        def _ema_fallback(prices, timeperiod=30):
+            """Exponential moving average"""
+            return pd.Series(prices).ewm(span=timeperiod).mean().fillna(0).values
+
+        def _mfi_fallback(high, low, close, volume, timeperiod=14):
+            """Money Flow Index (simplified)"""
+            high_series = pd.Series(high)
+            low_series = pd.Series(low)
+            close_series = pd.Series(close)
+            volume_series = pd.Series(volume)
+
+            typical_price = (high_series + low_series + close_series) / 3
+            money_flow = typical_price * volume_series
+
+            # Simplified MFI calculation
+            mfi = pd.Series(index=typical_price.index, dtype=float)
+            for i in range(timeperiod, len(typical_price)):
+                pos_flow = money_flow.iloc[i - timeperiod : i][
+                    typical_price.iloc[i - timeperiod : i].diff() > 0
+                ].sum()
+                neg_flow = money_flow.iloc[i - timeperiod : i][
+                    typical_price.iloc[i - timeperiod : i].diff() < 0
+                ].sum()
+                if neg_flow != 0:
+                    mfi.iloc[i] = 100 - (100 / (1 + (pos_flow / neg_flow)))
+                else:
+                    mfi.iloc[i] = 100
+
+            return mfi.fillna(0).values
+
+        def _cci_fallback(high, low, close, timeperiod=14):
+            """Commodity Channel Index (simplified)"""
+            high_series = pd.Series(high)
+            low_series = pd.Series(low)
+            close_series = pd.Series(close)
+
+            typical_price = (high_series + low_series + close_series) / 3
+            sma = typical_price.rolling(window=timeperiod).mean()
+            mad = (typical_price - sma).abs().rolling(window=timeperiod).mean()
+
+            cci = (typical_price - sma) / (0.015 * mad)
+            return cci.fillna(0).values
+
+        # Candlestick patterns (basic implementations)
+        def _cdlhammer_fallback(open, high, low, close):
+            """Basic hammer pattern detection"""
+            open_series = pd.Series(open)
+            high_series = pd.Series(high)
+            low_series = pd.Series(low)
+            close_series = pd.Series(close)
+
+            body = (close_series - open_series).abs()
+            lower_shadow = (
+                pd.concat([open_series, close_series], axis=1).min(axis=1) - low_series
+            )
+            upper_shadow = high_series - pd.concat(
+                [open_series, close_series], axis=1
+            ).max(axis=1)
+
+            hammer = ((lower_shadow > 2 * body) & (upper_shadow < body)).astype(int)
+            return hammer.values
+
+        def _cdlengulfing_fallback(open, high, low, close):
+            """Basic engulfing pattern detection"""
+            open_series = pd.Series(open)
+            close_series = pd.Series(close)
+
+            prev_body = (close_series.shift(1) - open_series.shift(1)).abs()
+            curr_body = (close_series - open_series).abs()
+
+            bullish_engulfing = (
+                (close_series > open_series)
+                & (close_series.shift(1) < open_series.shift(1))
+                & (close_series > open_series.shift(1))
+                & (open_series < close_series.shift(1))
+            ).astype(int)
+            bearish_engulfing = (
+                (close_series < open_series)
+                & (close_series.shift(1) > open_series.shift(1))
+                & (close_series < open_series.shift(1))
+                & (open_series > close_series.shift(1))
+            ).astype(int)
+
+            return (bullish_engulfing | bearish_engulfing).astype(int).values
+
+        def _cdlmorningstar_fallback(open, high, low, close):
+            """Basic morning star pattern (simplified)"""
+            close_series = pd.Series(close)
+
+            # Very basic morning star detection
+            star = (
+                (close_series.shift(2) < close_series.shift(1))
+                & (close_series.shift(1) < close_series)
+                & (close_series > close_series.shift(2))
+            ).astype(int)
+            return star.values
+
+        def _cdlhangingman_fallback(open, high, low, close):
+            """Basic hanging man pattern"""
+            return _cdlhammer_fallback(open, high, low, close)  # Same logic as hammer
+
+        def _cdleveningstar_fallback(open, high, low, close):
+            """Basic evening star pattern (simplified)"""
+            close_series = pd.Series(close)
+
+            # Very basic evening star detection
+            star = (
+                (close_series.shift(2) > close_series.shift(1))
+                & (close_series.shift(1) > close_series)
+                & (close_series < close_series.shift(2))
+            ).astype(int)
+            return star.values
+
+        # Assign to talib namespace for seamless fallback
+        talib = SimpleNamespace()
+        talib.RSI = _rsi_fallback
+        talib.MACD = _macd_fallback
+        talib.SMA = _sma_fallback
+        talib.STOCH = _stoch_fallback
+        talib.ADX = _adx_fallback
+        talib.ATR = _atr_fallback
+        talib.OBV = _obv_fallback
+        talib.BBANDS = _bbands_fallback
+        talib.EMA = _ema_fallback
+        talib.MFI = _mfi_fallback
+        talib.CCI = _cci_fallback
+        talib.CDLHAMMER = _cdlhammer_fallback
+        talib.CDLENGULFING = _cdlengulfing_fallback
+        talib.CDLMORNINGSTAR = _cdlmorningstar_fallback
+        talib.CDLHANGINGMAN = _cdlhangingman_fallback
+        talib.CDLEVENINGSTAR = _cdleveningstar_fallback
 
 from scipy import stats
 from sklearn.ensemble import (

@@ -89,19 +89,47 @@ export async function executeFuturesTrade() {
   }
 }
 
-export async function toggleFuturesTrading() {
+export async function toggleFuturesTrading(forceEnable = null) {
+  const button = document.getElementById('futures-toggle-btn');
   try {
+    // Query current state so we can toggle when enable is omitted
+    const dashboard = await fetchJson('/api/dashboard');
+    const current = !!(dashboard && dashboard.system_status && dashboard.system_status.futures_trading_enabled);
+    const enable = forceEnable === null ? !current : !!forceEnable;
+
+    // Show spinner and disable button while request is in-flight
+    if (button) {
+      button.disabled = true;
+      button.dataset._origText = button.textContent;
+      button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+    }
+
     const data = await fetchJson('/api/futures/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enable: true }),
+      body: JSON.stringify({ enable }),
     });
+
     alert(data.message || 'Futures trading updated');
-    // Update button text based on new state
     updateFuturesTradingButton(data.futures_trading_enabled);
   } catch (error) {
     console.error('Failed to toggle futures trading:', error);
     alert('Failed to toggle futures trading');
+  } finally {
+    if (button) {
+      button.disabled = false;
+      // restore text and ensure state sync
+      if (button.dataset._origText) {
+        button.textContent = button.dataset._origText;
+        delete button.dataset._origText;
+      }
+      // refresh from server to sync the UI state
+      try {
+        await refreshFuturesData();
+      } catch (err) {
+        // best-effort only
+      }
+    }
   }
 }
 

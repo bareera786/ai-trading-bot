@@ -44,6 +44,27 @@ def test_futures_toggle_persists_and_returns_status():
                 js2 = resp2.get_json()
                 assert js2.get("futures_trading_enabled") in (True, False)
 
+                # toggle by omitting the 'enable' field (should flip state)
+                # read current dashboard state
+                dash = client.get("/api/dashboard")
+                assert dash.status_code == 200
+                current = (
+                    dash.get_json()
+                    .get("system_status", {})
+                    .get("futures_trading_enabled", False)
+                )
+
+                resp3 = client.post("/api/futures/toggle", json={})
+                assert resp3.status_code == 200
+                js3 = resp3.get_json()
+                assert js3.get("futures_trading_enabled") == (not current)
+
+                # flip back
+                resp4 = client.post("/api/futures/toggle", json={})
+                assert resp4.status_code == 200
+                js4 = resp4.get_json()
+                assert js4.get("futures_trading_enabled") == current
+
     finally:
         # Clean up temporary DB file
         os.close(db_fd)

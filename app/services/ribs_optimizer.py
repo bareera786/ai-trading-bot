@@ -106,8 +106,15 @@ class TradingRIBSOptimizer:
     ) -> Tuple[float, List]:
         """Evaluate a trading strategy"""
         try:
+            # Defensive: coerce solution to numpy array (log if it's an unexpected type)
+            try:
+                sol_arr = np.asarray(solution)
+            except Exception:
+                # If conversion fails, keep original repr for logging and proceed
+                sol_arr = solution
+
             # Decode parameters
-            params = self.decode_solution(solution)
+            params = self.decode_solution(sol_arr)
 
             # Run backtest with these parameters
             results = self.run_backtest(params, market_data)
@@ -123,7 +130,20 @@ class TradingRIBSOptimizer:
             return objective, behavior
 
         except Exception as e:
-            self.logger.error(f"Evaluation failed: {e}")
+            # Log full traceback and the offending solution (repr) for easier debugging
+            try:
+                self.logger.exception(
+                    "Evaluation failed",
+                    extra={
+                        "solution_repr": repr(solution),
+                        "solution_type": type(solution).__name__,
+                    },
+                )
+            except Exception:
+                self.logger.error(
+                    f"Evaluation failed: {e} (also failed to log solution repr)"
+                )
+
             return -100.0, [0.0, 100.0, 0.0]  # Penalize failed evaluations
 
     def run_backtest(self, params: Dict, market_data: Dict) -> Dict:
@@ -257,7 +277,27 @@ class TradingRIBSOptimizer:
                     }
 
                     for future in as_completed(future_to_sol):
-                        obj, beh = future.result()
+                        sol = future_to_sol.get(future)
+                        try:
+                            obj, beh = future.result()
+                        except Exception as e:
+                            # Log exception with full traceback and offending solution
+                            try:
+                                self.logger.exception(
+                                    "Exception during solution evaluation",
+                                    extra={
+                                        "solution_repr": repr(sol),
+                                        "solution_type": type(sol).__name__,
+                                    },
+                                )
+                            except Exception:
+                                self.logger.error(
+                                    f"Exception evaluating solution: {e} (failed to log solution repr)"
+                                )
+
+                            # Use penalized evaluation result for failed futures and continue
+                            obj, beh = -100.0, [0.0, 100.0, 0.0]
+
                         objectives.append(obj)
                         behaviors.append(beh)
 

@@ -6132,10 +6132,14 @@ strategy_manager = (
 
 class ParallelPredictionEngine:
     def __init__(self):
+        import logging
+
+        # provide a logger to avoid attribute errors when methods call self.logger
+        self.logger = logging.getLogger(__name__)
         self.num_cores = multiprocessing.cpu_count()
         self.max_workers = max(1, min(self.num_cores, 4))
         self.parallel_backend = "threading"
-        print(
+        self.logger.info(
             f"🚀 Parallel Prediction Engine Initialized with {self.num_cores} cores"
             f" (using up to {self.max_workers} {self.parallel_backend} workers)"
         )

@@ -18,6 +18,67 @@ _runtime_started = False
 _TEST_MODE = os.getenv("AI_BOT_TEST_MODE", "").lower() in ("1", "true", "yes")
 
 
+def _validate_startup_configuration(app) -> None:
+    """Validate critical configuration settings on startup."""
+    issues = []
+
+    # Check required environment variables
+    required_env_vars = [
+        "BINANCE_API_KEY",
+        "BINANCE_SECRET_KEY",
+    ]
+
+    for var in required_env_vars:
+        if not os.getenv(var):
+            issues.append(f"Missing required environment variable: {var}")
+
+    # Check database configuration
+    if not app.config.get("SQLALCHEMY_DATABASE_URI"):
+        issues.append("Database URI not configured")
+
+    # Check trading mode configuration
+    use_testnet = os.getenv("USE_TESTNET", "1").lower() in ("1", "true", "yes")
+    enable_futures = os.getenv("ENABLE_FUTURES_TRADING", "0").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    enable_auto_trading = os.getenv("ENABLE_AUTO_TRADING", "0").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+    if enable_auto_trading and not use_testnet:
+        issues.append(
+            "WARNING: Auto trading enabled in LIVE mode - ensure you understand the risks"
+        )
+
+    if enable_futures and not use_testnet:
+        issues.append(
+            "WARNING: Futures trading enabled in LIVE mode - ensure you understand the risks"
+        )
+
+    # Check for conflicting configurations
+    if enable_auto_trading and enable_futures and not use_testnet:
+        issues.append(
+            "CRITICAL: Both auto trading and futures trading enabled in LIVE mode - this is HIGH RISK"
+        )
+
+    # Log validation results
+    if issues:
+        app.logger.warning("Configuration validation found %d issue(s):", len(issues))
+        for issue in issues:
+            if issue.startswith("CRITICAL"):
+                app.logger.error("🚨 %s", issue)
+            elif issue.startswith("WARNING"):
+                app.logger.warning("⚠️ %s", issue)
+            else:
+                app.logger.warning("ℹ️ %s", issue)
+    else:
+        app.logger.info("✅ Configuration validation passed")
+
+
 def _check_ui_assets(app) -> None:
     """Check for missing hashed UI assets and warn if build is needed."""
     static_dir = os.path.join(app.root_path, "static")
@@ -49,6 +110,9 @@ def _check_ui_assets(app) -> None:
 
 def bootstrap_runtime(app) -> Optional[BootstrapContext]:
     """Ensure the legacy AI bot runtime is wired into the provided Flask app."""
+
+    # Validate startup configuration
+    _validate_startup_configuration(app)
 
     with app.app_context():
         from app import (

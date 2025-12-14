@@ -42,12 +42,26 @@ def health_check():
     # Check Binance API latency
     binance_status = "error"
     binance_latency_ms = None
+    binance_testnet_status = "error"
+    binance_testnet_latency_ms = None
+
     try:
+        # Check mainnet API
         start_time = time.time()
         response = requests.get("https://api.binance.com/api/v3/time", timeout=5)
         if response.status_code == 200:
             binance_status = "ok"
             binance_latency_ms = round((time.time() - start_time) * 1000, 2)
+    except Exception:
+        pass
+
+    try:
+        # Check testnet API
+        start_time = time.time()
+        response = requests.get("https://testnet.binance.vision/api/v3/time", timeout=5)
+        if response.status_code == 200:
+            binance_testnet_status = "ok"
+            binance_testnet_latency_ms = round((time.time() - start_time) * 1000, 2)
     except Exception:
         pass
 
@@ -72,10 +86,46 @@ def health_check():
     except Exception:
         pass
 
+    # Check memory usage
+    memory_status = "ok"
+    memory_usage_percent = None
+    try:
+        import psutil
+
+        memory = psutil.virtual_memory()
+        memory_usage_percent = round(memory.percent, 1)
+        memory_status = "high" if memory.percent > 90 else "ok"
+    except ImportError:
+        memory_status = "unknown"
+    except Exception:
+        memory_status = "error"
+
+    # Check CPU usage
+    cpu_status = "ok"
+    cpu_usage_percent = None
+    try:
+        import psutil
+
+        cpu_usage_percent = round(psutil.cpu_percent(interval=1), 1)
+        cpu_status = "high" if cpu_usage_percent > 95 else "ok"
+    except ImportError:
+        cpu_status = "unknown"
+    except Exception:
+        cpu_status = "error"
+
     # Determine overall status
-    checks = [binance_status, db_status, worker_status, disk_status]
+    checks = [
+        binance_status,
+        db_status,
+        worker_status,
+        disk_status,
+        memory_status,
+        cpu_status,
+    ]
     overall_status = (
-        "healthy" if all(status == "ok" for status in checks) else "unhealthy"
+        "healthy"
+        if all(status in ("ok", "unknown") for status in checks)
+        else "unhealthy"
     )
 
     return jsonify(
@@ -88,6 +138,10 @@ def health_check():
                     "status": binance_status,
                     "latency_ms": binance_latency_ms,
                 },
+                "binance_testnet_api": {
+                    "status": binance_testnet_status,
+                    "latency_ms": binance_testnet_latency_ms,
+                },
                 "database": {
                     "status": db_status,
                 },
@@ -97,6 +151,14 @@ def health_check():
                 "disk_space": {
                     "status": disk_status,
                     "free_gb": disk_free_gb,
+                },
+                "memory": {
+                    "status": memory_status,
+                    "usage_percent": memory_usage_percent,
+                },
+                "cpu": {
+                    "status": cpu_status,
+                    "usage_percent": cpu_usage_percent,
                 },
             },
         }

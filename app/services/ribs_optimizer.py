@@ -198,12 +198,39 @@ class TradingRIBSOptimizer:
     def calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
         """Calculate RSI indicator"""
         try:
+            # Defensive handling: ensure period is a valid integer >= 1
+            try:
+                period_int = int(period)
+            except Exception:
+                self.logger.warning(
+                    f"Invalid RSI period {period!r}, falling back to 14"
+                )
+                period_int = 14
+
+            if period_int < 1:
+                self.logger.warning(f"RSI period {period_int} < 1, using 14")
+                period_int = 14
+
+            # If not enough data for the given period, return neutral RSI (50)
+            if len(prices) < max(1, period_int):
+                return pd.Series([50] * len(prices), index=prices.index)
+
             delta = prices.diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-            rs = gain / loss
+            gain = (
+                delta.where(delta > 0, 0)
+                .rolling(window=period_int, min_periods=period_int)
+                .mean()
+            )
+            loss = (
+                (-delta.where(delta < 0, 0))
+                .rolling(window=period_int, min_periods=period_int)
+                .mean()
+            )
+            # Avoid division by zero
+            rs = gain / (loss.replace(0, np.nan))
             rsi = 100 - (100 / (1 + rs))
-            return rsi
+            # Where RSI is NaN (due to zero loss/gain windows), fill with 50 (neutral)
+            return rsi.fillna(50)
         except Exception as e:
             self.logger.error(f"RSI calculation failed: {e}")
             return pd.Series([50] * len(prices), index=prices.index)

@@ -1375,7 +1375,7 @@
                             <span class="section-icon">🔑</span>
                             API Key Management
                         </h2>
-                        <button class="btn btn-primary">Add API Key</button>
+                        <button id="add-api-key-btn" class="btn btn-primary">Add API Key</button>
                     </div>
 
                     <div class="dashboard-card">
@@ -1392,21 +1392,48 @@
                                     </tr>
                                 </thead>
                                 <tbody id="api-keys-table">
-                                    <tr>
-                                        <td>Binance</td>
-                                        <td>••••••••••••••••••••••••••••••••</td>
-                                        <td><span class="status-indicator status-success">Active</span></td>
-                                        <td>2 minutes ago</td>
-                                        <td>
-                                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;">Edit</button>
-                                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;">Remove</button>
-                                        </td>
-                                    </tr>
+                                    <!-- Rows will be inserted here by JS -->
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </section>
+
+                <!-- API Keys Modal -->
+                <div id="api-keys-modal" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index:2000; align-items:center; justify-content:center;">
+                    <div style="background:var(--bg-card); padding: 20px; border-radius:8px; width: 500px; max-width: 95%;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3 id="api-keys-modal-title">API Key</h3>
+                            <button class="modal-close" style="background:none;border:none;font-size:20px;" onclick="document.getElementById('api-keys-modal').style.display='none'">×</button>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Account Type</label>
+                            <select id="api-keys-account-type" class="form-input">
+                                <option value="spot">Spot</option>
+                                <option value="futures">Futures</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">API Key</label>
+                            <input id="api-keys-api-key" class="form-input" placeholder="API Key">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">API Secret</label>
+                            <input id="api-keys-api-secret" class="form-input" placeholder="API Secret">
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label"><input id="api-keys-testnet" type="checkbox" checked> Use Testnet</label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Note</label>
+                            <input id="api-keys-note" class="form-input" placeholder="Optional note">
+                        </div>
+                        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
+                            <button class="btn btn-secondary" onclick="document.getElementById('api-keys-modal').style.display='none'">Cancel</button>
+                            <button id="api-keys-save-btn" class="btn btn-primary">Save</button>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Journal Page -->
                 <section id="journal" class="page-section">

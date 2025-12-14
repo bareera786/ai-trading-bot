@@ -31,11 +31,11 @@
     <div class="ribs-visualization">
         <h4>Behavior Space (3D Scatter)</h4>
         <div id="ribs-3d-plot"></div>
-        <script id="ribs-data" type="application/json">{{ ribs_optimization|tojson }}</script>
+        <div id="ribs-data" data-json="{{ ribs_optimization|tojson }}"></div>
 
         <script>
         // RIBS Dashboard JavaScript functions
-        const ribsData = JSON.parse(document.getElementById('ribs-data').textContent || '{}');
+        const ribsData = JSON.parse(document.getElementById('ribs-data').dataset.json || '{}');
 
         // Set dynamic styles
         const progressBar = document.querySelector('.progress-bar');

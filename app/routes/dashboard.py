@@ -75,15 +75,47 @@ def _ctx_ml_system(ctx: dict[str, Any], key: str):
     return ctx.get(key)
 
 
-@dashboard_bp.route("/app", endpoint="dashboard")
+@dashboard_bp.route("/dashboard")
 @login_required
 def dashboard():
     ctx = _get_ai_bot_context()
+    dashboard_data = _get_dashboard_data(ctx)
     version_label = (
         ctx.get("version_label") or ctx.get("ai_bot_version") or "Ultimate AI Bot"
     )
+    ribs_optimization = dashboard_data.get("ribs_optimization", {})
     response = make_response(
-        render_template("dashboard.html", version_label=version_label)
+        render_template(
+            "dashboard.html",
+            version_label=version_label,
+            ribs_optimization=ribs_optimization,
+        )
+    )
+    response.headers[
+        "Cache-Control"
+    ] = "no-cache, no-store, must-revalidate, max-age=0, private, no-transform"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@dashboard_bp.route("/ribs", endpoint="ribs_dashboard")
+@login_required
+def ribs_dashboard():
+    ctx = _get_ai_bot_context()
+    dashboard_data = _get_dashboard_data(ctx)
+    version_label = (
+        ctx.get("version_label") or ctx.get("ai_bot_version") or "Ultimate AI Bot"
+    )
+    ribs_optimization = dashboard_data.get("ribs_optimization", {})
+    response = make_response(
+        render_template(
+            "ribs_dashboard.html",
+            version_label=version_label,
+            ribs_optimization=ribs_optimization,
+        )
     )
     response.headers[
         "Cache-Control"

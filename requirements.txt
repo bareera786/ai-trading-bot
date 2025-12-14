@@ -8,7 +8,6 @@ requests==2.31.0
 scipy==1.12.0
 python-binance==1.0.17
 cryptography==41.0.7
-TA-Lib==0.4.25
 matplotlib==3.8.2
 seaborn==0.13.0
 gunicorn==21.2.0

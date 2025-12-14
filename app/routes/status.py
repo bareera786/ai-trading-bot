@@ -199,7 +199,10 @@ def ribs_status():
 def start_ribs_optimization():
     """Start RIBS optimization"""
     ctx = _ctx()
-    self_improvement_worker = ctx.get("self_improvement_worker")
+    service_runtime = ctx.get("service_runtime")
+    self_improvement_worker = (
+        service_runtime.self_improvement_worker if service_runtime else None
+    )
 
     if not self_improvement_worker or not self_improvement_worker.ribs_enabled:
         return (
@@ -225,7 +228,10 @@ def start_ribs_optimization():
 def pause_ribs_optimization():
     """Pause RIBS optimization"""
     ctx = _ctx()
-    self_improvement_worker = ctx.get("self_improvement_worker")
+    service_runtime = ctx.get("service_runtime")
+    self_improvement_worker = (
+        service_runtime.self_improvement_worker if service_runtime else None
+    )
 
     if not self_improvement_worker:
         return (
@@ -249,7 +255,10 @@ def pause_ribs_optimization():
 def reset_ribs_archive():
     """Reset RIBS archive"""
     ctx = _ctx()
-    self_improvement_worker = ctx.get("self_improvement_worker")
+    service_runtime = ctx.get("service_runtime")
+    self_improvement_worker = (
+        service_runtime.self_improvement_worker if service_runtime else None
+    )
 
     if not self_improvement_worker or not self_improvement_worker.ribs_optimizer:
         return jsonify({"success": False, "error": "RIBS optimizer not available"}), 400
@@ -271,7 +280,10 @@ def reset_ribs_archive():
 def deploy_ribs_strategy(strategy_id):
     """Deploy a RIBS-generated strategy"""
     ctx = _ctx()
-    self_improvement_worker = ctx.get("self_improvement_worker")
+    service_runtime = ctx.get("service_runtime")
+    self_improvement_worker = (
+        service_runtime.self_improvement_worker if service_runtime else None
+    )
 
     if not self_improvement_worker or not self_improvement_worker.ribs_optimizer:
         return jsonify({"success": False, "error": "RIBS optimizer not available"}), 400
@@ -297,7 +309,10 @@ def deploy_ribs_strategy(strategy_id):
 def export_ribs_strategy(strategy_id):
     """Export RIBS strategy parameters"""
     ctx = _ctx()
-    self_improvement_worker = ctx.get("self_improvement_worker")
+    service_runtime = ctx.get("service_runtime")
+    self_improvement_worker = (
+        service_runtime.self_improvement_worker if service_runtime else None
+    )
 
     if not self_improvement_worker or not self_improvement_worker.ribs_optimizer:
         return jsonify({"success": False, "error": "RIBS optimizer not available"}), 400
@@ -337,7 +352,10 @@ def export_ribs_strategy(strategy_id):
 def export_ribs_archive():
     """Export entire RIBS archive data"""
     ctx = _ctx()
-    self_improvement_worker = ctx.get("self_improvement_worker")
+    service_runtime = ctx.get("service_runtime")
+    self_improvement_worker = (
+        service_runtime.self_improvement_worker if service_runtime else None
+    )
 
     if not self_improvement_worker or not self_improvement_worker.ribs_optimizer:
         return jsonify({"success": False, "error": "RIBS optimizer not available"}), 400

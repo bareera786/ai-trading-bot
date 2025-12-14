@@ -1,21 +1,23 @@
 # Use a base image with Python 3.11
 FROM python:3.11-slim
 
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash trader
+
 # Install system dependencies for building TA-Lib
 RUN apt-get update && apt-get install -y \
     build-essential \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install TA-Lib from source
-RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz \
-    && tar -xzf ta-lib-0.4.0-src.tar.gz \
-    && cd ta-lib \
-    && ./configure --prefix=/usr \
-    && make \
-    && make install \
-    && cd .. \
-    && rm -rf ta-lib ta-lib-0.4.0-src.tar.gz
+# Build and install TA-Lib
+RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz -O /tmp/ta-lib.tar.gz && \
+    tar -xzf /tmp/ta-lib.tar.gz -C /tmp && \
+    cd /tmp/ta-lib-0.4.0 && \
+    ./configure --prefix=/usr && \
+    make && \
+    make install && \
+    rm -rf /tmp/ta-lib*
 
 # Create a virtual environment
 RUN python -m venv /opt/venv
@@ -24,15 +26,21 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Set work directory
 WORKDIR /app
 
-# Copy requirements and install Python dependencies
+# Copy requirements first for better caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code
-COPY . .
+# Copy application code with proper ownership
+COPY --chown=trader:trader . .
 
-# Expose port (assuming the app runs on 5000)
+# Expose port before CMD
 EXPOSE 5000
 
-# Default command (adjust if using gunicorn or another entry point)
-CMD ["python", "simple_server.py"]
+# Switch to non-root user
+USER trader
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import requests; exit(0) if requests.get('http://localhost:5000/health').status_code == 200 else exit(1)"
+
+CMD ["python", "start_server.py"]

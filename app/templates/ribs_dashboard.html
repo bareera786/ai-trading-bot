@@ -117,16 +117,16 @@
                     <td>{{ strategy.behavior[1]|round(2) }}%</td>
                     <td>{{ (strategy.behavior[2] * 100)|round(1) }}%</td>
                     <td>
-                        <button class="btn btn-sm btn-success"
-                                onclick="deployRIBSStrategy({{ strategy.id|tojson }})">
+                        <button class="btn btn-sm btn-success deploy-ribs-btn"
+                                data-strategy-id="{{ strategy.id|tojson }}">
                             🚀 Deploy
                         </button>
-                        <button class="btn btn-sm btn-info"
-                                onclick="analyzeRIBSStrategy({{ strategy.id|tojson }})">
+                        <button class="btn btn-sm btn-info analyze-ribs-btn"
+                                data-strategy-id="{{ strategy.id|tojson }}">
                             📊 Analyze
                         </button>
-                        <button class="btn btn-sm btn-warning"
-                                onclick="exportRIBSParams({{ strategy.id|tojson }})">
+                        <button class="btn btn-sm btn-warning export-ribs-btn"
+                                data-strategy-id="{{ strategy.id|tojson }}">
                             💾 Export
                         </button>
                     </td>
@@ -401,6 +401,27 @@ function exportRIBSData() {
         window.URL.revokeObjectURL(url);
     });
 }
+
+// Event listeners for RIBS strategy buttons
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.deploy-ribs-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            deployRIBSStrategy(this.dataset.strategyId);
+        });
+    });
+
+    document.querySelectorAll('.analyze-ribs-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            analyzeRIBSStrategy(this.dataset.strategyId);
+        });
+    });
+
+    document.querySelectorAll('.export-ribs-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            exportRIBSParams(this.dataset.strategyId);
+        });
+    });
+});
 </script>
 <!-- jshint ignore: end -->
 <!-- eslint-enable -->

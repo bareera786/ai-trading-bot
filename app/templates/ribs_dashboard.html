@@ -105,15 +105,15 @@
                     <td>{{ (strategy.behavior[2] * 100)|round(1) }}%</td>
                     <td>
                         <button class="btn btn-sm btn-success"
-                                onclick="deployRIBSStrategy('{{ strategy.id }}')">
+                                onclick="deployRIBSStrategy({{ strategy.id|tojson }})">
                             🚀 Deploy
                         </button>
                         <button class="btn btn-sm btn-info"
-                                onclick="analyzeRIBSStrategy('{{ strategy.id }}')">
+                                onclick="analyzeRIBSStrategy({{ strategy.id|tojson }})">
                             📊 Analyze
                         </button>
                         <button class="btn btn-sm btn-warning"
-                                onclick="exportRIBSParams('{{ strategy.id }}')">
+                                onclick="exportRIBSParams({{ strategy.id|tojson }})">
                             💾 Export
                         </button>
                     </td>

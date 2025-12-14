@@ -183,12 +183,18 @@ def api_health_dashboard():
 def ribs_status():
     """Get RIBS optimization status"""
     ctx = _ctx()
+    service_runtime = ctx.get("service_runtime")
+    self_improvement_worker = (
+        service_runtime.self_improvement_worker if service_runtime else None
+    )
     dashboard_data = _dashboard_data(ctx)
 
     ribs_data = dashboard_data.get("ribs_optimization", {})
     return jsonify(
         {
-            "enabled": ctx.get("ribs_enabled", False),
+            "enabled": self_improvement_worker.ribs_enabled
+            if self_improvement_worker
+            else False,
             "status": "active" if ribs_data else "inactive",
             "data": ribs_data,
         }

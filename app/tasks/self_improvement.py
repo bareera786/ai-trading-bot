@@ -723,27 +723,51 @@ class SelfImprovementWorker:
 
             # Archive statistics
             archive_stats = self.ribs_optimizer.get_archive_stats()
-            ribs_data.update(archive_stats)
+            # Convert numpy types to native Python types
+            ribs_data.update(
+                {
+                    k: float(v)
+                    if hasattr(v, "item")
+                    else v  # numpy scalars have .item()
+                    for k, v in archive_stats.items()
+                }
+            )
 
             # Elite strategies
             elite_strategies = self.ribs_optimizer.get_elite_strategies(top_n=5)
-            ribs_data["elite_strategies"] = elite_strategies
+            # Convert to JSON serializable format
+            ribs_data["elite_strategies"] = [
+                {
+                    "id": str(s.get("id", i)),
+                    "objective": float(s["objective"]),
+                    "behavior": [float(b) for b in s["behavior"]],
+                    "params": {
+                        k: float(v)
+                        if isinstance(v, (int, float)) and hasattr(v, "item")
+                        else v
+                        for k, v in s.get("params", {}).items()
+                    },
+                }
+                for i, s in enumerate(elite_strategies)
+            ]
 
             # Coverage percentage
-            ribs_data["coverage"] = archive_stats.get("coverage", 0) * 100
+            ribs_data["coverage"] = float(archive_stats.get("coverage", 0)) * 100
 
             # Behavior space data for visualization
             if elite_strategies:
                 ribs_data["behaviors_x"] = [
-                    s["behavior"][0] for s in elite_strategies
+                    float(s["behavior"][0]) for s in elite_strategies
                 ]  # Sharpe ratio
                 ribs_data["behaviors_y"] = [
-                    s["behavior"][1] for s in elite_strategies
+                    float(s["behavior"][1]) for s in elite_strategies
                 ]  # Max drawdown
                 ribs_data["behaviors_z"] = [
-                    s["behavior"][2] for s in elite_strategies
+                    float(s["behavior"][2]) for s in elite_strategies
                 ]  # Win rate
-                ribs_data["objectives"] = [s["objective"] for s in elite_strategies]
+                ribs_data["objectives"] = [
+                    float(s["objective"]) for s in elite_strategies
+                ]
 
         except Exception as e:
             self._log(f"❌ Failed to update RIBS dashboard data: {e}")

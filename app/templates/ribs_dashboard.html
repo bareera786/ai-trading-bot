@@ -31,14 +31,18 @@
     <div class="ribs-visualization">
         <h4>Behavior Space (3D Scatter)</h4>
         <div id="ribs-3d-plot"></div>
+        <script id="ribs-data" type="application/json">{{ ribs_optimization|tojson }}</script>
 
         <script>
+        // RIBS Dashboard JavaScript functions
+        const ribsData = JSON.parse(document.getElementById('ribs-data').textContent || '{}');
+
         // Plotly 3D visualization of RIBS archive
         if (typeof Plotly !== 'undefined') {
-            const behaviorsX = {{ ribs_optimization.behaviors_x|default([]) }};
-            const behaviorsY = {{ ribs_optimization.behaviors_y|default([]) }};
-            const behaviorsZ = {{ ribs_optimization.behaviors_z|default([]) }};
-            const objectives = {{ ribs_optimization.objectives|default([]) }};
+            const behaviorsX = ribsData.behaviors_x || [];
+            const behaviorsY = ribsData.behaviors_y || [];
+            const behaviorsZ = ribsData.behaviors_z || [];
+            const objectives = ribsData.objectives || [];
 
             if (behaviorsX.length > 0) {
                 Plotly.newPlot('ribs-3d-plot', {

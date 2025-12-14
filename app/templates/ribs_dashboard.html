@@ -1,0 +1,391 @@
+<div class="ribs-dashboard">
+    <h2>🧬 RIBS Strategy Evolution</h2>
+
+    <div class="ribs-stats">
+        <div class="stat-card">
+            <h4>Archive Coverage</h4>
+            <div class="progress">
+                <div class="progress-bar" style="width: {{ ribs_optimization.coverage|default(0)|round(1) }}%"></div>
+            </div>
+            <span>{{ ribs_optimization.coverage|default(0)|round(1) }}%</span>
+        </div>
+
+        <div class="stat-card">
+            <h4>Elite Strategies</h4>
+            <span class="big-number">{{ ribs_optimization.num_elites|default(0) }}</span>
+        </div>
+
+        <div class="stat-card">
+            <h4>Best Objective</h4>
+            <span class="big-number {{ 'positive' if ribs_optimization.best_objective|default(0) > 0 else 'negative' }}">
+                {{ ribs_optimization.best_objective|default(0)|round(2) }}%
+            </span>
+        </div>
+
+        <div class="stat-card">
+            <h4>QD Score</h4>
+            <span class="big-number">{{ ribs_optimization.qd_score|default(0)|round(2) }}</span>
+        </div>
+    </div>
+
+    <div class="ribs-visualization">
+        <h4>Behavior Space (3D Scatter)</h4>
+        <div id="ribs-3d-plot"></div>
+
+        <script>
+        // Plotly 3D visualization of RIBS archive
+        if (typeof Plotly !== 'undefined') {
+            const behaviorsX = {{ ribs_optimization.behaviors_x|default([])|tojson }};
+            const behaviorsY = {{ ribs_optimization.behaviors_y|default([])|tojson }};
+            const behaviorsZ = {{ ribs_optimization.behaviors_z|default([])|tojson }};
+            const objectives = {{ ribs_optimization.objectives|default([])|tojson }};
+
+            if (behaviorsX.length > 0) {
+                Plotly.newPlot('ribs-3d-plot', {
+                    data: [{
+                        x: behaviorsX,
+                        y: behaviorsY,
+                        z: behaviorsZ,
+                        mode: 'markers',
+                        marker: {
+                            size: 8,
+                            color: objectives,
+                            colorscale: 'Viridis',
+                            showscale: true,
+                            colorbar: {
+                                title: 'Total Return %'
+                            }
+                        },
+                        type: 'scatter3d'
+                    }],
+                    layout: {
+                        title: 'RIBS Archive: Return vs Drawdown vs Win Rate',
+                        scene: {
+                            xaxis: {title: 'Sharpe Ratio'},
+                            yaxis: {title: 'Max Drawdown %'},
+                            zaxis: {title: 'Win Rate'}
+                        },
+                        margin: {l: 0, r: 0, t: 40, b: 0},
+                        height: 500
+                    }
+                });
+            } else {
+                document.getElementById('ribs-3d-plot').innerHTML =
+                    '<div class="no-data">No RIBS data available yet. Optimization in progress...</div>';
+            }
+        } else {
+            document.getElementById('ribs-3d-plot').innerHTML =
+                '<div class="no-data">Plotly not loaded. Install plotly for 3D visualization.</div>';
+        }
+        </script>
+    </div>
+
+    <div class="elite-strategies">
+        <h4>Top 5 Elite Strategies</h4>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Total Return</th>
+                    <th>Sharpe Ratio</th>
+                    <th>Max Drawdown</th>
+                    <th>Win Rate</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for strategy in ribs_optimization.elite_strategies|default([]) %}
+                <tr>
+                    <td>#{{ loop.index }}</td>
+                    <td class="{{ 'positive' if strategy.objective > 0 else 'negative' }}">
+                        {{ strategy.objective|round(2) }}%
+                    </td>
+                    <td>{{ strategy.behavior[0]|round(2) }}</td>
+                    <td>{{ strategy.behavior[1]|round(2) }}%</td>
+                    <td>{{ (strategy.behavior[2] * 100)|round(1) }}%</td>
+                    <td>
+                        <button class="btn btn-sm btn-success"
+                                onclick="deployRIBSStrategy('{{ strategy.id }}')">
+                            🚀 Deploy
+                        </button>
+                        <button class="btn btn-sm btn-info"
+                                onclick="analyzeRIBSStrategy('{{ strategy.id }}')">
+                            📊 Analyze
+                        </button>
+                        <button class="btn btn-sm btn-warning"
+                                onclick="exportRIBSParams('{{ strategy.id }}')">
+                            💾 Export
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not ribs_optimization.elite_strategies|default([]) %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted">
+                        No elite strategies found yet. RIBS optimization is running...
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="ribs-controls">
+        <h4>Optimization Controls</h4>
+        <div class="control-buttons">
+            <button class="btn btn-primary" onclick="startRIBSOptimization()">
+                ▶️ Start RIBS Optimization
+            </button>
+            <button class="btn btn-secondary" onclick="pauseRIBSOptimization()">
+                ⏸️ Pause Optimization
+            </button>
+            <button class="btn btn-danger" onclick="resetRIBSArchive()">
+                🔄 Reset Archive
+            </button>
+            <button class="btn btn-info" onclick="exportRIBSData()">
+                💾 Export Archive
+            </button>
+        </div>
+    </div>
+
+    <div class="ribs-parameters">
+        <h4>Strategy Parameters (Latest Elite)</h4>
+        {% if ribs_optimization.elite_strategies|default([]) %}
+        <div class="params-grid">
+            {% set latest = ribs_optimization.elite_strategies[0] %}
+            {% for key, value in latest.params.items() %}
+            <div class="param-item">
+                <label>{{ key|replace('_', ' ')|title }}</label>
+                <span class="param-value">{{ value|round(3) if value is number else value }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-data">No parameter data available</div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.ribs-dashboard {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.ribs-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.stat-card h4 {
+    margin: 0 0 10px 0;
+    color: #666;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.progress {
+    background: #e9ecef;
+    border-radius: 10px;
+    height: 8px;
+    margin-bottom: 10px;
+}
+
+.progress-bar {
+    background: linear-gradient(90deg, #28a745, #20c997);
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.big-number {
+    font-size: 2em;
+    font-weight: bold;
+    color: #333;
+}
+
+.positive {
+    color: #28a745 !important;
+}
+
+.negative {
+    color: #dc3545 !important;
+}
+
+.ribs-visualization {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.ribs-visualization h4 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+#ribs-3d-plot {
+    width: 100%;
+    height: 500px;
+}
+
+.elite-strategies, .ribs-controls, .ribs-parameters {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th, .table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+}
+
+.control-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.params-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.param-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+
+.param-item label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.param-value {
+    font-family: monospace;
+    background: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid #dee2e6;
+}
+
+.no-data {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 40px;
+}
+</style>
+
+<script>
+// RIBS Dashboard JavaScript functions
+function deployRIBSStrategy(strategyId) {
+    if (confirm(`Deploy RIBS strategy ${strategyId} to live trading?`)) {
+        fetch(`/api/ribs/deploy/${strategyId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Strategy deployed successfully!');
+                location.reload();
+            } else {
+                alert('Deployment failed: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error deploying strategy: ' + error);
+        });
+    }
+}
+
+function analyzeRIBSStrategy(strategyId) {
+    window.open(`/ribs/analyze/${strategyId}`, '_blank');
+}
+
+function exportRIBSParams(strategyId) {
+    fetch(`/api/ribs/export/${strategyId}`)
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ribs_strategy_${strategyId}_params.json`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    });
+}
+
+function startRIBSOptimization() {
+    fetch('/api/ribs/start', { method: 'POST' })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message || 'RIBS optimization started');
+    });
+}
+
+function pauseRIBSOptimization() {
+    fetch('/api/ribs/pause', { method: 'POST' })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message || 'RIBS optimization paused');
+    });
+}
+
+function resetRIBSArchive() {
+    if (confirm('Reset RIBS archive? This will clear all optimization progress.')) {
+        fetch('/api/ribs/reset', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message || 'Archive reset');
+            location.reload();
+        });
+    }
+}
+
+function exportRIBSData() {
+    fetch('/api/ribs/export')
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'ribs_archive_data.json';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    });
+}
+</script>

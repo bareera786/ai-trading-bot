@@ -178,6 +178,209 @@ def api_health_dashboard():
     return jsonify(payload)
 
 
+# RIBS Optimization Routes
+@status_bp.route("/api/ribs/status", methods=["GET"])
+def ribs_status():
+    """Get RIBS optimization status"""
+    ctx = _ctx()
+    dashboard_data = _dashboard_data(ctx)
+
+    ribs_data = dashboard_data.get("ribs_optimization", {})
+    return jsonify(
+        {
+            "enabled": ctx.get("ribs_enabled", False),
+            "status": "active" if ribs_data else "inactive",
+            "data": ribs_data,
+        }
+    )
+
+
+@status_bp.route("/api/ribs/start", methods=["POST"])
+def start_ribs_optimization():
+    """Start RIBS optimization"""
+    ctx = _ctx()
+    self_improvement_worker = ctx.get("self_improvement_worker")
+
+    if not self_improvement_worker or not self_improvement_worker.ribs_enabled:
+        return (
+            jsonify({"success": False, "error": "RIBS optimization not available"}),
+            400,
+        )
+
+    try:
+        # Start RIBS optimization in background thread
+        import threading
+
+        ribs_thread = threading.Thread(
+            target=self_improvement_worker.continuous_ribs_optimization, daemon=True
+        )
+        ribs_thread.start()
+
+        return jsonify({"success": True, "message": "RIBS optimization started"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@status_bp.route("/api/ribs/pause", methods=["POST"])
+def pause_ribs_optimization():
+    """Pause RIBS optimization"""
+    ctx = _ctx()
+    self_improvement_worker = ctx.get("self_improvement_worker")
+
+    if not self_improvement_worker:
+        return (
+            jsonify(
+                {"success": False, "error": "Self-improvement worker not available"}
+            ),
+            400,
+        )
+
+    try:
+        # Set stop event to pause optimization
+        if hasattr(self_improvement_worker, "_stop_event"):
+            self_improvement_worker._stop_event.set()
+
+        return jsonify({"success": True, "message": "RIBS optimization paused"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@status_bp.route("/api/ribs/reset", methods=["POST"])
+def reset_ribs_archive():
+    """Reset RIBS archive"""
+    ctx = _ctx()
+    self_improvement_worker = ctx.get("self_improvement_worker")
+
+    if not self_improvement_worker or not self_improvement_worker.ribs_optimizer:
+        return jsonify({"success": False, "error": "RIBS optimizer not available"}), 400
+
+    try:
+        # Reset the RIBS optimizer
+        self_improvement_worker.ribs_optimizer = None
+        # Reinitialize
+        from app.services.ribs_optimizer import TradingRIBSOptimizer
+
+        self_improvement_worker.ribs_optimizer = TradingRIBSOptimizer()
+
+        return jsonify({"success": True, "message": "RIBS archive reset"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@status_bp.route("/api/ribs/deploy/<strategy_id>", methods=["POST"])
+def deploy_ribs_strategy(strategy_id):
+    """Deploy a RIBS-generated strategy"""
+    ctx = _ctx()
+    self_improvement_worker = ctx.get("self_improvement_worker")
+
+    if not self_improvement_worker or not self_improvement_worker.ribs_optimizer:
+        return jsonify({"success": False, "error": "RIBS optimizer not available"}), 400
+
+    try:
+        # Find the strategy in elite strategies
+        elite_strategies = self_improvement_worker.ribs_optimizer.get_elite_strategies()
+        strategy = next((s for s in elite_strategies if s["id"] == strategy_id), None)
+
+        if not strategy:
+            return jsonify({"success": False, "error": "Strategy not found"}), 404
+
+        # Deploy the strategy
+        solution = strategy["solution"]
+        self_improvement_worker.deploy_strategy(solution, strategy_id)
+
+        return jsonify({"success": True, "message": f"Strategy {strategy_id} deployed"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@status_bp.route("/api/ribs/export/<strategy_id>", methods=["GET"])
+def export_ribs_strategy(strategy_id):
+    """Export RIBS strategy parameters"""
+    ctx = _ctx()
+    self_improvement_worker = ctx.get("self_improvement_worker")
+
+    if not self_improvement_worker or not self_improvement_worker.ribs_optimizer:
+        return jsonify({"success": False, "error": "RIBS optimizer not available"}), 400
+
+    try:
+        # Find the strategy
+        elite_strategies = self_improvement_worker.ribs_optimizer.get_elite_strategies()
+        strategy = next((s for s in elite_strategies if s["id"] == strategy_id), None)
+
+        if not strategy:
+            return jsonify({"success": False, "error": "Strategy not found"}), 404
+
+        # Return strategy parameters as JSON
+        from flask import Response
+        import json
+
+        strategy_data = {
+            "strategy_id": strategy_id,
+            "params": strategy["params"],
+            "objective": strategy["objective"],
+            "behavior": strategy["behavior"],
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        return Response(
+            json.dumps(strategy_data, indent=2),
+            mimetype="application/json",
+            headers={
+                "Content-Disposition": f"attachment; filename=ribs_strategy_{strategy_id}.json"
+            },
+        )
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@status_bp.route("/api/ribs/export", methods=["GET"])
+def export_ribs_archive():
+    """Export entire RIBS archive data"""
+    ctx = _ctx()
+    self_improvement_worker = ctx.get("self_improvement_worker")
+
+    if not self_improvement_worker or not self_improvement_worker.ribs_optimizer:
+        return jsonify({"success": False, "error": "RIBS optimizer not available"}), 400
+
+    try:
+        # Get archive data
+        archive_stats = self_improvement_worker.ribs_optimizer.get_archive_stats()
+        elite_strategies = self_improvement_worker.ribs_optimizer.get_elite_strategies(
+            top_n=20
+        )
+
+        archive_data = {
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "archive_stats": archive_stats,
+            "elite_strategies": elite_strategies,
+            "ribs_config": {
+                "solution_dim": self_improvement_worker.ribs_optimizer.config.get(
+                    "solution_dim", 10
+                ),
+                "archive_dimensions": self_improvement_worker.ribs_optimizer.config.get(
+                    "archive_dimensions", [20, 20, 15]
+                ),
+                "num_emitters": self_improvement_worker.ribs_optimizer.config.get(
+                    "num_emitters", 6
+                ),
+            },
+        }
+
+        # Return as downloadable JSON
+        from flask import Response
+        import json
+
+        return Response(
+            json.dumps(archive_data, indent=2),
+            mimetype="application/json",
+            headers={
+                "Content-Disposition": "attachment; filename=ribs_archive_data.json"
+            },
+        )
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @status_bp.route("/metrics")
 def metrics():
     return Response(generate_latest(), mimetype="text/plain")

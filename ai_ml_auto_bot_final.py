@@ -4310,6 +4310,13 @@ TRADING_CONFIG = {
     "auto_take_profit_adjust_interval": 30,
     "auto_take_profit_reprice_threshold": 0.002,
     "auto_take_profit_spread_margin": 0.0005,
+    # RIBS Quality Diversity Optimization
+    "enable_ribs_optimization": True,
+    "ribs_optimization_interval_hours": 6,
+    "ribs_iterations_per_cycle": 200,
+    "ribs_max_elite_strategies": 5,
+    "ribs_auto_deploy_elites": True,
+    "ribs_checkpoint_interval": 50,
 }
 
 OPTIMIZED_TRADING_CONFIG = {

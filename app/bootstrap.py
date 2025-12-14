@@ -187,6 +187,64 @@ def bootstrap_runtime(app) -> Optional[BootstrapContext]:
                     app.logger.warning(
                         "Live portfolio scheduler failed to start: %s", exc
                     )
+
+            # Initialize self-improvement worker with RIBS optimization
+            if context:
+                try:
+                    from app.tasks.self_improvement import SelfImprovementWorker
+
+                    ultimate_trader = context.get("ultimate_trader")
+                    optimized_trader = context.get("optimized_trader")
+                    ultimate_ml_system = context.get("ultimate_ml_system")
+                    optimized_ml_system = context.get("optimized_ml_system")
+                    trading_config = context.get("trading_config", {})
+
+                    if all(
+                        [
+                            ultimate_trader,
+                            optimized_trader,
+                            ultimate_ml_system,
+                            optimized_ml_system,
+                        ]
+                    ):
+                        self_improvement_worker = SelfImprovementWorker(
+                            ultimate_trader=ultimate_trader,
+                            optimized_trader=optimized_trader,
+                            ultimate_ml_system=ultimate_ml_system,
+                            optimized_ml_system=optimized_ml_system,
+                            dashboard_data=context.get("dashboard_data", {}),
+                            trading_config=trading_config,
+                            logger=app.logger,
+                        )
+
+                        # Store reference in context for access from routes
+                        context["self_improvement_worker"] = self_improvement_worker
+
+                        # Start RIBS optimization if enabled
+                        if self_improvement_worker.ribs_enabled:
+                            import threading
+
+                            ribs_thread = threading.Thread(
+                                target=self_improvement_worker.continuous_ribs_optimization,
+                                daemon=True,
+                                name="RIBS-Optimization",
+                            )
+                            ribs_thread.start()
+                            app.logger.info(
+                                "🧬 RIBS Quality Diversity Optimization started"
+                            )
+
+                        app.logger.info("🤖 Self-improvement worker initialized")
+                    else:
+                        app.logger.warning(
+                            "⚠️ Missing components for self-improvement worker"
+                        )
+
+                except Exception as exc:
+                    app.logger.warning(
+                        "Self-improvement worker failed to start: %s", exc
+                    )
+
             _runtime_started = True
 
     # Check for UI asset build status

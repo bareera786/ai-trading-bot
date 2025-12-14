@@ -34,3 +34,16 @@ ruff==0.1.5
 pytest==8.4.2
 pytest-cov==4.1.0
 pre-commit==3.6.0
+
+# RIBS (Quality Diversity Optimization)
+ribs[all]>=0.5.0
+
+# Visualization for RIBS
+plotly>=5.17.0
+dash>=2.14.0
+
+# Parallel processing
+concurrent-executor>=0.2.0
+
+# Optional: GPU acceleration
+torch>=2.0.0  # Only if using neural emitters

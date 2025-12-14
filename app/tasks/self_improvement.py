@@ -12,6 +12,26 @@ from datetime import datetime, timedelta
 import statistics
 import json
 
+# Data science imports for RIBS
+try:
+    import pandas as pd
+    import numpy as np
+
+    DATA_SCIENCE_AVAILABLE = True
+except ImportError:
+    DATA_SCIENCE_AVAILABLE = False
+    pd = None
+    np = None
+
+# RIBS imports
+try:
+    from app.services.ribs_optimizer import TradingRIBSOptimizer
+
+    RIBS_AVAILABLE = True
+except ImportError:
+    RIBS_AVAILABLE = False
+    TradingRIBSOptimizer = None
+
 
 class SelfImprovementWorker:
     """Manage the periodic self-improvement cycle on a background thread."""
@@ -46,12 +66,17 @@ class SelfImprovementWorker:
         self.success_rates = deque(maxlen=20)  # Last 20 cycles for better analysis
         self.improvement_velocities = deque(maxlen=10)  # Track rate of improvement
         self.cycle_timestamps = deque(maxlen=20)  # Track when cycles ran
-        self.min_success_threshold = self.trading_config.get("self_improvement_min_success", 50.0)
+        self.min_success_threshold = self.trading_config.get(
+            "self_improvement_min_success", 50.0
+        )
         self.auto_fix_required = False
 
         # Enhanced metrics
         self.performance_trends = deque(maxlen=50)  # Long-term performance tracking
-        self.model_accuracy_history = {"ultimate": deque(maxlen=20), "optimized": deque(maxlen=20)}
+        self.model_accuracy_history = {
+            "ultimate": deque(maxlen=20),
+            "optimized": deque(maxlen=20),
+        }
         self.indicator_performance = {}  # Track which indicators perform best
         self.market_regime_adaptations = deque(maxlen=10)  # Track regime changes
 
@@ -70,7 +95,9 @@ class SelfImprovementWorker:
         }
 
         # Snapshot paths
-        self.snapshot_dir = self.project_root / "bot_persistence" / "self_improvement_snapshots"
+        self.snapshot_dir = (
+            self.project_root / "bot_persistence" / "self_improvement_snapshots"
+        )
         self.snapshot_dir.mkdir(exist_ok=True)
 
         # Performance analytics
@@ -78,17 +105,31 @@ class SelfImprovementWorker:
         self.last_cycle_duration = None
         self.average_cycle_duration = None
 
+        # RIBS Quality Diversity Optimization
+        self.ribs_optimizer = None
+        self.ribs_enabled = RIBS_AVAILABLE and self.trading_config.get(
+            "enable_ribs_optimization", False
+        )
+        if self.ribs_enabled:
+            try:
+                self.ribs_optimizer = TradingRIBSOptimizer()
+                self._log("🧬 RIBS Quality Diversity Optimizer initialized")
+            except Exception as e:
+                self._log(f"❌ Failed to initialize RIBS optimizer: {e}")
+                self.ribs_optimizer = None
+                self.ribs_enabled = False
+
     def _fix_model_retraining(self) -> None:
         """Auto-fix: Retrain models when accuracy drops."""
         try:
             self.logger.info("🔧 Auto-fix: Retraining models due to low accuracy")
 
             # Force retrain ultimate ML system
-            if hasattr(self.ultimate_ml_system, 'retrain_models'):
+            if hasattr(self.ultimate_ml_system, "retrain_models"):
                 self.ultimate_ml_system.retrain_models()
 
             # Force retrain optimized ML system
-            if hasattr(self.optimized_ml_system, 'retrain_models'):
+            if hasattr(self.optimized_ml_system, "retrain_models"):
                 self.optimized_ml_system.retrain_models()
 
             self.logger.info("✅ Model retraining completed")
@@ -190,7 +231,9 @@ class SelfImprovementWorker:
             "ETHUSDT_ADAUSDT": 0.70,
         }
 
-    def _calculate_correlation_adjustments(self, correlations: dict[str, float]) -> dict[str, float]:
+    def _calculate_correlation_adjustments(
+        self, correlations: dict[str, float]
+    ) -> dict[str, float]:
         """Calculate position size adjustments based on correlations."""
         adjustments = {}
         for pair, corr in correlations.items():
@@ -227,11 +270,15 @@ class SelfImprovementWorker:
         # Snapshot model files (simplified)
         models_dir = self.project_root / "ultimate_models"
         if models_dir.exists():
-            shutil.copytree(models_dir, snapshot_path / "ultimate_models", dirs_exist_ok=True)
+            shutil.copytree(
+                models_dir, snapshot_path / "ultimate_models", dirs_exist_ok=True
+            )
 
         futures_models_dir = self.project_root / "futures_models"
         if futures_models_dir.exists():
-            shutil.copytree(futures_models_dir, snapshot_path / "futures_models", dirs_exist_ok=True)
+            shutil.copytree(
+                futures_models_dir, snapshot_path / "futures_models", dirs_exist_ok=True
+            )
 
         self._log(f"📸 Created snapshot: {snapshot_path}")
         return str(snapshot_path)
@@ -316,7 +363,9 @@ class SelfImprovementWorker:
         self.success_rates.append(avg_success_rate)
 
         # Enhanced metrics tracking
-        self._update_enhanced_metrics(success_rate, optimized_success_rate, cycle_timestamp)
+        self._update_enhanced_metrics(
+            success_rate, optimized_success_rate, cycle_timestamp
+        )
 
         # Predictive analytics
         self._perform_predictive_analytics()
@@ -346,11 +395,17 @@ class SelfImprovementWorker:
         if self.average_cycle_duration is None:
             self.average_cycle_duration = cycle_duration
         else:
-            self.average_cycle_duration = (self.average_cycle_duration + cycle_duration) / 2
+            self.average_cycle_duration = (
+                self.average_cycle_duration + cycle_duration
+            ) / 2
 
-        self._log(f"🤖 Ultimate Self-Improvement Cycle Completed! (Duration: {cycle_duration:.1f}s)")
+        self._log(
+            f"🤖 Ultimate Self-Improvement Cycle Completed! (Duration: {cycle_duration:.1f}s)"
+        )
 
-    def _update_enhanced_metrics(self, ultimate_rate: float, optimized_rate: float, timestamp: datetime) -> None:
+    def _update_enhanced_metrics(
+        self, ultimate_rate: float, optimized_rate: float, timestamp: datetime
+    ) -> None:
         """Update enhanced performance metrics."""
         # Track model accuracy history
         self.model_accuracy_history["ultimate"].append(ultimate_rate)
@@ -369,36 +424,44 @@ class SelfImprovementWorker:
             "ultimate_rate": ultimate_rate,
             "optimized_rate": optimized_rate,
             "average_rate": (ultimate_rate + optimized_rate) / 2,
-            "cycle_number": len(self.success_rates)
+            "cycle_number": len(self.success_rates),
         }
         self.performance_trends.append(performance_data)
 
         # Analyze market regime adaptations (simplified)
         market_regime = self._detect_market_regime()
-        self.market_regime_adaptations.append({
-            "timestamp": timestamp.isoformat(),
-            "regime": market_regime,
-            "performance": (ultimate_rate + optimized_rate) / 2
-        })
+        self.market_regime_adaptations.append(
+            {
+                "timestamp": timestamp.isoformat(),
+                "regime": market_regime,
+                "performance": (ultimate_rate + optimized_rate) / 2,
+            }
+        )
 
     def _perform_predictive_analytics(self) -> None:
         """Perform predictive analytics on future performance."""
         if len(self.success_rates) >= 5:
             # Simple linear regression for performance prediction
             rates = list(self.success_rates)
-            predictions = self._linear_regression_prediction(rates, 3)  # Predict next 3 cycles
+            predictions = self._linear_regression_prediction(
+                rates, 3
+            )  # Predict next 3 cycles
 
             for i, pred in enumerate(predictions):
-                self.performance_predictions.append({
-                    "cycle_offset": i + 1,
-                    "predicted_rate": max(0, min(100, pred)),  # Clamp to 0-100
-                    "confidence": self._calculate_prediction_confidence(rates)
-                })
+                self.performance_predictions.append(
+                    {
+                        "cycle_offset": i + 1,
+                        "predicted_rate": max(0, min(100, pred)),  # Clamp to 0-100
+                        "confidence": self._calculate_prediction_confidence(rates),
+                    }
+                )
 
             # Determine optimal cycle timing based on performance patterns
             self.optimal_cycle_timing = self._calculate_optimal_cycle_timing()
 
-    def _linear_regression_prediction(self, data: list[float], steps: int) -> list[float]:
+    def _linear_regression_prediction(
+        self, data: list[float], steps: int
+    ) -> list[float]:
         """Simple linear regression prediction."""
         if len(data) < 2:
             return [data[-1]] * steps if data else [50.0] * steps
@@ -456,7 +519,9 @@ class SelfImprovementWorker:
         if len(rates) >= 5 and rates[-1] < rates[-3]:
             next_cycle = datetime.now() + timedelta(hours=1)  # More frequent
         elif recent_avg > 70:
-            next_cycle = datetime.now() + timedelta(hours=4)  # Less frequent when doing well
+            next_cycle = datetime.now() + timedelta(
+                hours=4
+            )  # Less frequent when doing well
         else:
             next_cycle = datetime.now() + timedelta(hours=3)  # Standard interval
 
@@ -481,14 +546,20 @@ class SelfImprovementWorker:
         # Enhanced metrics
         si_data["model_accuracy_history"] = {
             "ultimate": list(self.model_accuracy_history["ultimate"]),
-            "optimized": list(self.model_accuracy_history["optimized"])
+            "optimized": list(self.model_accuracy_history["optimized"]),
         }
-        si_data["improvement_velocity"] = list(self.improvement_velocities)[-1] if self.improvement_velocities else 0
-        si_data["performance_trends"] = list(self.performance_trends)[-10:]  # Last 10 entries
+        si_data["improvement_velocity"] = (
+            list(self.improvement_velocities)[-1] if self.improvement_velocities else 0
+        )
+        si_data["performance_trends"] = list(self.performance_trends)[
+            -10:
+        ]  # Last 10 entries
 
         # Predictive analytics
         si_data["performance_predictions"] = list(self.performance_predictions)
-        si_data["optimal_cycle_timing"] = self.optimal_cycle_timing.isoformat() if self.optimal_cycle_timing else None
+        si_data["optimal_cycle_timing"] = (
+            self.optimal_cycle_timing.isoformat() if self.optimal_cycle_timing else None
+        )
 
         # Cycle timing metrics
         si_data["last_cycle_duration"] = self.last_cycle_duration
@@ -509,7 +580,7 @@ class SelfImprovementWorker:
             thresholds = [
                 (self.min_success_threshold, "critical"),
                 (self.min_success_threshold + 10, "warning"),
-                (self.min_success_threshold + 20, "monitor")
+                (self.min_success_threshold + 20, "monitor"),
             ]
 
             for threshold, level in thresholds:
@@ -517,7 +588,9 @@ class SelfImprovementWorker:
                     self.auto_fix_required = True
                     self.dashboard_data["self_improvement"]["auto_fix_required"] = True
                     self.dashboard_data["self_improvement"]["drift_level"] = level
-                    self._log(f"⚠️ Drift detected ({level}): {recent_avg:.1f}% < {threshold}%")
+                    self._log(
+                        f"⚠️ Drift detected ({level}): {recent_avg:.1f}% < {threshold}%"
+                    )
                     self._trigger_auto_fix()
                     break
             else:
@@ -546,6 +619,134 @@ class SelfImprovementWorker:
             except Exception:
                 prices[symbol] = 0.0
         return prices
+
+    def continuous_ribs_optimization(self):
+        """Continuous RIBS optimization in background"""
+        if not self.ribs_enabled or not self.ribs_optimizer:
+            self._log("⚠️ RIBS optimization not available or disabled")
+            return
+
+        while not self._stop_event.is_set():
+            try:
+                # Load recent market data
+                market_data = self.load_recent_data(hours=168)  # 7 days
+
+                # Run optimization for 200 iterations
+                elite_strategies = self.ribs_optimizer.run_optimization_cycle(
+                    market_data=market_data, iterations=200
+                )
+
+                # Deploy top 3 strategies to paper trading
+                for i, (solution, objective, behavior) in enumerate(
+                    elite_strategies[:3]
+                ):
+                    strategy_id = (
+                        f"ribs_strategy_{datetime.now().strftime('%Y%m%d_%H%M')}_{i}"
+                    )
+                    self.deploy_strategy(solution, strategy_id)
+
+                    # Log deployment
+                    self._log(
+                        f"🧬 Deployed RIBS strategy {strategy_id}: "
+                        f"Objective={objective:.2f}, "
+                        f"Behavior={behavior}"
+                    )
+
+                # Update dashboard with RIBS data
+                self._update_ribs_dashboard_data()
+
+                # Sleep until next optimization cycle (6 hours)
+                self._stop_event.wait(21600)
+
+            except Exception as e:
+                self._log(f"❌ RIBS optimization failed: {e}")
+                self._stop_event.wait(300)  # Retry in 5 minutes
+
+    def load_recent_data(self, hours: int = 168) -> Dict:
+        """Load recent market data for RIBS optimization"""
+        try:
+            # This should load actual market data from your data sources
+            # For now, return a placeholder structure
+            market_data = {
+                "ohlcv": pd.DataFrame(
+                    {
+                        "timestamp": pd.date_range(
+                            end=datetime.now(), periods=1000, freq="1H"
+                        ),
+                        "open": np.random.uniform(40000, 60000, 1000),
+                        "high": np.random.uniform(40000, 60000, 1000),
+                        "low": np.random.uniform(40000, 60000, 1000),
+                        "close": np.random.uniform(40000, 60000, 1000),
+                        "volume": np.random.uniform(1000000, 5000000, 1000),
+                    }
+                )
+            }
+            return market_data
+        except Exception as e:
+            self._log(f"❌ Failed to load market data: {e}")
+            return {}
+
+    def deploy_strategy(self, solution, strategy_id: str):
+        """Deploy a RIBS-generated strategy"""
+        try:
+            # Decode the solution into trading parameters
+            params = self.ribs_optimizer.decode_solution(solution)
+
+            # Save strategy configuration
+            strategy_config = {
+                "id": strategy_id,
+                "params": params,
+                "created_at": datetime.now().isoformat(),
+                "source": "ribs_optimization",
+            }
+
+            # Save to strategies directory
+            strategies_dir = self.project_root / "strategies" / "ribs_generated"
+            strategies_dir.mkdir(exist_ok=True)
+
+            config_path = strategies_dir / f"{strategy_id}.json"
+            with open(config_path, "w") as f:
+                json.dump(strategy_config, f, indent=2)
+
+            self._log(f"✅ RIBS strategy deployed: {strategy_id}")
+
+        except Exception as e:
+            self._log(f"❌ Failed to deploy RIBS strategy: {e}")
+
+    def _update_ribs_dashboard_data(self):
+        """Update dashboard with RIBS optimization data"""
+        if not self.ribs_optimizer:
+            return
+
+        try:
+            ribs_data = self.dashboard_data.setdefault("ribs_optimization", {})
+
+            # Archive statistics
+            archive_stats = self.ribs_optimizer.get_archive_stats()
+            ribs_data.update(archive_stats)
+
+            # Elite strategies
+            elite_strategies = self.ribs_optimizer.get_elite_strategies(top_n=5)
+            ribs_data["elite_strategies"] = elite_strategies
+
+            # Coverage percentage
+            ribs_data["coverage"] = archive_stats.get("coverage", 0) * 100
+
+            # Behavior space data for visualization
+            if elite_strategies:
+                ribs_data["behaviors_x"] = [
+                    s["behavior"][0] for s in elite_strategies
+                ]  # Sharpe ratio
+                ribs_data["behaviors_y"] = [
+                    s["behavior"][1] for s in elite_strategies
+                ]  # Max drawdown
+                ribs_data["behaviors_z"] = [
+                    s["behavior"][2] for s in elite_strategies
+                ]  # Win rate
+                ribs_data["objectives"] = [s["objective"] for s in elite_strategies]
+
+        except Exception as e:
+            self._log(f"❌ Failed to update RIBS dashboard data: {e}")
 
     def _log(self, message: str) -> None:
         if self.logger:

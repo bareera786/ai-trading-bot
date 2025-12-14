@@ -98,6 +98,10 @@
                         <span class="nav-icon">🤖</span>
                         <span class="nav-text">ML Telemetry</span>
                     </a>
+                    <a href="#" class="nav-item" data-page="ribs-dashboard">
+                        <span class="nav-icon">🧬</span>
+                        <span class="nav-text">RIBS Evolution</span>
+                    </a>
                 </div>
 
                 <div class="nav-section">
@@ -1749,6 +1753,19 @@
                             </div>
                         </div>
                     </div>
+                </section>
+
+                <!-- RIBS Dashboard Page -->
+                <section id="ribs-dashboard" class="page-section ribs-dashboard-page" style="display: none;">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span class="section-icon">🧬</span>
+                            RIBS Strategy Evolution
+                        </h2>
+                        <p class="section-helper">Quality Diversity Optimization for trading strategies using RIBS (Robustness, Innovation, Behavior, Surprise).</p>
+                    </div>
+
+                    {% include 'ribs_dashboard.html' %}
                 </section>
             </div>
         </main>

@@ -23,5 +23,13 @@
   },
   "robot": {
     "commands": ["start_robot", "stop_robot", "restart_robot", "set_strategy", "view_robot_logs", "run_strategy", "check_robot_status", "view_performance"]
+  },
+  "ribs": {
+    "enabled": true,
+    "optimization_interval_hours": 6,
+    "iterations_per_cycle": 200,
+    "max_elite_strategies": 5,
+    "auto_deploy_elites": true,
+    "checkpoint_interval": 50
   }
 }

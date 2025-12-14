@@ -5,7 +5,7 @@
         <div class="stat-card">
             <h4>Archive Coverage</h4>
             <div class="progress">
-                <div class="progress-bar" style="width: {{ ribs_optimization.coverage|default(0)|round(1) }}%"></div>
+                <div class="progress-bar"></div>
             </div>
             <span>{{ ribs_optimization.coverage|default(0)|round(1) }}%</span>
         </div>
@@ -36,6 +36,12 @@
         <script>
         // RIBS Dashboard JavaScript functions
         const ribsData = JSON.parse(document.getElementById('ribs-data').textContent || '{}');
+
+        // Set dynamic styles
+        const progressBar = document.querySelector('.progress-bar');
+        if (progressBar) {
+            progressBar.style.width = (ribsData.coverage || 0) + '%';
+        }
 
         // Plotly 3D visualization of RIBS archive
         if (typeof Plotly !== 'undefined') {

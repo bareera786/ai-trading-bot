@@ -93,8 +93,13 @@ def health_check():
                 if callable(running):
                     running = running()
                 worker_status = "ok" if running else "stopped"
-    except Exception:
-        worker_status = "error"
+    except Exception as exc:
+        # Log the exception for diagnostics and include a short marker in the response
+        try:
+            current_app.logger.exception("Background worker health probe failed")
+        except Exception:
+            pass
+        worker_status = f"error:{type(exc).__name__}"
 
     # Check available disk space
     disk_status = "error"

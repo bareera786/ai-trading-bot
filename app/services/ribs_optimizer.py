@@ -8,6 +8,7 @@ import yaml
 from datetime import datetime
 import os
 import pandas as pd
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
@@ -530,3 +531,43 @@ class TradingRIBSOptimizer:
         except Exception as e:
             self.logger.error(f"Failed to get elite strategies: {e}")
             return []
+
+    def check_checkpoint_freshness(self, max_age_seconds: int = 6 * 3600) -> dict:
+        """Check ribs_status.json and latest checkpoint freshness.
+
+        Returns a dict with keys: status (ok/warn/missing), latest_checkpoint (dict or None), age_seconds (int or None)
+        """
+        status_path = os.path.join(self.checkpoints_dir, "ribs_status.json")
+        result = {"status": "missing", "latest_checkpoint": None, "age_seconds": None}
+        try:
+            if not os.path.exists(status_path):
+                self.logger.warning("RIBS status file missing: %s", status_path)
+                return result
+
+            with open(status_path, "r") as sf:
+                status = json.load(sf) or {}
+
+            latest = status.get("latest_checkpoint")
+            if not latest or not latest.get("path"):
+                result["status"] = "no_checkpoint"
+                return result
+
+            mtime = latest.get("mtime")
+            if mtime is None:
+                result["status"] = "unknown"
+                return result
+
+            age = int(time.time() - float(mtime))
+            result["latest_checkpoint"] = latest
+            result["age_seconds"] = age
+            result["status"] = "ok" if age <= max_age_seconds else "stale"
+            if result["status"] == "stale":
+                self.logger.warning(
+                    "RIBS checkpoint stale: %s seconds old (threshold=%s)",
+                    age,
+                    max_age_seconds,
+                )
+            return result
+        except Exception as e:
+            self.logger.exception("Failed to check RIBS checkpoint freshness: %s", e)
+            return result

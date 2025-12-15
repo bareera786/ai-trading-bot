@@ -146,6 +146,10 @@
     <div class="ribs-controls">
         <h4>Optimization Controls</h4>
         <div class="control-buttons">
+            <div id="ribs-status-widget" class="stat-card" style="min-width:200px;align-self:center;">
+                <h5>RIBS Status</h5>
+                <div id="ribs-status-content">Loading...</div>
+            </div>
             <button class="btn btn-primary" onclick="startRIBSOptimization()">
                 ▶️ Start RIBS Optimization
             </button>
@@ -163,6 +167,34 @@
 
     <div class="ribs-parameters">
         <h4>Strategy Parameters (Latest Elite)</h4>
+// Poll ribs status and update the status widget
+function updateRIBSStatusWidget() {
+    fetch('/api/ribs/archive/status')
+    .then(r => r.json())
+    .then(data => {
+        const el = document.getElementById('ribs-status-content');
+        if (!el) return;
+        if (!data.available) {
+            el.innerHTML = '<div class="text-muted">Unavailable</div>';
+            return;
+        }
+        const status = data.status_file || {};
+        const running = status.running ? 'Running' : (status.last_completed ? 'Idle' : 'Unknown');
+        let latest = status.latest_checkpoint || {};
+        let cpInfo = latest.path ? `${new Date((latest.mtime||0)*1000).toLocaleString()} (${Math.round((latest.size||0)/1024)} KB)` : 'No checkpoint yet';
+        el.innerHTML = `<div><strong>${running}</strong></div><div class="small text-muted">Last checkpoint: ${cpInfo}</div>`;
+    })
+    .catch(() => {
+        const el = document.getElementById('ribs-status-content');
+        if (el) el.innerHTML = '<div class="text-danger">Error fetching status</div>';
+    });
+}
+
+// Start polling every 30 seconds
+setInterval(updateRIBSStatusWidget, 30000);
+// Initial update
+updateRIBSStatusWidget();
+
         {% if ribs_optimization.elite_strategies|default([]) %}
         <div class="params-grid">
             {% set latest = ribs_optimization.elite_strategies[0] %}

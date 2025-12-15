@@ -237,18 +237,58 @@ class BinanceCredentialStore:
         return serialized
 
     def _write_to_disk(self, data: dict[str, dict[str, Any]]) -> None:
-        to_write = {
-            key: self._serialize_entry(value)
-            for key, value in self._normalize_data(data).items()
-        }
+        # Accept either flat account_type -> entry maps (legacy) or
+        # a structure with a 'users' mapping for per-user scoped credentials.
+        normalized = self._normalize_data(data)
+        to_write: dict[str, Any] = {}
+
+        # If the normalized mapping contains user ids already (string keys that are not account types),
+        # treat them as user scoped; otherwise write account_type -> entry mapping as legacy format.
+        user_keys = [k for k in normalized.keys() if k not in ("spot", "futures")]
+        if user_keys:
+            # Build users mapping
+            users_map: dict[str, dict[str, Any]] = {}
+            for k, v in normalized.items():
+                users_map[k] = self._serialize_entry(v) if isinstance(v, dict) else v
+            to_write["users"] = users_map
+        else:
+            to_write = {
+                key: self._serialize_entry(value) for key, value in normalized.items()
+            }
         tmp_file = f"{self.credential_file}.tmp"
         with open(tmp_file, "w", encoding="utf-8") as handle:
             json.dump(to_write, handle, indent=2, default=str)
         os.replace(tmp_file, self.credential_file)
 
-    def get_credentials(self, account_type: Optional[str] = None) -> dict[str, Any]:
+    def get_credentials(
+        self,
+        account_type: Optional[str] = None,
+        user_id: Optional[Union[int, str]] = None,
+    ) -> dict[str, Any]:
+        """Get credentials for a given account type or user. If user_id is provided, returns that user's credentials.
+
+        If no arguments are provided, returns the global (legacy) credential mapping.
+        """
         with self._lock:
             cache = self._ensure_cache()
+            # Per-user scoped credentials
+            if user_id is not None:
+                users = cache.get("users") or {}
+                user_key = str(user_id)
+                user_map = users.get(user_key) or {}
+                if account_type:
+                    return dict(
+                        user_map.get(self._normalize_account_type(account_type)) or {}
+                    )
+                # Return all for user
+                return {
+                    key: dict(value)
+                    for key, value in (
+                        user_map.items() if isinstance(user_map, dict) else []
+                    )
+                }
+
+            # Legacy/global behaviour
             if account_type:
                 key = self._normalize_account_type(account_type)
                 return dict(cache.get(key) or {})
@@ -261,6 +301,7 @@ class BinanceCredentialStore:
         testnet: bool = True,
         note: Optional[str] = None,
         account_type: str = "spot",
+        user_id: Optional[Union[int, str]] = None,
     ) -> dict[str, Any]:
         payload = {
             "api_key": api_key or "",
@@ -274,10 +315,23 @@ class BinanceCredentialStore:
         account_key = payload["account_type"]
         with self._lock:
             cache = self._ensure_cache()
-            cache[account_key] = payload
+            if user_id is not None:
+                users = cache.get("users") or {}
+                user_key = str(user_id)
+                user_map = users.get(user_key) or {}
+                user_map[account_key] = payload
+                users[user_key] = user_map
+                cache["users"] = users
+            else:
+                cache[account_key] = payload
             self._write_to_disk(cache)
             if self._cipher.enabled:
-                cache[account_key]["encrypted"] = True
+                if user_id is not None:
+                    cache.get("users", {}).get(str(user_id), {}).get(account_key, {})[
+                        "encrypted"
+                    ] = True
+                else:
+                    cache[account_key]["encrypted"] = True
             self._cache = dict(cache)
         return dict(payload)
 
@@ -286,14 +340,27 @@ class BinanceCredentialStore:
         return self._cipher.enabled
 
     def clear_credentials(
-        self, account_type: Optional[str] = None
+        self,
+        account_type: Optional[str] = None,
+        user_id: Optional[Union[int, str]] = None,
     ) -> dict[str, dict[str, Any]]:
         with self._lock:
             cache = self._ensure_cache()
-            if account_type:
-                cache.pop(self._normalize_account_type(account_type), None)
+            if user_id is not None:
+                users = cache.get("users") or {}
+                user_key = str(user_id)
+                user_map = users.get(user_key) or {}
+                if account_type:
+                    user_map.pop(self._normalize_account_type(account_type), None)
+                else:
+                    user_map.clear()
+                users[user_key] = user_map
+                cache["users"] = users
             else:
-                cache.clear()
+                if account_type:
+                    cache.pop(self._normalize_account_type(account_type), None)
+                else:
+                    cache.clear()
             self._write_to_disk(cache)
             self._cache = dict(cache)
         return {}
@@ -503,9 +570,17 @@ class BinanceCredentialService:
         return True
 
     def get_status(
-        self, include_connection: bool = False, include_logs: bool = False
+        self,
+        include_connection: bool = False,
+        include_logs: bool = False,
+        user_id: Optional[Union[int, str]] = None,
     ) -> dict[str, Any]:
-        creds_map = self.credentials_store.get_credentials()
+        # Allow requesting status scoped to a particular user (if provided)
+        creds_map = (
+            self.credentials_store.get_credentials(user_id=user_id)
+            if user_id is not None
+            else self.credentials_store.get_credentials()
+        )
         accounts: dict[str, dict[str, Any]] = {}
 
         if isinstance(creds_map, dict):
@@ -678,6 +753,37 @@ class BinanceCredentialService:
             return method() or {}
         except Exception:
             return {"connected": False, "last_error": f"{method_name}_error"}
+
+    def test_credentials(
+        self,
+        api_key: str,
+        api_secret: str,
+        account_type: str = "spot",
+        testnet: bool = True,
+        timeout: float = 10.0,
+    ) -> dict[str, Any]:
+        """Attempt a lightweight validation of API credentials.
+
+        Returns a dict with keys: connected (bool), error (optional str).
+        """
+        try:
+            # Import in-method to avoid circular imports during initial module import
+            from app.services.trading import RealBinanceTrader
+
+            trader = RealBinanceTrader(
+                api_key=api_key, api_secret=api_secret, testnet=testnet
+            )
+            connected = trader.connect()
+            if not connected:
+                return {"connected": False, "error": trader.last_error}
+            # Try a safe status call
+            status = self._safe_trader_status(trader, "get_real_trading_status")
+            return {
+                "connected": bool(status.get("connected") if status else False),
+                "detail": status,
+            }
+        except Exception as exc:
+            return {"connected": False, "error": str(exc)}
 
     def _log_event(
         self,

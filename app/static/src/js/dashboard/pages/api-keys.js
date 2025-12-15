@@ -138,6 +138,7 @@ if (typeof window !== 'undefined') {
     if (modal) {
       modal.querySelector('.modal-close')?.addEventListener('click', closeApiKeyModal);
       document.getElementById(IDS.saveBtn)?.addEventListener('click', saveApiKey);
+        document.getElementById('api-keys-test-btn')?.addEventListener('click', testApiKey);
     }
 
     // Auto-load if visible
@@ -149,3 +150,32 @@ if (typeof window !== 'undefined') {
 }
 
 export { loadApiKeys };
+
+async function testApiKey() {
+  const apiKey = document.getElementById(IDS.apiKeyInput).value.trim();
+  const apiSecret = document.getElementById(IDS.apiSecretInput).value.trim();
+  const testnet = document.getElementById(IDS.testnetInput).checked;
+
+  if (!apiKey || !apiSecret) {
+    alert('API key and secret are required to test');
+    return;
+  }
+
+  try {
+    const resp = await fetchJson('/api/binance/credentials/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey, apiSecret, testnet }),
+    });
+    if (resp.connected) {
+      alert('Credentials validated successfully (connected)');
+    } else if (resp.error) {
+      alert('Validation failed: ' + resp.error);
+    } else {
+      alert('Validation result: ' + JSON.stringify(resp));
+    }
+  } catch (err) {
+    console.error('Failed to test API key', err);
+    alert('Failed to test API key: ' + (err.message || err));
+  }
+}

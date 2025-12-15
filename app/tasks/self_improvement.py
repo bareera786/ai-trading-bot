@@ -317,6 +317,25 @@ class SelfImprovementWorker:
         )
         self._thread.start()
         self._log("🤖 Self-improvement worker started")
+        # Start a monitor thread to check RIBS checkpoint freshness periodically
+        try:
+            self._monitor_stop_event = threading.Event()
+
+            def _monitor_loop():
+                while not self._monitor_stop_event.wait(600):  # every 10 minutes
+                    try:
+                        if self.ribs_optimizer:
+                            self.ribs_optimizer.check_checkpoint_freshness()
+                    except Exception as e:
+                        if self.logger:
+                            self.logger.error("RIBS monitor failure: %s", e)
+
+            self._monitor_thread = threading.Thread(
+                target=_monitor_loop, name="RIBSMonitor", daemon=True
+            )
+            self._monitor_thread.start()
+        except Exception:
+            pass
 
     def stop(self) -> None:
         if not self.is_running:
@@ -326,6 +345,14 @@ class SelfImprovementWorker:
             self._thread.join(timeout=max(5.0, self.cycle_interval / 10))
         self._thread = None
         self._log("🤖 Self-improvement worker stopped")
+        # Stop monitor thread if present
+        try:
+            if getattr(self, "_monitor_stop_event", None):
+                self._monitor_stop_event.set()
+            if getattr(self, "_monitor_thread", None):
+                self._monitor_thread.join(timeout=5.0)
+        except Exception:
+            pass
 
     def _run_loop(self) -> None:
         # Wait before first run to match the legacy cadence (every 3 hours)

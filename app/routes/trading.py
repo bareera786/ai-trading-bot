@@ -109,7 +109,9 @@ def api_binance_credentials():
     method = request.method
 
     if method == "GET":
-        status = status_fn(include_connection=True, include_logs=True)
+        status = status_fn(
+            include_connection=True, include_logs=True, user_id=current_user.id
+        )
         dashboard_data["binance_credentials"] = status
         dashboard_data["binance_logs"] = status.get("logs", [])
         dashboard_data["real_trading_status"] = status.get("ultimate_status") or {}
@@ -153,6 +155,7 @@ def api_binance_credentials():
             testnet=testnet_flag,
             note=payload.get("note"),
             account_type=account_type,
+            user_id=current_user.id,
         )
 
         if binance_log_manager:
@@ -165,7 +168,9 @@ def api_binance_credentials():
             )
 
         connected = apply_credentials(account_type=account_type, creds=saved)
-        status = status_fn(include_connection=True, include_logs=True)
+        status = status_fn(
+            include_connection=True, include_logs=True, user_id=current_user.id
+        )
         dashboard_data["binance_credentials"] = status
         dashboard_data["binance_logs"] = status.get("logs", [])
 
@@ -218,7 +223,7 @@ def api_binance_credentials():
 
     if account_type:
         account_type = credentials_store._normalize_account_type(account_type)
-        credentials_store.clear_credentials(account_type)
+        credentials_store.clear_credentials(account_type, user_id=current_user.id)
         if account_type == "spot":
             for trader in (ultimate_trader, optimized_trader):
                 disable = getattr(trader, "disable_real_trading", None)
@@ -232,7 +237,7 @@ def api_binance_credentials():
                 account_type=account_type,
             )
     else:
-        credentials_store.clear_credentials()
+        credentials_store.clear_credentials(user_id=current_user.id)
         for trader in (ultimate_trader, optimized_trader):
             disable = getattr(trader, "disable_real_trading", None)
             if callable(disable):
@@ -251,7 +256,9 @@ def api_binance_credentials():
                 account_type="futures",
             )
 
-    status = status_fn(include_connection=True, include_logs=True)
+    status = status_fn(
+        include_connection=True, include_logs=True, user_id=current_user.id
+    )
     dashboard_data["binance_credentials"] = status
     dashboard_data["binance_logs"] = status.get("logs", [])
     dashboard_data["real_trading_status"] = status.get("ultimate_status") or {}
@@ -279,6 +286,33 @@ def api_binance_credentials():
         "optimized_status": status.get("optimized_status"),
     }
     return jsonify(response)
+
+
+@trading_bp.route(
+    "/api/binance/credentials/test",
+    methods=["POST"],
+    endpoint="api_binance_credentials_test",
+)
+@login_required
+def api_binance_credentials_test():
+    ctx = _get_bot_context()
+    credentials_service = ctx.get("binance_credential_service")
+
+    if not credentials_service:
+        return jsonify({"error": "Credential service unavailable"}), 500
+
+    payload = request.get_json(silent=True) or {}
+    api_key = (payload.get("apiKey") or payload.get("api_key") or "").strip()
+    api_secret = (payload.get("apiSecret") or payload.get("api_secret") or "").strip()
+    testnet_flag = _coerce_bool_with_ctx(ctx, payload.get("testnet"), default=True)
+
+    if not api_key or not api_secret:
+        return jsonify({"error": "API key and secret are required for testing"}), 400
+
+    result = credentials_service.test_credentials(
+        api_key, api_secret, testnet=testnet_flag
+    )
+    return jsonify(result)
 
 
 @trading_bp.route("/api/binance/logs", methods=["GET"], endpoint="api_binance_logs")

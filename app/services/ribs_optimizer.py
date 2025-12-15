@@ -261,6 +261,9 @@ class TradingRIBSOptimizer:
             f"Starting RIBS optimization cycle with {iterations} iterations"
         )
 
+        # Heartbeat: log cycle start time for improved observability
+        self.logger.info("RIBS optimization cycle heartbeat: start")
+
         try:
             for i in range(iterations):
                 # Ask for new solutions
@@ -302,7 +305,41 @@ class TradingRIBSOptimizer:
                         behaviors.append(beh)
 
                 # Tell results back to scheduler
-                self.scheduler.tell(objectives, behaviors)  # Track progress
+                # Sanitize objectives and behaviors (defensive) before telling scheduler
+                try:
+                    sanitized_objectives = []
+                    sanitized_behaviors = []
+                    for o, b in zip(objectives, behaviors):
+                        # coerce objective to float
+                        try:
+                            o_safe = float(o)
+                        except Exception:
+                            self.logger.warning(
+                                "Non-numeric objective encountered during sanitize; using penalty",
+                                extra={"objective_repr": repr(o)},
+                            )
+                            o_safe = -100.0
+
+                        # coerce behavior to list of floats
+                        try:
+                            b_iter = list(b)
+                            b_safe = [float(x) for x in b_iter]
+                        except Exception:
+                            self.logger.warning(
+                                "Non-iterable or invalid behavior encountered during sanitize; using default",
+                                extra={"behavior_repr": repr(b)},
+                            )
+                            b_safe = [0.0, 100.0, 0.0]
+
+                        sanitized_objectives.append(o_safe)
+                        sanitized_behaviors.append(b_safe)
+
+                    self.scheduler.tell(sanitized_objectives, sanitized_behaviors)
+                except Exception as e:
+                    self.logger.exception(
+                        "Failed to tell scheduler after sanitizing results",
+                        extra={"error": str(e)},
+                    )
                 if i % 10 == 0:
                     self.log_progress(i)
 
@@ -317,6 +354,7 @@ class TradingRIBSOptimizer:
                     self.save_checkpoint()
 
             self.logger.info("RIBS optimization cycle completed")
+            self.logger.info("RIBS optimization cycle heartbeat: completed")
             return self.archive.sample_elites(10)  # Return top 10 elites
 
         except Exception as e:
@@ -344,6 +382,7 @@ class TradingRIBSOptimizer:
             checkpoint_path = os.path.join(
                 self.checkpoints_dir, f"ribs_checkpoint_{timestamp}.pkl"
             )
+            tmp_path = checkpoint_path + ".tmp"
 
             checkpoint = {
                 "archive": self.archive,
@@ -353,10 +392,18 @@ class TradingRIBSOptimizer:
                 "timestamp": timestamp,
             }
 
-            with open(checkpoint_path, "wb") as f:
+            # Write to a temporary file and atomically replace the final file
+            with open(tmp_path, "wb") as f:
                 pickle.dump(checkpoint, f)
+                try:
+                    f.flush()
+                    os.fsync(f.fileno())
+                except Exception:
+                    # fsync may fail on some filesystems; continue but warn
+                    self.logger.warning("Failed to fsync checkpoint tmp file")
 
-            self.logger.info(f"RIBS checkpoint saved: {checkpoint_path}")
+            os.replace(tmp_path, checkpoint_path)
+            self.logger.info(f"RIBS checkpoint saved atomically: {checkpoint_path}")
 
         except Exception as e:
             self.logger.error(f"Failed to save checkpoint: {e}")

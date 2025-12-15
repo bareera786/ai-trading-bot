@@ -632,9 +632,13 @@ class SelfImprovementWorker:
                 market_data = self.load_recent_data(hours=168)  # 7 days
 
                 # Run optimization for 200 iterations
+                self._log(
+                    "🧬 Starting continuous RIBS optimization cycle (200 iterations)"
+                )
                 elite_strategies = self.ribs_optimizer.run_optimization_cycle(
                     market_data=market_data, iterations=200
                 )
+                self._log("🧬 Completed continuous RIBS optimization cycle")
 
                 # Deploy top 3 strategies to paper trading
                 for i, (solution, objective, behavior) in enumerate(

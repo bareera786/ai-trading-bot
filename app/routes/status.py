@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 
 import requests
 from flask import Blueprint, current_app, jsonify, Response
+from flask import current_app as app
+import os
 from prometheus_client import generate_latest
 
 from app.extensions import db
@@ -199,6 +201,40 @@ def ribs_status():
             "data": ribs_data,
         }
     )
+
+
+@status_bp.route("/api/ribs/archive/status", methods=["GET"])
+def ribs_archive_status():
+    """Return basic RIBS optimizer status for debugging and dashboard"""
+    try:
+        worker = app.config.get("context", {}).get("self_improvement_worker")
+        if not worker or not worker.ribs_optimizer:
+            return jsonify({"available": False, "message": "RIBS not enabled"})
+
+        optimizer = worker.ribs_optimizer
+        stats = optimizer.get_archive_stats() or {}
+
+        # Check latest checkpoint file timestamp if any
+        cp_dir = optimizer.checkpoints_dir
+        latest = None
+        try:
+            files = [os.path.join(cp_dir, f) for f in os.listdir(cp_dir)]
+            files = [f for f in files if f.endswith(".pkl")]
+            if files:
+                latest_file = max(files, key=os.path.getmtime)
+                latest = {
+                    "path": latest_file,
+                    "mtime": os.path.getmtime(latest_file),
+                    "size": os.path.getsize(latest_file),
+                }
+        except Exception:
+            latest = None
+
+        return jsonify(
+            {"available": True, "archive_stats": stats, "latest_checkpoint": latest}
+        )
+    except Exception as e:
+        return jsonify({"available": False, "error": str(e)}), 500
 
 
 @status_bp.route("/api/ribs/start", methods=["POST"])

@@ -14,9 +14,7 @@ def migrate_database() -> None:
         inspector = db.inspect(db.engine)
 
         try:
-            user_columns = [
-                col["name"] for col in inspector.get_columns("user")
-            ]
+            user_columns = [col["name"] for col in inspector.get_columns("user")]
         except Exception:
             user_columns = []
 
@@ -43,6 +41,19 @@ def migrate_database() -> None:
                 LOGGER.info("✅ Added custom_symbols column to user table")
             except Exception as exc:
                 LOGGER.warning("Could not add custom_symbols column: %s", exc)
+
+        # Ensure email_verified exists on user table (older DBs may not have it)
+        if "email_verified" not in user_columns:
+            try:
+                with db.engine.connect() as conn:
+                    conn.execute(
+                        db.text(
+                            "ALTER TABLE user ADD COLUMN email_verified BOOLEAN DEFAULT FALSE"
+                        )
+                    )
+                LOGGER.info("✅ Added email_verified column to user table")
+            except Exception as exc:
+                LOGGER.warning("Could not add email_verified column: %s", exc)
 
         try:
             portfolio_columns = [

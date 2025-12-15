@@ -85,3 +85,18 @@ def test_run_optimization_cycle_handles_invalid_solution(monkeypatch):
     # Should run without raising and return a list (possibly empty) of elites
     elites = opt.run_optimization_cycle(market, iterations=1)
     assert isinstance(elites, list)
+
+
+def test_run_optimization_cycle_sanitizes_bad_results(monkeypatch):
+    opt = TradingRIBSOptimizer(config_path="config/ribs_config.yaml")
+    market = {"ohlcv": make_market_df()}
+
+    # Replace evaluate_solution to return an invalid objective and behavior
+    def bad_eval(sol, market_data):
+        return slice(None), [slice(None)]
+
+    monkeypatch.setattr(opt, "evaluate_solution", bad_eval)
+
+    # Should not raise and should return a list (maybe empty) after sanitization
+    elites = opt.run_optimization_cycle(market, iterations=1)
+    assert isinstance(elites, list)

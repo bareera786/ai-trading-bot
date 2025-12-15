@@ -25,12 +25,17 @@ def _validate_startup_configuration(app) -> None:
     # Check required environment variables
     required_env_vars = [
         "BINANCE_API_KEY",
-        "BINANCE_SECRET_KEY",
     ]
 
     for var in required_env_vars:
         if not os.getenv(var):
             issues.append(f"Missing required environment variable: {var}")
+
+    # Accept either BINANCE_API_SECRET or legacy BINANCE_SECRET_KEY for the secret env var
+    if not (os.getenv("BINANCE_API_SECRET") or os.getenv("BINANCE_SECRET_KEY")):
+        issues.append(
+            "Missing required environment variable: BINANCE_API_SECRET (or legacy BINANCE_SECRET_KEY)"
+        )
 
     # Check database configuration
     if not app.config.get("SQLALCHEMY_DATABASE_URI"):

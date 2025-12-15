@@ -263,6 +263,39 @@ def ribs_archive_status():
         return jsonify({"available": False, "error": str(e)}), 500
 
 
+@status_bp.route("/api/health/ribs", methods=["GET"])
+def api_health_ribs():
+    """Return a lightweight health status for RIBS based on ribs_status.json"""
+    status_path = os.path.join(
+        "bot_persistence", "ribs_checkpoints", "ribs_status.json"
+    )
+    if not os.path.exists(status_path):
+        return (
+            jsonify({"status": "missing", "message": "RIBS status file not found"}),
+            404,
+        )
+
+    try:
+        with open(status_path, "r") as sf:
+            status = json.load(sf)
+
+        latest = status.get("latest_checkpoint") or {}
+        mtime = latest.get("mtime")
+        age = None
+        if mtime:
+            age = int(time.time() - float(mtime))
+
+        return jsonify(
+            {
+                "status": "ok",
+                "status_file": status,
+                "latest_checkpoint_age_seconds": age,
+            }
+        )
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
 @status_bp.route("/api/ribs/start", methods=["POST"])
 def start_ribs_optimization():
     """Start RIBS optimization"""

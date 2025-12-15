@@ -1,7 +1,9 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app.models import User
 from app.extensions import db, limiter
+from flask import request
+from app.services.binance import BinanceCredentialStore, BinanceCredentialService
 
 admin_user_api_bp = Blueprint("admin_user_api", __name__, url_prefix="/api/users")
 
@@ -89,6 +91,113 @@ def get_user(user_id):
             "last_login": user.last_login.isoformat() if user.last_login else None,
         }
     )
+
+
+@admin_user_api_bp.route(
+    "/<int:user_id>/credentials", methods=["GET"], endpoint="admin_get_user_credentials"
+)
+@login_required
+@limiter.exempt
+def admin_get_user_credentials(user_id):
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": "Forbidden"}), 403
+    ctx = current_app.extensions.get("ai_bot_context") or {}
+    credentials_store: BinanceCredentialStore = ctx.get("binance_credentials_store")
+    credential_service: BinanceCredentialService = ctx.get("binance_credential_service")
+    if not credentials_store:
+        return jsonify({"error": "Credential store unavailable"}), 500
+
+    creds = credentials_store.get_credentials(user_id=user_id)
+    status = None
+    if credential_service:
+        status = credential_service.get_status(
+            include_connection=False, include_logs=False, user_id=user_id
+        )
+
+    return jsonify({"credentials": creds, "status": status})
+
+
+@admin_user_api_bp.route(
+    "/<int:user_id>/credentials",
+    methods=["POST"],
+    endpoint="admin_set_user_credentials",
+)
+@login_required
+@limiter.exempt
+def admin_set_user_credentials(user_id):
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": "Forbidden"}), 403
+    data = request.get_json(silent=True) or {}
+    api_key = (data.get("apiKey") or data.get("api_key") or "").strip()
+    api_secret = (data.get("apiSecret") or data.get("api_secret") or "").strip()
+    testnet = data.get("testnet", True)
+    account_type = data.get("accountType") or data.get("account_type") or "spot"
+
+    ctx = current_app.extensions.get("ai_bot_context") or {}
+    credentials_store: BinanceCredentialStore = ctx.get("binance_credentials_store")
+    if not credentials_store:
+        return jsonify({"error": "Credential store unavailable"}), 500
+
+    if not api_key or not api_secret:
+        return jsonify({"error": "API key and secret are required"}), 400
+
+    saved = credentials_store.save_credentials(
+        api_key, api_secret, testnet=testnet, account_type=account_type, user_id=user_id
+    )
+    return jsonify({"saved": True, "credentials": saved})
+
+
+@admin_user_api_bp.route(
+    "/<int:user_id>/credentials",
+    methods=["DELETE"],
+    endpoint="admin_clear_user_credentials",
+)
+@login_required
+@limiter.exempt
+def admin_clear_user_credentials(user_id):
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": "Forbidden"}), 403
+    data = request.get_json(silent=True) or {}
+    account_type = data.get("accountType") or data.get("account_type")
+
+    ctx = current_app.extensions.get("ai_bot_context") or {}
+    credentials_store: BinanceCredentialStore = ctx.get("binance_credentials_store")
+    if not credentials_store:
+        return jsonify({"error": "Credential store unavailable"}), 500
+
+    if account_type:
+        credentials_store.clear_credentials(account_type, user_id=user_id)
+    else:
+        credentials_store.clear_credentials(user_id=user_id)
+
+    return jsonify({"cleared": True})
+
+
+@admin_user_api_bp.route(
+    "/<int:user_id>/credentials/test",
+    methods=["POST"],
+    endpoint="admin_test_user_credentials",
+)
+@login_required
+@limiter.exempt
+def admin_test_user_credentials(user_id):
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": "Forbidden"}), 403
+    data = request.get_json(silent=True) or {}
+    api_key = (data.get("apiKey") or data.get("api_key") or "").strip()
+    api_secret = (data.get("apiSecret") or data.get("api_secret") or "").strip()
+    testnet = data.get("testnet", True)
+
+    ctx = current_app.extensions.get("ai_bot_context") or {}
+    credential_service: BinanceCredentialService = ctx.get("binance_credential_service")
+    if not credential_service:
+        return jsonify({"error": "Credential service unavailable"}), 500
+
+    if not api_key or not api_secret:
+        return jsonify({"error": "API key and secret are required for testing"}), 400
+
+    result = credential_service.test_credentials(api_key, api_secret, testnet=testnet)
+    return jsonify(result)
 
 
 @admin_user_api_bp.route("/<int:user_id>/toggle", methods=["POST"])

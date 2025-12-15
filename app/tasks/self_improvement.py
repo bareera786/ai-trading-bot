@@ -209,6 +209,15 @@ class SelfImprovementWorker:
         except Exception as e:
             self.logger.error(f"❌ Correlation rebalancing failed: {e}")
 
+    def _send_ribs_alert(self, msg: str) -> None:
+        try:
+            webhook = os.getenv("RIBS_ALERT_WEBHOOK")
+            if webhook:
+                requests.post(webhook, json={"text": msg}, timeout=5)
+        except Exception:
+            if self.logger:
+                self.logger.debug("Failed to send RIBS alert webhook")
+
     def _analyze_indicator_performance(self) -> dict[str, float]:
         """Analyze which indicators performed best recently."""
         # This would analyze historical performance data
@@ -325,7 +334,28 @@ class SelfImprovementWorker:
                 while not self._monitor_stop_event.wait(600):  # every 10 minutes
                     try:
                         if self.ribs_optimizer:
-                            self.ribs_optimizer.check_checkpoint_freshness()
+                            res = self.ribs_optimizer.check_checkpoint_freshness()
+                            if res and res.get("status") in (
+                                "stale",
+                                "missing",
+                                "no_checkpoint",
+                            ):
+                                msg = f"RIBS checkpoint alert: status={res.get('status')} age={res.get('age_seconds')}"
+                                # Log and optionally post to webhook
+                                if self.logger:
+                                    self.logger.warning(msg)
+                                webhook = os.getenv("RIBS_ALERT_WEBHOOK")
+                                if webhook:
+                                    try:
+                                        requests.post(
+                                            webhook, json={"text": msg}, timeout=5
+                                        )
+                                    except Exception as e:
+                                        if self.logger:
+                                            self.logger.debug(
+                                                "Failed to POST ribs alert webhook: %s",
+                                                e,
+                                            )
                     except Exception as e:
                         if self.logger:
                             self.logger.error("RIBS monitor failure: %s", e)

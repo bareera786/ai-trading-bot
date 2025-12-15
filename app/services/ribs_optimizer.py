@@ -221,15 +221,17 @@ class TradingRIBSOptimizer:
         try:
             # Defensive handling: ensure period is a valid integer >= 1
             try:
+                # Coerce to int where sensible (e.g., float -> int)
                 period_int = int(period)
             except Exception:
-                self.logger.warning(
-                    f"Invalid RSI period {period!r}, falling back to 14"
-                )
+                # This is expected for many malformed candidate values (slice, None, etc.)
+                # Use debug level to avoid log noise; fall back to default 14
+                self.logger.debug(f"Invalid RSI period {period!r}, falling back to 14")
                 period_int = 14
 
             if period_int < 1:
-                self.logger.warning(f"RSI period {period_int} < 1, using 14")
+                # Treat non-positive values as malformed candidates and fall back silently
+                self.logger.debug(f"RSI period {period_int} < 1, using 14")
                 period_int = 14
 
             # If not enough data for the given period, return neutral RSI (50)
@@ -252,8 +254,14 @@ class TradingRIBSOptimizer:
             rsi = 100 - (100 / (1 + rs))
             # Where RSI is NaN (due to zero loss/gain windows), fill with 50 (neutral)
             return rsi.fillna(50)
+        except (ValueError, TypeError) as e:
+            # Often pandas raises ValueError('window must be an integer 0 or greater')
+            # for malformed window values; log at warning level and return neutral series.
+            self.logger.warning(f"RSI calculation failed (malformed input): {e}")
+            return pd.Series([50] * len(prices), index=prices.index)
         except Exception as e:
-            self.logger.error(f"RSI calculation failed: {e}")
+            # Unexpected exceptions should be logged with full traceback
+            self.logger.exception(f"RSI calculation failed unexpectedly: {e}")
             return pd.Series([50] * len(prices), index=prices.index)
 
     def run_optimization_cycle(self, market_data: Dict, iterations: int = 100):
@@ -434,17 +442,63 @@ class TradingRIBSOptimizer:
             }
 
             # Write to a temporary file and atomically replace the final file
-            with open(tmp_path, "wb") as f:
-                pickle.dump(checkpoint, f)
-                try:
-                    f.flush()
-                    os.fsync(f.fileno())
-                except Exception:
-                    # fsync may fail on some filesystems; continue but warn
-                    self.logger.warning("Failed to fsync checkpoint tmp file")
+            try:
+                with open(tmp_path, "wb") as f:
+                    pickle.dump(checkpoint, f)
+                    try:
+                        f.flush()
+                        os.fsync(f.fileno())
+                    except Exception:
+                        # fsync may fail on some filesystems; continue but warn
+                        self.logger.warning("Failed to fsync checkpoint tmp file")
 
-            os.replace(tmp_path, checkpoint_path)
-            self.logger.info(f"RIBS checkpoint saved atomically: {checkpoint_path}")
+                # Ensure tmp file is non-empty before replacing final file
+                try:
+                    tmp_size = os.path.getsize(tmp_path)
+                except Exception:
+                    tmp_size = 0
+
+                if tmp_size <= 0:
+                    # Do not replace with an empty temp file; clean up and warn
+                    try:
+                        os.remove(tmp_path)
+                    except Exception:
+                        pass
+                    self.logger.warning(
+                        "Checkpoint tmp file was empty; aborting checkpoint save"
+                    )
+                else:
+                    os.replace(tmp_path, checkpoint_path)
+                    self.logger.info(
+                        f"RIBS checkpoint saved atomically: {checkpoint_path}"
+                    )
+            finally:
+                # Defensive cleanup: ensure no stray tmp file remains
+                try:
+                    if os.path.exists(tmp_path):
+                        os.remove(tmp_path)
+                except Exception:
+                    pass
+            # Post-save cleanup: remove any zero-byte final checkpoints and stray tmp files
+            try:
+                for fname in os.listdir(self.checkpoints_dir):
+                    fpath = os.path.join(self.checkpoints_dir, fname)
+                    if fname.endswith(".tmp"):
+                        try:
+                            os.remove(fpath)
+                        except Exception:
+                            pass
+                    if fname.endswith(".pkl"):
+                        try:
+                            if os.path.getsize(fpath) == 0:
+                                os.remove(fpath)
+                                self.logger.warning(
+                                    "Removed stale zero-byte checkpoint: %s", fpath
+                                )
+                        except Exception:
+                            pass
+            except Exception:
+                pass
 
             # update status file with latest checkpoint info (cross-process)
             try:

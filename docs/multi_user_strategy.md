@@ -72,6 +72,8 @@ _Last updated: 2025-11-02_
 ## 6. Testing & Validation Checklist
 
 - [x] Unit tests for `BinanceCredentialStore` multi-tenant lookups (`tests/test_profile_pathing.py::test_binance_store_isolates_multiple_profiles`).
+ - [x] Unit tests for `BinanceCredentialStore` multi-tenant lookups (`tests/test_profile_pathing.py::test_binance_store_isolates_multiple_profiles`).
+ - [ ] Migration helper: `scripts/migrate_credentials_to_users.py` (move legacy `spot`/`futures` entries into `users/<user_id>/` mapping)
 - [x] Integration test: start two tenant contexts, ensure trades/persistence remain isolated (`tests/test_profile_pathing.py::test_profile_paths_isolate_persistence`).
 - [ ] Load test with concurrent tenant requests (Gunicorn + workers).
 - [ ] Security review for credential storage and log redaction per tenant.

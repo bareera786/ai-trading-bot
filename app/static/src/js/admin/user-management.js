@@ -51,11 +51,88 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p><strong>Subscription Expiry:</strong> ${user.subscription_expiry ?? 'N/A'}</p>
                             <p><strong>Subscription History:</strong><br>${user.subscription_history ? user.subscription_history.map(s => `${s.plan} (${s.start} - ${s.end})`).join('<br>') : 'N/A'}</p>
                             <p><strong>Status:</strong> ${user.is_active ? 'Active' : 'Disabled'}</p>
-                            <button class='btn btn-primary' onclick='editUser(${user.id})'>Edit</button>
+                            <div style="display:flex; gap:8px;">
+                                <button class='btn btn-primary' onclick='editUser(${user.id})'>Edit</button>
+                                <button class='btn btn-secondary' onclick='openManageUserKeys(${user.id})'>Manage API Keys</button>
+                            </div>
                         </div>
                     </div>
                 `;
             });
+    }
+
+    // Admin: Manage user API keys
+    window.openManageUserKeys = function(userId) {
+        // Open admin modal prefilled with user's existing credentials
+        fetch(`/api/users/${userId}/credentials`)
+            .then(res => res.json())
+            .then(data => {
+                const creds = data.credentials || {};
+                const spot = creds.spot || {};
+                const futures = creds.futures || {};
+
+                // Prefill modal inputs
+                document.getElementById('admin-api-account-type').value = 'spot';
+                document.getElementById('admin-api-key').value = spot.api_key || '';
+                document.getElementById('admin-api-secret').value = spot.api_secret || '';
+                document.getElementById('admin-api-testnet').checked = !!spot.testnet;
+                document.getElementById('admin-user-keys-modal').dataset.userId = userId;
+                document.getElementById('admin-user-keys-modal').style.display = 'flex';
+            })
+            .catch(err => alert('Failed to load user credentials: ' + err));
+    }
+
+    // Wire modal buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        const testBtn = document.getElementById('admin-api-test-btn');
+        const saveBtn = document.getElementById('admin-api-save-btn');
+
+        if (testBtn) {
+            testBtn.addEventListener('click', async function() {
+                const apiKey = document.getElementById('admin-api-key').value.trim();
+                const apiSecret = document.getElementById('admin-api-secret').value.trim();
+                const testnet = document.getElementById('admin-api-testnet').checked;
+                if (!apiKey || !apiSecret) { alert('API key and secret are required to test'); return; }
+                try {
+                    const resp = await fetch(`/api/users/${document.getElementById('admin-user-keys-modal').dataset.userId}/credentials/test`, {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({apiKey, apiSecret, testnet})
+                    });
+                    const json = await resp.json();
+                    if (json.connected) alert('Credentials validated successfully (connected)');
+                    else if (json.error) alert('Validation failed: ' + json.error);
+                    else alert('Validation result: ' + JSON.stringify(json));
+                } catch (err) { alert('Failed to test API key: ' + err); }
+            });
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', async function() {
+                const apiKey = document.getElementById('admin-api-key').value.trim();
+                const apiSecret = document.getElementById('admin-api-secret').value.trim();
+                const testnet = document.getElementById('admin-api-testnet').checked;
+                const accountType = document.getElementById('admin-api-account-type').value || 'spot';
+                const userId = document.getElementById('admin-user-keys-modal').dataset.userId;
+                if (!apiKey || !apiSecret) { alert('API key and secret are required'); return; }
+                try {
+                    const resp = await fetch(`/api/users/${userId}/credentials`, {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({apiKey, apiSecret, accountType, testnet})
+                    });
+                    const json = await resp.json();
+                    if (json.saved) { alert('Saved'); document.getElementById('admin-user-keys-modal').style.display = 'none'; fetchUsers(userSearch.value); viewUser(userId); }
+                    else alert('Save failed: ' + JSON.stringify(json));
+                } catch (err) { alert('Failed to save: ' + err); }
+            });
+        }
+    });
+
+    window.removeUserKey = function(userId) {
+        if (!confirm('Remove all API keys for this user?')) return;
+        fetch(`/api/users/${userId}/credentials`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(() => { alert('Removed'); fetchUsers(userSearch.value); viewUser(userId); })
+        .catch(err => alert('Failed to remove: ' + err));
     }
 
     window.editUser = function(id) {

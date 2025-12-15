@@ -11,6 +11,39 @@
     <div id="userDetails" style="display:none;">
         <!-- User details will be loaded here -->
     </div>
+
+    <!-- Admin: Manage User API Keys Modal -->
+    <div id="admin-user-keys-modal" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index:2000; align-items:center; justify-content:center;">
+        <div style="background:var(--bg-card); padding: 20px; border-radius:8px; width: 520px; max-width: 95%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h3 id="admin-user-keys-modal-title">Manage User API Keys</h3>
+                <button class="modal-close" style="background:none;border:none;font-size:20px;" onclick="document.getElementById('admin-user-keys-modal').style.display='none'">×</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Account Type</label>
+                <select id="admin-api-account-type" class="form-input">
+                    <option value="spot">Spot</option>
+                    <option value="futures">Futures</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">API Key</label>
+                <input id="admin-api-key" class="form-input" placeholder="API Key">
+            </div>
+            <div class="form-group">
+                <label class="form-label">API Secret</label>
+                <input id="admin-api-secret" class="form-input" placeholder="API Secret">
+            </div>
+            <div class="form-group">
+                <label class="checkbox-label"><input id="admin-api-testnet" type="checkbox" checked> Use Testnet</label>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('admin-user-keys-modal').style.display='none'">Cancel</button>
+                <button id="admin-api-test-btn" class="btn btn-info">Test</button>
+                <button id="admin-api-save-btn" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
 </div>
 <script src="{{ url_for('static', filename='src/js/admin/user-management.js') }}"></script>
 {% endblock %}

@@ -40,3 +40,19 @@ def test_calculate_rsi_handles_invalid_periods():
     # check values are in expected range or neutral
     for s in (s1, s2, s3, s4, s5):
         assert all(0 <= v <= 100 for v in s.fillna(50).tolist())
+
+
+def test_calculate_rsi_does_not_log_errors_for_malformed_period(caplog):
+    from app.services.ribs_optimizer import TradingRIBSOptimizer
+
+    prices = make_prices(30)
+    caplog.set_level("WARNING")
+
+    r = TradingRIBSOptimizer()
+    # pass a malformed period (slice) which previously triggered error-level logs
+    _ = r.calculate_rsi(prices, period=slice(0, 10))
+
+    # No ERROR level logs mentioning RSI should be present
+    assert not any(
+        rec.levelname == "ERROR" and "RSI" in rec.message for rec in caplog.records
+    )

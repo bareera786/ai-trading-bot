@@ -6159,7 +6159,9 @@ class ParallelPredictionEngine:
                         self.logger.warning(f"Symbol {symbol} not found in market data")
                         return symbol, None
                 except Exception as e:
-                    self.logger.error(
+                    getattr(
+                        self, "logger", __import__("logging").getLogger(__name__)
+                    ).error(
                         f"Prediction failed for {symbol}: {str(e)}",
                         extra={
                             "symbol": symbol,
@@ -6178,22 +6180,35 @@ class ParallelPredictionEngine:
             successful_predictions = len(predictions)
             total_symbols = len(symbols)
 
-            self.logger.info(
+            getattr(self, "logger", __import__("logging").getLogger(__name__)).info(
                 f"Parallel predictions completed: {successful_predictions}/{total_symbols} symbols successful"
             )
 
             if successful_predictions == 0:
-                self.logger.warning("No successful predictions in parallel batch")
+                getattr(
+                    self, "logger", __import__("logging").getLogger(__name__)
+                ).warning("No successful predictions in parallel batch")
 
             return predictions
 
         except Exception as e:
-            self.logger.error(
+            getattr(self, "logger", __import__("logging").getLogger(__name__)).error(
                 f"Parallel prediction system failed: {str(e)}",
                 extra={"total_symbols": len(symbols), "error_type": type(e).__name__},
             )
             # Fallback to sequential processing
             return self.sequential_predict(symbols, market_data, ml_system)
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state.pop("logger", None)
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        import logging
+
+        self.logger = logging.getLogger(__name__)
 
     def sequential_predict(self, symbols, market_data, ml_system):
         """Sequential fallback prediction"""

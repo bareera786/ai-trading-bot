@@ -11,6 +11,13 @@ def set_background_task_manager(manager: BackgroundTaskManager) -> None:
     """Set the global background task manager instance."""
     global _background_task_manager
     _background_task_manager = manager
+    try:
+        import logging
+
+        logger = logging.getLogger("ai_trading_bot")
+        logger.info("BackgroundTaskManager set: %s", type(manager).__name__)
+    except Exception:
+        pass
 
 
 def get_self_improvement_worker() -> Any | None:

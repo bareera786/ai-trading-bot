@@ -5,6 +5,9 @@ import random
 import time
 from typing import Any, Optional
 
+import os
+import json
+
 from flask import (
     Blueprint,
     current_app,
@@ -110,6 +113,35 @@ def ribs_dashboard():
         ctx.get("version_label") or ctx.get("ai_bot_version") or "Ultimate AI Bot"
     )
     ribs_optimization = dashboard_data.get("ribs_optimization", {})
+
+    # If there is no live in-process ribs_optimization payload, try to read
+    # a cross-process status file so the dashboard can show archive/progress
+    # information even when the optimizer runs in another process.
+    if not ribs_optimization:
+        status_path = os.path.join(
+            "bot_persistence", "ribs_checkpoints", "ribs_status.json"
+        )
+        try:
+            if os.path.exists(status_path):
+                with open(status_path, "r") as sf:
+                    status = json.load(sf)
+                # Map the status file into a shape compatible with the template
+                ribs_optimization = {
+                    "coverage": status.get("archive_stats", {}).get("coverage", 0),
+                    "num_elites": status.get("archive_stats", {}).get("num_elites", 0),
+                    "best_objective": status.get("archive_stats", {}).get(
+                        "best_objective", 0
+                    ),
+                    "qd_score": status.get("archive_stats", {}).get("qd_score", 0),
+                    "elite_strategies": status.get("archive_stats", {}).get(
+                        "elites", []
+                    )
+                    or [],
+                    # leave behaviors/objectives empty if not present
+                }
+        except Exception:
+            # Fail silently; the page will still render with empty data
+            ribs_optimization = ribs_optimization or {}
     response = make_response(
         render_template(
             "ribs_dashboard.html",

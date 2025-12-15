@@ -264,6 +264,26 @@ class TradingRIBSOptimizer:
         # Heartbeat: log cycle start time for improved observability
         self.logger.info("RIBS optimization cycle heartbeat: start")
 
+        # cross-process status: write a status file indicating cycle start
+        try:
+            status_path = os.path.join(self.checkpoints_dir, "ribs_status.json")
+            status_tmp = status_path + ".tmp"
+            status = {
+                "running": True,
+                "start_time": datetime.now().isoformat(),
+                "iterations": iterations,
+            }
+            with open(status_tmp, "w") as sf:
+                json.dump(status, sf)
+                try:
+                    sf.flush()
+                    os.fsync(sf.fileno())
+                except Exception:
+                    pass
+            os.replace(status_tmp, status_path)
+        except Exception:
+            self.logger.warning("Failed to write ribs_status start file")
+
         try:
             for i in range(iterations):
                 # Ask for new solutions
@@ -354,6 +374,26 @@ class TradingRIBSOptimizer:
                     self.save_checkpoint()
 
             self.logger.info("RIBS optimization cycle completed")
+            # update cross-process status file to indicate completion
+            try:
+                status_path = os.path.join(self.checkpoints_dir, "ribs_status.json")
+                status_tmp = status_path + ".tmp"
+                status = {
+                    "running": False,
+                    "last_completed": datetime.now().isoformat(),
+                    "iterations": iterations,
+                    "archive_stats": self.get_archive_stats(),
+                }
+                with open(status_tmp, "w") as sf:
+                    json.dump(status, sf)
+                    try:
+                        sf.flush()
+                        os.fsync(sf.fileno())
+                    except Exception:
+                        pass
+                os.replace(status_tmp, status_path)
+            except Exception:
+                self.logger.warning("Failed to write ribs_status completion file")
             self.logger.info("RIBS optimization cycle heartbeat: completed")
             return self.archive.sample_elites(10)  # Return top 10 elites
 
@@ -404,6 +444,37 @@ class TradingRIBSOptimizer:
 
             os.replace(tmp_path, checkpoint_path)
             self.logger.info(f"RIBS checkpoint saved atomically: {checkpoint_path}")
+
+            # update status file with latest checkpoint info (cross-process)
+            try:
+                status_path = os.path.join(self.checkpoints_dir, "ribs_status.json")
+                status_tmp = status_path + ".tmp"
+                status = {}
+                # load existing status if available
+                try:
+                    with open(status_path, "r") as sf:
+                        status = json.load(sf) or {}
+                except Exception:
+                    status = {}
+
+                status["latest_checkpoint"] = {
+                    "path": checkpoint_path,
+                    "mtime": os.path.getmtime(checkpoint_path),
+                    "size": os.path.getsize(checkpoint_path),
+                }
+
+                with open(status_tmp, "w") as sf:
+                    json.dump(status, sf)
+                    try:
+                        sf.flush()
+                        os.fsync(sf.fileno())
+                    except Exception:
+                        pass
+                os.replace(status_tmp, status_path)
+            except Exception:
+                self.logger.warning(
+                    "Failed to write latest checkpoint to ribs_status file"
+                )
 
         except Exception as e:
             self.logger.error(f"Failed to save checkpoint: {e}")

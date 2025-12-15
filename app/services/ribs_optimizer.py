@@ -28,6 +28,8 @@ class TradingRIBSOptimizer:
         self.history = []
         self.best_solution = None
         self.best_objective = -float("inf")
+        # Track current iteration for progress reporting
+        self.current_iteration = 0
 
         # Create checkpoints directory
         self.checkpoints_dir = "bot_persistence/ribs_checkpoints"
@@ -49,12 +51,13 @@ class TradingRIBSOptimizer:
     def create_archive(self):
         """Create RIBS archive for quality-diversity optimization"""
         try:
+            threshold = float(self.config.get("threshold_min", -10.0))
             archive = ribs.archives.GridArchive(
                 solution_dim=self.config["solution_dim"],
                 dims=self.config["archive_dimensions"],
                 ranges=self.config["archive_ranges"],
                 learning_rate=0.01,
-                threshold_min=-10.0,
+                threshold_min=threshold,
                 qd_score_offset=0.0,
             )
             self.logger.info("RIBS GridArchive created successfully")
@@ -282,6 +285,8 @@ class TradingRIBSOptimizer:
                 "start_time": datetime.now().isoformat(),
                 "iterations": iterations,
             }
+            # store total for progress percent calculations
+            self.current_total = int(iterations)
             with open(status_tmp, "w") as sf:
                 json.dump(status, sf)
                 try:
@@ -369,8 +374,19 @@ class TradingRIBSOptimizer:
                         "Failed to tell scheduler after sanitizing results",
                         extra={"error": str(e)},
                     )
-                if i % 10 == 0:
-                    self.log_progress(i)
+                # Progress reporting: configurable interval
+                try:
+                    progress_interval = int(self.config.get("progress_interval", 10))
+                except Exception:
+                    progress_interval = 10
+
+                if progress_interval < 1:
+                    progress_interval = 1
+
+                if i % progress_interval == 0:
+                    # Update current iteration and log progress (also writes status file)
+                    self.current_iteration = i
+                    self.log_progress(i, total=iterations)
 
                 # Update best solution
                 max_obj_idx = np.argmax(objectives)
@@ -393,6 +409,12 @@ class TradingRIBSOptimizer:
                     "iterations": iterations,
                     "archive_stats": self.get_archive_stats(),
                 }
+                # ensure progress reflects completion
+                try:
+                    status["current_iteration"] = int(iterations)
+                    status["progress_percent"] = 100
+                except Exception:
+                    pass
                 with open(status_tmp, "w") as sf:
                     json.dump(status, sf)
                     try:
@@ -410,7 +432,7 @@ class TradingRIBSOptimizer:
             self.logger.error(f"RIBS optimization cycle failed: {e}")
             return []
 
-    def log_progress(self, iteration: int):
+    def log_progress(self, iteration: int, total: int = 1):
         """Log optimization progress"""
         try:
             stats = self.archive.stats
@@ -421,6 +443,50 @@ class TradingRIBSOptimizer:
                 f"QD Score={stats.qd_score:.2f}, "
                 f"Best Objective={self.best_objective:.2f}"
             )
+            # Also write a lightweight progress status to ribs_status.json for external monitors
+            try:
+                # Always write a fresh status file rather than relying on reading it first.
+                status_path = os.path.join(self.checkpoints_dir, "ribs_status.json")
+                status_tmp = status_path + ".tmp"
+
+                # Guard total against zero
+                total_safe = int(total) if int(total) > 0 else 1
+                progress = int(100.0 * (float(iteration) / float(total_safe)))
+
+                status = {
+                    "running": True,
+                    "current_iteration": int(iteration),
+                    "progress_percent": progress,
+                    "archive_stats": self.get_archive_stats(),
+                }
+
+                # Also include latest_checkpoint metadata if available
+                try:
+                    files = [
+                        os.path.join(self.checkpoints_dir, f)
+                        for f in os.listdir(self.checkpoints_dir)
+                        if f.endswith(".pkl")
+                    ]
+                    if files:
+                        latest_file = max(files, key=os.path.getmtime)
+                        status["latest_checkpoint"] = {
+                            "path": latest_file,
+                            "mtime": os.path.getmtime(latest_file),
+                            "size": os.path.getsize(latest_file),
+                        }
+                except Exception:
+                    pass
+
+                with open(status_tmp, "w") as sf:
+                    json.dump(status, sf)
+                    try:
+                        sf.flush()
+                        os.fsync(sf.fileno())
+                    except Exception:
+                        pass
+                os.replace(status_tmp, status_path)
+            except Exception:
+                self.logger.exception("Failed to update ribs_status progress file")
         except Exception as e:
             self.logger.error(f"Failed to log progress: {e}")
 
@@ -517,6 +583,20 @@ class TradingRIBSOptimizer:
                     "mtime": os.path.getmtime(checkpoint_path),
                     "size": os.path.getsize(checkpoint_path),
                 }
+                # Also include current iteration/progress if available
+                try:
+                    status["current_iteration"] = int(
+                        getattr(self, "current_iteration", 0)
+                    )
+                    status["progress_percent"] = int(
+                        100.0
+                        * (
+                            float(status.get("current_iteration", 0))
+                            / float(getattr(self, "current_total", 1))
+                        )
+                    )
+                except Exception:
+                    pass
 
                 with open(status_tmp, "w") as sf:
                     json.dump(status, sf)

@@ -70,6 +70,11 @@ class SelfImprovementWorker:
             "self_improvement_min_success", 50.0
         )
         self.auto_fix_required = False
+        # Auto-fix cooldown (seconds) to prevent repeated rapid fixes
+        self.auto_fix_cooldown_seconds = int(
+            self.trading_config.get("auto_fix_cooldown_seconds", 3600)
+        )
+        self.last_auto_fix: Optional[float] = None
 
         # Enhanced metrics
         self.performance_trends = deque(maxlen=50)  # Long-term performance tracking
@@ -98,7 +103,7 @@ class SelfImprovementWorker:
         self.snapshot_dir = (
             self.project_root / "bot_persistence" / "self_improvement_snapshots"
         )
-        self.snapshot_dir.mkdir(exist_ok=True)
+        self.snapshot_dir.mkdir(parents=True, exist_ok=True)
 
         # Performance analytics
         self.cycle_start_time = None
@@ -656,14 +661,86 @@ class SelfImprovementWorker:
                 self.dashboard_data["self_improvement"]["drift_level"] = "stable"
 
     def _trigger_auto_fix(self) -> None:
-        """Execute registered auto-fix actions."""
+        """Execute registered auto-fix actions with cooldown/hysteresis."""
         self._log("🔧 Triggering auto-fix actions...")
-        for name, handler in self.auto_fix_handlers.items():
+
+        now = time.time()
+        if (
+            self.last_auto_fix
+            and (now - self.last_auto_fix) < self.auto_fix_cooldown_seconds
+        ):
+            self._log(
+                f"⚠️ Skipping auto-fix due to cooldown (last ran {int(now - self.last_auto_fix)}s ago)"
+            )
+            return
+
+        # Run handlers in background thread to avoid blocking monitor
+        def _run_handlers():
+            for name, handler in self.auto_fix_handlers.items():
+                try:
+                    self._log(f"🔧 Running auto-fix: {name}")
+                    handler()
+                except Exception as exc:
+                    self._log(f"❌ Auto-fix {name} failed: {exc}")
+
+            # Record last auto-fix time
+            self.last_auto_fix = time.time()
             try:
-                self._log(f"🔧 Running auto-fix: {name}")
-                handler()
+                self.dashboard_data.setdefault("self_improvement", {})[
+                    "last_auto_fix"
+                ] = datetime.now().isoformat()
+            except Exception:
+                pass
+
+        t = threading.Thread(target=_run_handlers, name="AutoFixRunner", daemon=True)
+        t.start()
+
+    def execute_auto_fix_action(self, action: str) -> dict:
+        """Execute a named auto-fix action with cooldown checks.
+
+        Returns a dict with keys: success (bool) and message (str).
+        """
+        if action not in self.auto_fix_handlers:
+            return {"success": False, "message": f"Unknown auto-fix action: {action}"}
+
+        now = time.time()
+        if (
+            self.last_auto_fix
+            and (now - self.last_auto_fix) < self.auto_fix_cooldown_seconds
+        ):
+            return {
+                "success": False,
+                "message": f"Auto-fix cooldown active: try again in {int(self.auto_fix_cooldown_seconds - (now - self.last_auto_fix))}s",
+            }
+
+        # Run the handler in background
+        def _run():
+            try:
+                self._log(f"🔧 Running auto-fix: {action}")
+                self.auto_fix_handlers[action]()
             except Exception as exc:
-                self._log(f"❌ Auto-fix {name} failed: {exc}")
+                self._log(f"❌ Auto-fix {action} failed: {exc}")
+            finally:
+                self.last_auto_fix = time.time()
+                try:
+                    self.dashboard_data.setdefault("self_improvement", {})[
+                        "last_auto_fix"
+                    ] = datetime.now().isoformat()
+                except Exception:
+                    pass
+
+        # Mark last_auto_fix immediately to prevent concurrent triggers
+        self.last_auto_fix = time.time()
+        try:
+            self.dashboard_data.setdefault("self_improvement", {})[
+                "last_auto_fix"
+            ] = datetime.now().isoformat()
+        except Exception:
+            pass
+
+        t = threading.Thread(target=_run, name=f"AutoFix-{action}", daemon=True)
+        t.start()
+        return {"success": True, "message": f"Auto-fix action '{action}' started"}
 
     def _extract_prices(self, _profile_key: str) -> dict[str, float]:
         market_data = self.dashboard_data.get("market_data", {}) or {}
@@ -753,6 +830,53 @@ class SelfImprovementWorker:
             # Decode the solution into trading parameters
             params = self.ribs_optimizer.decode_solution(solution)
 
+            # Light backtest gating to prevent deploying broken strategies
+            deploy_cfg = {
+                "min_return": float(
+                    self.trading_config.get("ribs_deploy_min_return", 0.0)
+                ),
+                "min_sharpe": float(
+                    self.trading_config.get("ribs_deploy_min_sharpe", 0.0)
+                ),
+                "max_drawdown": float(
+                    self.trading_config.get("ribs_deploy_max_drawdown", 100.0)
+                ),
+                "min_win_rate": float(
+                    self.trading_config.get("ribs_deploy_min_win_rate", 0.0)
+                ),
+                "backtest_hours": int(
+                    self.trading_config.get("ribs_deploy_backtest_hours", 168)
+                ),
+            }
+
+            try:
+                market_data = self.load_recent_data(hours=deploy_cfg["backtest_hours"])
+                backtest = self.ribs_optimizer.run_backtest(params, market_data)
+            except Exception as e:
+                self._log(f"❌ Backtest failed during deploy gating: {e}")
+                return {"success": False, "message": "Backtest failed"}
+
+            # Evaluate gating thresholds
+            if backtest.get("total_return", -9999) < deploy_cfg["min_return"]:
+                msg = f"Backtest total_return {backtest.get('total_return'):.2f} < required {deploy_cfg['min_return']:.2f}"
+                self._log(f"❌ Deploy gating rejected strategy: {msg}")
+                return {"success": False, "message": msg}
+
+            if backtest.get("sharpe_ratio", 0.0) < deploy_cfg["min_sharpe"]:
+                msg = f"Backtest sharpe_ratio {backtest.get('sharpe_ratio'):.2f} < required {deploy_cfg['min_sharpe']:.2f}"
+                self._log(f"❌ Deploy gating rejected strategy: {msg}")
+                return {"success": False, "message": msg}
+
+            if backtest.get("max_drawdown", 0.0) > deploy_cfg["max_drawdown"]:
+                msg = f"Backtest max_drawdown {backtest.get('max_drawdown'):.2f} > allowed {deploy_cfg['max_drawdown']:.2f}"
+                self._log(f"❌ Deploy gating rejected strategy: {msg}")
+                return {"success": False, "message": msg}
+
+            if backtest.get("win_rate", 0.0) < deploy_cfg["min_win_rate"]:
+                msg = f"Backtest win_rate {(backtest.get('win_rate')*100):.1f}% < required {(deploy_cfg['min_win_rate']*100):.1f}%"
+                self._log(f"❌ Deploy gating rejected strategy: {msg}")
+                return {"success": False, "message": msg}
+
             # Save strategy configuration
             strategy_config = {
                 "id": strategy_id,
@@ -763,16 +887,20 @@ class SelfImprovementWorker:
 
             # Save to strategies directory
             strategies_dir = self.project_root / "strategies" / "ribs_generated"
-            strategies_dir.mkdir(exist_ok=True)
+            strategies_dir.mkdir(parents=True, exist_ok=True)
 
             config_path = strategies_dir / f"{strategy_id}.json"
             with open(config_path, "w") as f:
                 json.dump(strategy_config, f, indent=2)
 
             self._log(f"✅ RIBS strategy deployed: {strategy_id}")
-
+            return {
+                "success": True,
+                "message": f"RIBS strategy deployed: {strategy_id}",
+            }
         except Exception as e:
             self._log(f"❌ Failed to deploy RIBS strategy: {e}")
+            return {"success": False, "message": str(e)}
 
     def _update_ribs_dashboard_data(self):
         """Update dashboard with RIBS optimization data"""

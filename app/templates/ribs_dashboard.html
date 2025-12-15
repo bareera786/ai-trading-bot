@@ -93,6 +93,9 @@
         </script>
     </div>
 
+    <!-- Toast container for non-blocking notifications -->
+    <div id="ribs-toast-container" style="position:fixed;top:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:10px;"></div>
+
     <div class="elite-strategies">
         <h4>Top 5 Elite Strategies</h4>
         <table class="table table-striped">
@@ -149,6 +152,12 @@
             <div id="ribs-status-widget" class="stat-card" style="min-width:200px;align-self:center;">
                 <h5>RIBS Status</h5>
                 <div id="ribs-status-content">Loading...</div>
+                <div id="ribs-progress" style="margin-top:10px;display:none;">
+                    <div class="progress" style="height:14px;">
+                        <div id="ribs-progress-bar" class="progress-bar" style="height:14px;width:0%"></div>
+                    </div>
+                    <div id="ribs-progress-text" style="font-size:12px;margin-top:6px;color:#666;">--</div>
+                </div>
             </div>
             <button class="btn btn-primary" onclick="startRIBSOptimization()">
                 ▶️ Start RIBS Optimization
@@ -169,20 +178,31 @@
         <h4>Strategy Parameters (Latest Elite)</h4>
 // Poll ribs status and update the status widget
 function updateRIBSStatusWidget() {
-    fetch('/api/ribs/archive/status')
+    // Fetch both archive status and progress
+    fetch('/api/ribs/progress')
     .then(r => r.json())
     .then(data => {
         const el = document.getElementById('ribs-status-content');
         if (!el) return;
-        if (!data.available) {
+        // `data` here is progress object from /api/ribs/progress
+        if (data.status === 'missing') {
             el.innerHTML = '<div class="text-muted">Unavailable</div>';
             return;
         }
-        const status = data.status_file || {};
-        const running = status.running ? 'Running' : (status.last_completed ? 'Idle' : 'Unknown');
-        let latest = status.latest_checkpoint || {};
-        let cpInfo = latest.path ? `${new Date((latest.mtime||0)*1000).toLocaleString()} (${Math.round((latest.size||0)/1024)} KB)` : 'No checkpoint yet';
-        el.innerHTML = `<div><strong>${running}</strong></div><div class="small text-muted">Last checkpoint: ${cpInfo}</div>`;
+        const running = data.running ? 'Running' : 'Idle';
+        el.innerHTML = `<div><strong>${running}</strong></div>`;
+
+        // Update progress bar if present
+        const progressBarWrap = document.getElementById('ribs-progress');
+        const progressBar = document.getElementById('ribs-progress-bar');
+        const progressText = document.getElementById('ribs-progress-text');
+        if (data.progress_percent != null) {
+            if (progressBarWrap) progressBarWrap.style.display = 'block';
+            if (progressBar) progressBar.style.width = Math.max(0, Math.min(100, data.progress_percent)) + '%';
+            if (progressText) progressText.textContent = `Iteration ${data.current_iteration || 0} — ${data.progress_percent}%`;
+        } else {
+            if (progressBarWrap) progressBarWrap.style.display = 'none';
+        }
     })
     .catch(() => {
         const el = document.getElementById('ribs-status-content');
@@ -190,8 +210,8 @@ function updateRIBSStatusWidget() {
     });
 }
 
-// Start polling every 30 seconds
-setInterval(updateRIBSStatusWidget, 30000);
+// Start polling every 2 seconds for live progress updates
+setInterval(updateRIBSStatusWidget, 2000);
 // Initial update
 updateRIBSStatusWidget();
 
@@ -352,29 +372,68 @@ updateRIBSStatusWidget();
     font-style: italic;
     padding: 40px;
 }
+
+/* RIBS toast styles */
+.ribs-toast {
+    min-width: 240px;
+    max-width: 420px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+.ribs-toast-info { background: linear-gradient(90deg,#3b82f6,#60a5fa); }
+.ribs-toast-success { background: linear-gradient(90deg,#10b981,#34d399); }
+.ribs-toast-error { background: linear-gradient(90deg,#ef4444,#f97316); }
 </style>
 
 <script>
 // RIBS Dashboard JavaScript functions
 function deployRIBSStrategy(strategyId) {
-    if (confirm(`Deploy RIBS strategy ${strategyId} to live trading?`)) {
-        fetch(`/api/ribs/deploy/${strategyId}`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'}
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Strategy deployed successfully!');
-                location.reload();
-            } else {
-                alert('Deployment failed: ' + data.error);
-            }
-        })
-        .catch(error => {
-            alert('Error deploying strategy: ' + error);
-        });
-    }
+    if (!confirm(`Deploy RIBS strategy ${strategyId} to live trading?`)) return;
+
+    // Show a temporary 'starting' toast
+    const startToastId = showRibsToast('Starting deployment...', 'info', 5000);
+
+    fetch(`/api/ribs/deploy/${strategyId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (response.ok && data.success) {
+            showRibsToast('Strategy deployed successfully!', 'success', 4000);
+            // update UI after a short delay so the toast can be seen
+            setTimeout(() => location.reload(), 800);
+        } else {
+            const message = (data && (data.error || data.message)) || `Deployment failed (HTTP ${response.status})`;
+            showRibsToast(message, 'error', 8000);
+        }
+    })
+    .catch(error => {
+        showRibsToast('Error deploying strategy: ' + (error.message||error), 'error', 8000);
+    });
+}
+
+// Simple toast helper for the RIBS dashboard
+function showRibsToast(text, type='info', timeout=5000) {
+    const container = document.getElementById('ribs-toast-container');
+    if (!container) return null;
+    const toast = document.createElement('div');
+    toast.className = `ribs-toast ribs-toast-${type}`;
+    toast.textContent = text;
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+    toast.style.transform = 'translateY(-6px)';
+    container.appendChild(toast);
+    // animate in
+    requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; });
+    if (timeout > 0) setTimeout(() => {
+        toast.style.opacity = '0'; toast.style.transform = 'translateY(-6px)';
+        setTimeout(() => toast.remove(), 260);
+    }, timeout);
+    return toast;
 }
 
 function analyzeRIBSStrategy(strategyId) {

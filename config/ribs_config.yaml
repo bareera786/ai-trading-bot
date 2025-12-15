@@ -17,6 +17,11 @@ ribs:
   total_iterations: 2000
   iterations_per_batch: 100
   checkpoint_frequency: 100
+  # Minimum objective threshold for inserting into archive
+  # Lower (more negative) values make it easier to insert low-performing candidates
+  threshold_min: -30.0
+  # Progress reporting interval (iterations). Set to 1 for per-iteration updates.
+  progress_interval: 1
 
   # Behavior descriptors (what we're optimizing for)
   behavior_descriptors:

@@ -6,7 +6,9 @@ After=network.target postgresql.service redis-server.service
 User=aibot
 WorkingDirectory=/home/aibot/ai-bot
 EnvironmentFile=/home/aibot/ai-bot/config/deploy.env.production
-Environment="PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus"
+# Use an app-owned prometheus directory to avoid conflicts with systemd PrivateTmp
+# (services with PrivateTmp=true get an isolated /tmp which may not contain /tmp/prometheus)
+Environment="PROMETHEUS_MULTIPROC_DIR=/home/aibot/ai-bot/prometheus"
 ExecStart=/bin/bash -lc 'cd /home/aibot/ai-bot && source .venv/bin/activate && exec python ai_ml_auto_bot_final.py'
 Restart=on-failure
 RestartSec=10

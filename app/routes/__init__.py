@@ -7,6 +7,7 @@ from .dashboard import dashboard_bp  # noqa: F401
 from .metrics import metrics_bp  # noqa: F401
 from .realtime import realtime_bp  # noqa: F401
 from .status import status_bp  # noqa: F401
+from .ribs_progress import ribs_progress_bp  # noqa: F401
 from .strategies import strategies_bp  # noqa: F401
 from .subscriptions import subscription_bp  # noqa: F401
 from .system_ops import system_ops_bp  # noqa: F401
@@ -51,6 +52,7 @@ ROUTE_BLUEPRINTS = (
     realtime_bp,
     strategies_bp,
     status_bp,
+    ribs_progress_bp,
     admin_users_bp,
     admin_analytics_bp,
     user_api_bp,

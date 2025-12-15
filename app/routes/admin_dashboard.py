@@ -81,11 +81,11 @@ def trigger_auto_fix():
         if action not in worker.auto_fix_handlers:
             return jsonify({"error": f"Unknown auto-fix action: {action}"}), 400
 
-        # Trigger the specific auto-fix
-        worker.auto_fix_handlers[action]()
+        # Trigger the specific auto-fix (respecting cooldown/hysteresis)
+        result = worker.execute_auto_fix_action(action)
+        if not result.get("success"):
+            return jsonify({"error": result.get("message", "Auto-fix rejected")}), 400
 
-        return jsonify(
-            {"message": f"Auto-fix action '{action}' completed successfully"}
-        )
+        return jsonify({"message": result.get("message")})
     except Exception as e:
         return jsonify({"error": str(e)}), 500

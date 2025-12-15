@@ -2,7 +2,21 @@
 from __future__ import annotations
 
 from flask import current_app, url_for
-from flask_mail import Message
+
+try:
+    from flask_mail import Message
+except (
+    Exception
+):  # pragma: no cover - optional dependency may be missing in some test envs
+    # Provide a lightweight Message shim so unit tests that import this module
+    # don't fail when Flask-Mail isn't installed.
+    class Message:
+        def __init__(self, *args, **kwargs):
+            self.subject = kwargs.get("subject")
+            self.recipients = kwargs.get("recipients")
+            self.body = kwargs.get("body")
+            self.html = kwargs.get("html")
+
 
 from app.extensions import mail
 

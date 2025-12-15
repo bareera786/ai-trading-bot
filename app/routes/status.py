@@ -14,7 +14,7 @@ import json
 from prometheus_client import generate_latest
 
 from app.extensions import db
-from app.tasks.manager import _background_task_manager
+from app.tasks.manager import _background_task_manager, get_self_improvement_worker
 
 
 status_bp = Blueprint("status", __name__)
@@ -76,8 +76,25 @@ def health_check():
     except Exception:
         pass
 
-    # Check background worker heartbeat
-    worker_status = "ok" if _background_task_manager is not None else "error"
+    # Check background worker heartbeat with more detail
+    try:
+        # Import the manager module at runtime to pick up dynamic updates in tests/ops
+        from app.tasks import manager as task_manager
+
+        if getattr(task_manager, "_background_task_manager", None) is None:
+            worker_status = "uninitialized"
+        else:
+            worker = task_manager.get_self_improvement_worker()
+            if worker is None:
+                worker_status = "missing"
+            else:
+                # Prefer explicit running flag if available
+                running = getattr(worker, "is_running", None)
+                if callable(running):
+                    running = running()
+                worker_status = "ok" if running else "stopped"
+    except Exception:
+        worker_status = "error"
 
     # Check available disk space
     disk_status = "error"
@@ -296,6 +313,35 @@ def api_health_ribs():
         return jsonify({"status": "error", "error": str(e)}), 500
 
 
+@status_bp.route("/api/ribs/progress", methods=["GET"])
+def api_ribs_progress():
+    """Return lightweight RIBS progress information read from ribs_status.json"""
+    status_path = os.path.join(
+        "bot_persistence", "ribs_checkpoints", "ribs_status.json"
+    )
+    if not os.path.exists(status_path):
+        return (
+            jsonify({"status": "missing", "message": "RIBS status file not found"}),
+            404,
+        )
+
+    try:
+        with open(status_path, "r") as sf:
+            status = json.load(sf)
+
+        # Provide a minimal progress view
+        progress = {
+            "running": status.get("running", False),
+            "current_iteration": status.get("current_iteration"),
+            "progress_percent": status.get("progress_percent"),
+            "archive_stats": status.get("archive_stats", {}),
+            "latest_checkpoint": status.get("latest_checkpoint"),
+        }
+        return jsonify(progress)
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
 @status_bp.route("/api/ribs/start", methods=["POST"])
 def start_ribs_optimization():
     """Start RIBS optimization"""
@@ -397,10 +443,15 @@ def deploy_ribs_strategy(strategy_id):
         if not strategy:
             return jsonify({"success": False, "error": "Strategy not found"}), 404
 
-        # Deploy the strategy
+        # Deploy the strategy (with gating)
         solution = strategy["solution"]
-        self_improvement_worker.deploy_strategy(solution, strategy_id)
+        res = self_improvement_worker.deploy_strategy(solution, strategy_id)
+        if isinstance(res, dict):
+            if not res.get("success"):
+                return jsonify({"success": False, "error": res.get("message")}), 400
+            return jsonify({"success": True, "message": res.get("message")})
 
+        # Back-compat: if deploy_strategy didn't return a dict, assume success
         return jsonify({"success": True, "message": f"Strategy {strategy_id} deployed"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

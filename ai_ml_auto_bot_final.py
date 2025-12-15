@@ -15290,21 +15290,28 @@ def register_ai_bot_context(flask_app=None, force=False):
 
 
 # Initialize AI bot context for Flask routes (needed for WSGI deployment)
-print("🔧 Initializing AI bot context for Flask routes...")
-try:
-    print("  📋 Registering AI bot context...")
-    ai_bot_context = register_ai_bot_context(app, force=True)
-    print("  ⚙️  Initializing ultimate system...")
-    initialize_runtime_from_context(ai_bot_context)
-    print("✅ AI bot context initialized successfully for Flask routes")
-except Exception as e:
-    import traceback
+import sys
 
-    print(f"❌ Failed to initialize AI bot context: {e}")
-    print("Full traceback:")
-    traceback.print_exc()
-    print("⚠️  Continuing without AI bot context - some features may not work")
-    # Continue anyway - don't crash the app startup
+# During pytest runs or when the module is imported in test contexts, avoid
+# performing heavyweight runtime initialization that expects an application
+# context. Skip auto-initialization when pytest is detected in the environment
+# to prevent side-effects during test collection.
+if "pytest" not in sys.modules and not os.environ.get("PYTEST_CURRENT_TEST"):
+    print("🔧 Initializing AI bot context for Flask routes...")
+    try:
+        print("  📋 Registering AI bot context...")
+        ai_bot_context = register_ai_bot_context(app, force=True)
+        print("  ⚙️  Initializing ultimate system...")
+        initialize_runtime_from_context(ai_bot_context)
+        print("✅ AI bot context initialized successfully for Flask routes")
+    except Exception as e:
+        import traceback
+
+        print(f"❌ Failed to initialize AI bot context: {e}")
+        print("Full traceback:")
+        traceback.print_exc()
+        print("⚠️  Continuing without AI bot context - some features may not work")
+        # Continue anyway - don't crash the app startup
 
 
 # ==================== MAIN EXECUTION ====================

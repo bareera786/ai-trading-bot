@@ -35,6 +35,8 @@ pytest==8.4.2
 pytest-cov==4.1.0
 pre-commit==3.6.0
 
+# (Playwright E2E was removed; no E2E dev deps are required by default)
+
 # RIBS (Quality Diversity Optimization)
 ribs[all]>=0.5.0
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 import signal
 from typing import Any, Mapping, MutableMapping, Sequence
 
-from flask import current_app
+from flask import current_app, has_app_context
 
 
 def _safe_bool_mapping(value, default):
@@ -89,22 +89,28 @@ def initialize_runtime_from_context(context: Mapping[str, Any]) -> None:
         ] = getattr(optimized_trader, "trading_enabled", False)
 
     if background_task_manager:
-        try:
-            background_task_manager.start_background_tasks(
-                start_ultimate_training=not getattr(ultimate_ml_system, "models", None),
-                start_optimized_training=not getattr(
-                    optimized_ml_system, "models", None
-                ),
-                persistence_inputs={
-                    "trader": ultimate_trader,
-                    "ml_system": ultimate_ml_system,
-                    "config": trading_config,
-                    "symbols": top_symbols,
-                    "historical_data": historical_data,
-                },
-            )
-        except Exception as exc:
-            print(f"⚠️ Failed to start background tasks: {exc}")
+        # Don't start long-running background tasks when running tests
+        if has_app_context() and current_app.config.get("TESTING"):
+            print("ℹ️ TESTING mode detected: skipping start of background tasks")
+        else:
+            try:
+                background_task_manager.start_background_tasks(
+                    start_ultimate_training=not getattr(
+                        ultimate_ml_system, "models", None
+                    ),
+                    start_optimized_training=not getattr(
+                        optimized_ml_system, "models", None
+                    ),
+                    persistence_inputs={
+                        "trader": ultimate_trader,
+                        "ml_system": ultimate_ml_system,
+                        "config": trading_config,
+                        "symbols": top_symbols,
+                        "historical_data": historical_data,
+                    },
+                )
+            except Exception as exc:
+                print(f"⚠️ Failed to start background tasks: {exc}")
 
     if dashboard_data is not None:
         system_status = dashboard_data.setdefault("system_status", {})
@@ -145,18 +151,18 @@ def initialize_runtime_from_context(context: Mapping[str, Any]) -> None:
     print("=" * 80)
     print("🎉 ULTIMATE AI TRADING BOT FULLY INITIALIZED AND READY!")
     print("💾 Professional Persistence: ACTIVE")
-    
+
     # Get the actual port from Flask app config or default to 5000
     port = 5000  # Default port we're using
     try:
-        if hasattr(current_app, 'config'):
+        if hasattr(current_app, "config"):
             # Try to get port from SERVER_NAME if set
-            server_name = current_app.config.get('SERVER_NAME')
-            if server_name and ':' in server_name:
-                port = int(server_name.split(':')[-1])
+            server_name = current_app.config.get("SERVER_NAME")
+            if server_name and ":" in server_name:
+                port = int(server_name.split(":")[-1])
     except Exception:
         pass  # Fall back to default
-    
+
     print(f"📍 Dashboard available at: http://localhost:{port}")
     print(f"📍 Health check at: http://localhost:{port}/health")
     print("=" * 80)

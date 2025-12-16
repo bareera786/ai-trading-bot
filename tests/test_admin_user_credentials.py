@@ -14,6 +14,8 @@ class AdminUser:
         self.id = 1
         self.is_authenticated = True
         self.is_admin = True
+        # Required by flask-login when calling login_user()
+        self.is_active = True
 
     def get_id(self):
         return str(self.id)

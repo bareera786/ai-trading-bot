@@ -47,8 +47,9 @@ def test_admin_credentials_crud(tmp_path):
     with app.test_client() as client:
         with app.app_context():
             app.extensions = {"ai_bot_context": ctx}
-            # login admin
-            login_user(AdminUser())
+            # login admin (set session directly to avoid request-context issues)
+            with client.session_transaction() as sess:
+                sess["_user_id"] = "1"
 
             # set credentials for user 2
             resp = client.post(

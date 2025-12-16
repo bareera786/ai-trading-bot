@@ -54,7 +54,9 @@ class CircuitBreaker:
         """Check if enough time has passed to attempt reset."""
         if self.last_failure_time is None:
             return True
-        return datetime.now() - self.last_failure_time > timedelta(seconds=self.recovery_timeout)
+        return datetime.now() - self.last_failure_time > timedelta(
+            seconds=self.recovery_timeout
+        )
 
     def _on_success(self):
         """Handle successful operation."""
@@ -78,6 +80,7 @@ class CircuitBreaker:
 
 class CircuitBreakerOpenException(Exception):
     """Exception raised when circuit breaker is open."""
+
     pass
 
 
@@ -121,13 +124,15 @@ class RealBinanceTrader:
         )
         self.binance_log_manager = binance_log_manager
         self.logger = logger or logging.getLogger("ai_trading_bot")
-        self.redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
-        
+        self.redis_client = redis.Redis(
+            host="localhost", port=6379, decode_responses=True
+        )
+
         # Circuit breaker for trading operations
         self.circuit_breaker = CircuitBreaker(
             failure_threshold=5,  # Open after 5 failures
             recovery_timeout=300,  # Try again after 5 minutes
-            expected_exception=self.api_exception_cls
+            expected_exception=self.api_exception_cls,
         )
 
         if self.api_key and self.api_secret:
@@ -208,8 +213,8 @@ class RealBinanceTrader:
 
     def is_ready(self):
         return (
-            self.connected 
-            and self.client is not None 
+            self.connected
+            and self.client is not None
             and not self.circuit_breaker.is_open
         )
 
@@ -218,7 +223,9 @@ class RealBinanceTrader:
         return {
             "state": self.circuit_breaker.state,
             "failure_count": self.circuit_breaker.failure_count,
-            "last_failure_time": self.circuit_breaker.last_failure_time.isoformat() if self.circuit_breaker.last_failure_time else None,
+            "last_failure_time": self.circuit_breaker.last_failure_time.isoformat()
+            if self.circuit_breaker.last_failure_time
+            else None,
             "is_open": self.circuit_breaker.is_open,
         }
 
@@ -746,7 +753,7 @@ class RealBinanceTrader:
                 return response, status
 
             response, status = self.circuit_breaker.call(_execute_order)
-            
+
             self._record_order_event(status, order_request, response=response)
             self._log_event(
                 "ORDER_SUBMITTED",
@@ -1399,6 +1406,13 @@ def attach_trading_ml_dependencies(
         ultimate_trader.futures_ml_system = futures_ml
     if hasattr(optimized_trader, "futures_ml_system"):
         optimized_trader.futures_ml_system = futures_ml
+
+
+# Backwards-compatible alias: some tests and older code import
+# `_default_safe_float` from the module directly. Keep an alias here
+# so imports like `from app.services.trading import _default_safe_float`
+# continue to work.
+_default_safe_float = BinanceFuturesTrader._default_safe_float
 
 
 def create_user_trader_resolver(

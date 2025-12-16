@@ -831,21 +831,44 @@ class SelfImprovementWorker:
             params = self.ribs_optimizer.decode_solution(solution)
 
             # Light backtest gating to prevent deploying broken strategies
+            # Merge admin overrides (persisted) with the base trading_config
+            try:
+                from app.services.ribs_admin import load_overrides
+
+                overrides = load_overrides() or {}
+            except Exception:
+                overrides = {}
+
             deploy_cfg = {
                 "min_return": float(
-                    self.trading_config.get("ribs_deploy_min_return", 0.0)
+                    overrides.get(
+                        "ribs_deploy_min_return",
+                        self.trading_config.get("ribs_deploy_min_return", 0.0),
+                    )
                 ),
                 "min_sharpe": float(
-                    self.trading_config.get("ribs_deploy_min_sharpe", 0.0)
+                    overrides.get(
+                        "ribs_deploy_min_sharpe",
+                        self.trading_config.get("ribs_deploy_min_sharpe", 0.0),
+                    )
                 ),
                 "max_drawdown": float(
-                    self.trading_config.get("ribs_deploy_max_drawdown", 100.0)
+                    overrides.get(
+                        "ribs_deploy_max_drawdown",
+                        self.trading_config.get("ribs_deploy_max_drawdown", 100.0),
+                    )
                 ),
                 "min_win_rate": float(
-                    self.trading_config.get("ribs_deploy_min_win_rate", 0.0)
+                    overrides.get(
+                        "ribs_deploy_min_win_rate",
+                        self.trading_config.get("ribs_deploy_min_win_rate", 0.0),
+                    )
                 ),
                 "backtest_hours": int(
-                    self.trading_config.get("ribs_deploy_backtest_hours", 168)
+                    overrides.get(
+                        "ribs_deploy_backtest_hours",
+                        self.trading_config.get("ribs_deploy_backtest_hours", 168),
+                    )
                 ),
             }
 

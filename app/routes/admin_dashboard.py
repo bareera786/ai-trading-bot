@@ -89,3 +89,97 @@ def trigger_auto_fix():
         return jsonify({"message": result.get("message")})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@admin_dashboard_bp.route("/ribs", methods=["GET"])
+@login_required
+@limiter.exempt
+def ribs_admin_page():
+    """Admin UI for tuning RIBS deploy thresholds."""
+    if not getattr(current_user, "is_admin", False):
+        return "Forbidden", 403
+    return render_template("admin/ribs_config.html")
+
+
+@admin_dashboard_bp.route("/api/ribs/config", methods=["GET", "PUT"])
+@login_required
+@limiter.exempt
+def admin_ribs_config():
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": "Forbidden"}), 403
+
+    try:
+        from app.services.ribs_admin import load_overrides, save_overrides
+
+        overrides = load_overrides() or {}
+
+        if request.method == "GET":
+            # Return overrides and merged effective values
+            base = {}
+            # Read base defaults from TRADING_CONFIG if available
+            try:
+                from ai_ml_auto_bot_final import TRADING_CONFIG as BASE_TRADING_CONFIG
+
+                base = {
+                    "ribs_deploy_min_return": float(
+                        BASE_TRADING_CONFIG.get("ribs_deploy_min_return", 0.0)
+                    ),
+                    "ribs_deploy_min_sharpe": float(
+                        BASE_TRADING_CONFIG.get("ribs_deploy_min_sharpe", 0.0)
+                    ),
+                    "ribs_deploy_max_drawdown": float(
+                        BASE_TRADING_CONFIG.get("ribs_deploy_max_drawdown", 100.0)
+                    ),
+                    "ribs_deploy_min_win_rate": float(
+                        BASE_TRADING_CONFIG.get("ribs_deploy_min_win_rate", 0.0)
+                    ),
+                    "ribs_deploy_backtest_hours": int(
+                        BASE_TRADING_CONFIG.get("ribs_deploy_backtest_hours", 168)
+                    ),
+                }
+            except Exception:
+                base = {}
+
+            effective = dict(base)
+            effective.update(overrides)
+
+            return jsonify({"overrides": overrides, "effective": effective})
+
+        # PUT -> update overrides
+        data = request.get_json() or {}
+        allowed = {
+            "ribs_deploy_min_return": float,
+            "ribs_deploy_min_sharpe": float,
+            "ribs_deploy_max_drawdown": float,
+            "ribs_deploy_min_win_rate": float,
+            "ribs_deploy_backtest_hours": int,
+        }
+
+        new_overrides = dict(overrides)
+        for k, v in data.items():
+            if k not in allowed:
+                continue
+            try:
+                new_overrides[k] = allowed[k](v)
+            except Exception:
+                return jsonify({"error": f"Invalid type for {k}"}), 400
+
+        if not save_overrides(new_overrides):
+            return jsonify({"error": "Failed to save overrides"}), 500
+
+        # If possible, notify running self-improvement worker to pick up new values
+        try:
+            from app.tasks.manager import get_self_improvement_worker
+
+            worker = get_self_improvement_worker()
+            if worker:
+                # Worker reads overrides at deploy time, but we can nudge dashboard data
+                worker.dashboard_data.setdefault("self_improvement", {})[
+                    "ribs_deploy_overrides"
+                ] = new_overrides
+        except Exception:
+            pass
+
+        return jsonify({"success": True, "overrides": new_overrides})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

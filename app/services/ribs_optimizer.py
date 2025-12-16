@@ -268,7 +268,10 @@ class TradingRIBSOptimizer:
             return pd.Series([50] * len(prices), index=prices.index)
 
     def run_optimization_cycle(self, market_data: Dict, iterations: int = 100):
-        """Run one optimization cycle"""
+        """Run one optimization cycle
+
+        Returns a list of elite strategies as tuples: (solution, objective, behavior).
+        """
         self.logger.info(
             f"Starting RIBS optimization cycle with {iterations} iterations"
         )
@@ -397,9 +400,35 @@ class TradingRIBSOptimizer:
                 # Save checkpoint periodically
                 if i % 50 == 0:
                     self.save_checkpoint()
+        except Exception as exc:  # pragma: no cover - defensive
+            self.logger.exception(f"RIBS optimization cycle failed: {exc}")
+            # Attempt to write a failure status file
+            try:
+                status_path = os.path.join(self.checkpoints_dir, "ribs_status.json")
+                with open(status_path, "w") as sf:
+                    json.dump({"running": False, "error": str(exc)}, sf)
+            except Exception:
+                pass
+            return []
 
+        # Post-cycle: log completion, write a final status file, and return elite strategies
+        try:
             self.logger.info("RIBS optimization cycle completed")
-            # update cross-process status file to indicate completion
+
+            # Build elites list (best known solution)
+            elites = []
+            if self.best_solution is not None:
+                elites.append(
+                    (
+                        self.best_solution.tolist()
+                        if hasattr(self.best_solution, "tolist")
+                        else self.best_solution,
+                        float(self.best_objective),
+                        [],
+                    )
+                )
+
+            # update cross-process status file to indicate completion (best-effort)
             try:
                 status_path = os.path.join(self.checkpoints_dir, "ribs_status.json")
                 status_tmp = status_path + ".tmp"
@@ -425,9 +454,9 @@ class TradingRIBSOptimizer:
                 os.replace(status_tmp, status_path)
             except Exception:
                 self.logger.warning("Failed to write ribs_status completion file")
-            self.logger.info("RIBS optimization cycle heartbeat: completed")
-            return self.archive.sample_elites(10)  # Return top 10 elites
 
+            self.logger.info("RIBS optimization cycle heartbeat: completed")
+            return elites
         except Exception as e:
             self.logger.error(f"RIBS optimization cycle failed: {e}")
             return []

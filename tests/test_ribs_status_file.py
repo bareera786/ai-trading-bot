@@ -35,9 +35,16 @@ def test_ribs_writes_status_file_on_completion(tmp_path):
     status_path = tmp_path / "ribs_status.json"
     assert status_path.exists(), "ribs_status.json was not created"
 
-    # Verify content indicates completion
+    # Verify content indicates completion and contains elite information for dashboard rendering
     content = json.loads(status_path.read_text())
     assert content.get("running") is False
     assert content.get("archive_stats") is not None
     assert isinstance(content.get("iterations"), int)
     assert content.get("progress_percent") == 100
+
+    # Completion status should include elite strategies and behavior arrays (best-effort)
+    assert "elites" in content.get("archive_stats", {})
+    assert "behaviors_x" in content
+    assert "behaviors_y" in content
+    assert "behaviors_z" in content
+    assert "objectives" in content

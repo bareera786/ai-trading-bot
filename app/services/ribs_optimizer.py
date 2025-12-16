@@ -438,6 +438,31 @@ class TradingRIBSOptimizer:
                     "iterations": iterations,
                     "archive_stats": self.get_archive_stats(),
                 }
+                # Include elite strategies and behavior arrays for dashboard visualizations
+                try:
+                    elites = self.get_elite_strategies(top_n=10) or []
+                    status.setdefault("archive_stats", {})["elites"] = elites
+
+                    # Prepare behavior arrays expected by the front-end
+                    behaviors_x = [
+                        e.get("behavior", [None, None, None])[0] for e in elites
+                    ]
+                    behaviors_y = [
+                        e.get("behavior", [None, None, None])[1] for e in elites
+                    ]
+                    behaviors_z = [
+                        e.get("behavior", [None, None, None])[2] for e in elites
+                    ]
+                    objectives = [e.get("objective") for e in elites]
+
+                    status["behaviors_x"] = behaviors_x
+                    status["behaviors_y"] = behaviors_y
+                    status["behaviors_z"] = behaviors_z
+                    status["objectives"] = objectives
+                    status["elite_strategies"] = elites
+                except Exception:
+                    # Best-effort only; do not fail the completion write if elites can't be sampled
+                    pass
                 # ensure progress reflects completion
                 try:
                     status["current_iteration"] = int(iterations)

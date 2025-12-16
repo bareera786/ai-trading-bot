@@ -705,17 +705,57 @@ class TradingRIBSOptimizer:
             elite_strategies = []
 
             for entry in elites:
-                try:
-                    # sample_elites may return tuples of variable shape; defensively unpack
-                    solution = entry[0]
-                    objective = float(entry[1]) if len(entry) > 1 else None
-                    behavior = entry[2] if len(entry) > 2 else None
-                except Exception:
+                # sample_elites may return tuples, lists or mapping-like entries; handle common shapes
+                solution = None
+                objective = None
+                behavior = None
+
+                # Mapping-like entry (dict or similar)
+                if hasattr(entry, "get") and not isinstance(entry, (list, tuple)):
                     try:
-                        solution, objective, behavior = entry
+                        solution = entry.get("solution") or entry.get("x")
+                        objective = (
+                            entry.get("objective")
+                            or entry.get("fitness")
+                            or entry.get("score")
+                        )
+                        # measures or behavior may be stored under various keys
+                        measures = (
+                            entry.get("measures")
+                            or entry.get("behavior")
+                            or entry.get("measures")
+                        )
+                        if isinstance(measures, dict):
+                            # take first three numeric values as behavior
+                            behavior = [v for v in list(measures.values())[:3]]
+                        else:
+                            behavior = measures
                     except Exception:
-                        self.logger.error("Failed to parse elite entry: %r", entry)
+                        self.logger.error(
+                            "Failed to extract fields from mapping elite entry: %r",
+                            entry,
+                        )
                         continue
+                elif isinstance(entry, (list, tuple)):
+                    # sequence-like entry: try to extract first three elements
+                    try:
+                        if len(entry) >= 3:
+                            solution = entry[0]
+                            objective = entry[1]
+                            behavior = entry[2]
+                        elif len(entry) == 2:
+                            solution, objective = entry
+                            behavior = None
+                        else:
+                            solution = entry[0]
+                    except Exception:
+                        self.logger.error(
+                            "Failed to parse sequence elite entry: %r", entry
+                        )
+                        continue
+                else:
+                    self.logger.error("Unknown elite entry shape: %r", entry)
+                    continue
 
                 # Normalize solution and behavior to serializable forms
                 try:

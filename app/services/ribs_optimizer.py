@@ -718,7 +718,11 @@ class TradingRIBSOptimizer:
                     try:
                         solution = elites.get("solution")[i]
                         objective = float(elites.get("objective")[i])
-                        measures = elites.get("measures") or elites.get("behavior")
+                        measures = (
+                            elites.get("measures")
+                            if elites.get("measures") is not None
+                            else elites.get("behavior")
+                        )
                         behavior = list(measures[i]) if measures is not None else None
                     except Exception:
                         self.logger.exception(

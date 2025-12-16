@@ -704,12 +704,43 @@ class TradingRIBSOptimizer:
             elites = self.archive.sample_elites(top_n)
             elite_strategies = []
 
-            for solution, objective, behavior in elites:
+            for entry in elites:
+                try:
+                    # sample_elites may return tuples of variable shape; defensively unpack
+                    solution = entry[0]
+                    objective = float(entry[1]) if len(entry) > 1 else None
+                    behavior = entry[2] if len(entry) > 2 else None
+                except Exception:
+                    try:
+                        solution, objective, behavior = entry
+                    except Exception:
+                        self.logger.error("Failed to parse elite entry: %r", entry)
+                        continue
+
+                # Normalize solution and behavior to serializable forms
+                try:
+                    solution_list = (
+                        solution.tolist()
+                        if hasattr(solution, "tolist")
+                        else list(solution)
+                    )
+                except Exception:
+                    solution_list = solution
+
+                try:
+                    behavior_list = (
+                        behavior.tolist()
+                        if hasattr(behavior, "tolist")
+                        else list(behavior)
+                    )
+                except Exception:
+                    behavior_list = []
+
                 strategy = {
                     "id": f"ribs_elite_{len(elite_strategies)+1}",
-                    "solution": solution.tolist(),
+                    "solution": solution_list,
                     "objective": objective,
-                    "behavior": behavior.tolist(),
+                    "behavior": behavior_list,
                     "params": self.decode_solution(solution),
                 }
                 elite_strategies.append(strategy)

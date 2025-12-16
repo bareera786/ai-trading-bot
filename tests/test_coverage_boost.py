@@ -5,6 +5,7 @@ import tempfile
 from datetime import datetime
 
 import pytest
+import logging
 
 pytest.importorskip("flask_mail")
 
@@ -37,7 +38,7 @@ def test_self_improvement_fix_handlers(tmp_path, monkeypatch):
         dashboard_data={},
         trading_config={},
         project_root=tmp_path,
-        logger=None,
+        logger=logging.getLogger("tests"),
     )
 
     # Call auto-fix methods

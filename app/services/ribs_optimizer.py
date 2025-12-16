@@ -704,6 +704,48 @@ class TradingRIBSOptimizer:
             elites = self.archive.sample_elites(top_n)
             elite_strategies = []
 
+            # Some archive implementations return a mapping-of-arrays (e.g., keys -> numpy arrays)
+            # where each key maps to an array of length N; handle that shape here.
+            if isinstance(elites, dict):
+                try:
+                    # Determine how many elites were returned
+                    any_values = next(iter(elites.values()))
+                    count = len(any_values)
+                except Exception:
+                    count = 0
+
+                for i in range(min(count, top_n)):
+                    try:
+                        solution = elites.get("solution")[i]
+                        objective = float(elites.get("objective")[i])
+                        measures = elites.get("measures") or elites.get("behavior")
+                        behavior = list(measures[i]) if measures is not None else None
+                    except Exception:
+                        self.logger.exception(
+                            "Failed to extract elite arrays at index %s", i
+                        )
+                        continue
+
+                    try:
+                        solution_list = (
+                            solution.tolist()
+                            if hasattr(solution, "tolist")
+                            else list(solution)
+                        )
+                    except Exception:
+                        solution_list = solution
+
+                    strategy = {
+                        "id": f"ribs_elite_{len(elite_strategies)+1}",
+                        "solution": solution_list,
+                        "objective": objective,
+                        "behavior": behavior or [],
+                        "params": self.decode_solution(solution),
+                    }
+                    elite_strategies.append(strategy)
+
+                return elite_strategies
+
             for entry in elites:
                 # sample_elites may return tuples, lists or mapping-like entries; handle common shapes
                 solution = None

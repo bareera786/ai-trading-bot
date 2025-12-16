@@ -192,6 +192,17 @@ class BinanceCredentialStore:
     def _normalize_data(self, data: Any) -> dict[str, dict[str, Any]]:
         normalized: dict[str, dict[str, Any]] = {}
         if isinstance(data, dict):
+            # Support per-user 'users' mapping as well as legacy account_type -> entry maps
+            if "users" in data and isinstance(data["users"], dict):
+                for user_key, user_map in data["users"].items():
+                    if not isinstance(user_map, dict):
+                        continue
+                    for acct_key, entry in user_map.items():
+                        acct = self._normalize_account_type(acct_key)
+                        normalized.setdefault(str(user_key), {})[
+                            acct
+                        ] = self._sanitize_entry(entry, acct)
+                return normalized
             if "api_key" in data or "api_secret" in data:
                 normalized["spot"] = self._sanitize_entry(data, "spot")
             else:

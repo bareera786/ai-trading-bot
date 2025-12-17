@@ -41,6 +41,35 @@ def init_extensions(app):
     """Bind extensions to the provided Flask application."""
     # SQLAlchemy
     db.init_app(app)
+    # If session options were provided via app config (e.g., tests may set
+    # expire_on_commit=False to avoid DetachedInstanceError when objects are
+    # accessed after commit), apply them to the scoped session factory.
+    session_opts = app.config.get("SQLALCHEMY_SESSION_OPTIONS")
+    if session_opts and isinstance(session_opts, dict):
+        try:
+            db.session.configure(**session_opts)
+        except Exception:
+            # Best-effort; don't fail initialization if configuration not
+            # compatible with the installed Flask-SQLAlchemy/SQLAlchemy
+            # version.
+            app.logger.debug("Failed to apply session options: %s", session_opts)
+    # Some versions of Flask-SQLAlchemy may not honor session options via
+    # config; in test environments explicitly replace the scoped session
+    # factory so sessions do not expire on commit (avoids DetachedInstance
+    # errors when test helpers access model attributes after commit).
+    try:
+        import os
+        from sqlalchemy.orm import scoped_session, sessionmaker
+
+        if app.config.get("TESTING") or os.getenv("PYTEST_CURRENT_TEST"):
+            with app.app_context():
+                # Create a session factory bound to the engine with
+                # expire_on_commit disabled so instances remain usable
+                # after commit in tests.
+                sess_factory = sessionmaker(bind=db.engine, expire_on_commit=False)
+                db.session = scoped_session(sess_factory)
+    except Exception:
+        app.logger.debug("Failed to configure test session factory", exc_info=True)
 
     # Flask-Migrate
     migrate.init_app(app, db, directory=app.config.get("MIGRATE_DIRECTORY"))

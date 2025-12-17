@@ -15,7 +15,7 @@ BootstrapContext = dict[str, Any]
 
 _bootstrap_lock = Lock()
 _runtime_started = False
-_TEST_MODE = os.getenv("AI_BOT_TEST_MODE", "").lower() in ("1", "true", "yes")
+_TEST_MODE = None  # Deprecated placeholder — evaluate test-mode dynamically in runtime
 
 
 def _validate_startup_configuration(app) -> None:
@@ -115,6 +115,10 @@ def _check_ui_assets(app) -> None:
 
 def bootstrap_runtime(app) -> Optional[BootstrapContext]:
     """Ensure the legacy AI bot runtime is wired into the provided Flask app."""
+    # Note: don't short-circuit before running DB migrations; we need basic
+    # schema creation to succeed even when tests set AI_BOT_TEST_MODE. The
+    # actual decision to skip starting background runtime will be taken
+    # later (after migrations) so tests can still create tables.
 
     # Validate startup configuration
     _validate_startup_configuration(app)
@@ -130,10 +134,21 @@ def bootstrap_runtime(app) -> Optional[BootstrapContext]:
         except Exception as exc:  # pragma: no cover - migration is best-effort
             app.logger.warning("Database migration skipped: %s", exc)
 
+    # Evaluate test mode dynamically so changes to AI_BOT_TEST_MODE during tests
+    # (set at runtime) are respected. Previously this used a module-level
+    # _TEST_MODE computed at import time which caused bootstrap to run even
+    # after tests set the env var inside a test function.
+    test_mode = os.getenv("AI_BOT_TEST_MODE", "").lower() in ("1", "true", "yes")
+    app.logger.info(
+        "bootstrap_runtime: AI_BOT_TEST_MODE=%s, app.TESTING=%s",
+        os.getenv("AI_BOT_TEST_MODE"),
+        app.config.get("TESTING"),
+    )
+
     if (
         app.config.get("TESTING")
         or app.config.get("SKIP_RUNTIME_BOOTSTRAP")
-        or _TEST_MODE
+        or test_mode
     ):
         return None
 

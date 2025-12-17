@@ -31,8 +31,9 @@ def load_migrations_with_fake_db(monkeypatch, executed):
     )
 
     # inject fake 'app.extensions' into sys.modules so migrations can import it
+    # Use monkeypatch so the original module is restored after the test.
     fake_extensions = SimpleNamespace(db=fake_db)
-    sys.modules["app.extensions"] = fake_extensions
+    monkeypatch.setitem(sys.modules, "app.extensions", fake_extensions)
 
     # load the migrations module directly from file
     spec = importlib.util.spec_from_file_location("migrations", "./app/migrations.py")

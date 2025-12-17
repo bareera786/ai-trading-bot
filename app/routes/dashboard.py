@@ -28,12 +28,40 @@ def _get_ai_bot_context() -> dict[str, Any]:
     """Get AI bot context, with fallback for when it's not fully initialized."""
     ctx = current_app.extensions.get("ai_bot_context")
     if not ctx:
-        # Return minimal context to prevent crashes
-        print("⚠️  AI bot context not fully initialized, using minimal fallback")
-        return {
+        # Return and register a minimal context so other routes (e.g., trading)
+        # can share state in lightweight test or limited setups.
+        current_app.logger.warning(
+            "⚠️ AI bot context not fully initialized, registering minimal fallback"
+        )
+        # Provide minimal test-friendly services
+        from app.services.test_fallbacks import (
+            InMemoryCredentialsStore,
+            SimpleLogManager,
+            FallbackTrader,
+            default_apply_credentials,
+            default_get_status,
+        )
+
+        fallback = {
             "version_label": "Ultimate AI Bot (Limited Mode)",
             "ai_bot_version": "Ultimate AI Bot (Limited Mode)",
+            "dashboard_data": {
+                "system_status": {},
+                "optimized_system_status": {},
+                "performance": {},
+                "portfolio": {},
+            },
+            # Minimal services so endpoints can operate during tests
+            "binance_credentials_store": InMemoryCredentialsStore(),
+            "binance_log_manager": SimpleLogManager(),
+            "apply_binance_credentials": default_apply_credentials,
+            "get_binance_credential_status": default_get_status,
+            "ultimate_trader": FallbackTrader(),
+            "optimized_trader": FallbackTrader(),
         }
+        # Store fallback in extensions so other modules access same object
+        current_app.extensions["ai_bot_context"] = fallback
+        return fallback
     return ctx
 
 

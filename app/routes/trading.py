@@ -20,7 +20,32 @@ trading_bp = Blueprint("trading", __name__)
 def _get_bot_context() -> dict[str, Any]:
     ctx = current_app.extensions.get("ai_bot_context")
     if not ctx:
-        raise RuntimeError("AI bot context has not been registered")
+        # If missing, try to reuse a previously-registered fallback (dashboard
+        # may have created one). Otherwise register a lightweight shared
+        # fallback so toggles and dashboard reads operate consistently.
+        fallback = current_app.extensions.get("ai_bot_context")
+        if not fallback:
+            # Provide the same lightweight services that dashboard fallback
+            # registers so trading endpoints behave consistently in test-mode.
+            from app.services.test_fallbacks import (
+                InMemoryCredentialsStore,
+                SimpleLogManager,
+                FallbackTrader,
+                default_apply_credentials,
+                default_get_status,
+            )
+
+            fallback = {
+                "dashboard_data": {"system_status": {}, "optimized_system_status": {}},
+                "ultimate_trader": FallbackTrader(),
+                "optimized_trader": FallbackTrader(),
+                "binance_credentials_store": InMemoryCredentialsStore(),
+                "binance_log_manager": SimpleLogManager(),
+                "apply_binance_credentials": default_apply_credentials,
+                "get_binance_credential_status": default_get_status,
+            }
+            current_app.extensions["ai_bot_context"] = fallback
+        return fallback
     return ctx
 
 

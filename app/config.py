@@ -12,7 +12,11 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 
     # Database
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///trading_bot.db")
+    # Prefer an explicit env var but treat an empty string as "unset" so that
+    # a blank value in an EnvironmentFile doesn't override the default local DB.
+    SQLALCHEMY_DATABASE_URI = (
+        os.environ.get("DATABASE_URL") or "sqlite:///trading_bot.db"
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Paths used by various subsystems

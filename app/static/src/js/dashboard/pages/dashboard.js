@@ -33,7 +33,9 @@ export async function refreshDashboardCards() {
 }
 
 export async function refreshRecentActivity() {
-  const data = await fetchJson('/api/trades?page=1&limit=10');
+  const user = await fetchJson('/api/current_user');
+  const mergeParam = user && user.is_admin ? '&merge_db=1' : '';
+  const data = await fetchJson(`/api/trades?page=1&limit=10${mergeParam}`);
   if (!data || data.error || !Array.isArray(data.trades)) return;
   const tbody = document.getElementById('recent-activity');
   if (!tbody) return;

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}RIBS Strategy Analyze - {{ strategy_id }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2>RIBS Strategy Analysis — {{ strategy_id }}</h2>
+
+  <section>
+    <h3>Parameters</h3>
+    <table class="table">
+      <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+      <tbody>
+      {% for k,v in strategy.params.items() %}
+        <tr><td>{{ k }}</td><td>{{ v }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h3>Behavior / Objective</h3>
+    <p><strong>Objective:</strong> {{ strategy.objective }}</p>
+    <p><strong>Behavior:</strong> {{ strategy.behavior }}</p>
+  </section>
+
+  <section>
+    <h3>Backtest (quick)</h3>
+    {% if backtest %}
+      <ul>
+        <li>Total return: {{ backtest.total_return }}</li>
+        <li>Sharpe ratio: {{ backtest.sharpe_ratio }}</li>
+        <li>Max drawdown: {{ backtest.max_drawdown }}</li>
+        <li>Win rate: {{ (backtest.win_rate * 100) | round(1) }}%</li>
+      </ul>
+    {% else %}
+      <div class="alert alert-warning">Backtest data not available for this strategy.</div>
+    {% endif %}
+  </section>
+
+  <section style="margin-top:1rem;">
+    <button id="deploy-btn" class="btn btn-primary">Deploy Strategy</button>
+    <a href="/ribs" class="btn btn-secondary">Back to RIBS</a>
+    <div id="deploy-result" style="margin-top:0.75rem;"></div>
+  </section>
+</div>
+
+<script>
+document.getElementById('deploy-btn').addEventListener('click', function(){
+  if(!confirm('Deploy this strategy? This will run gated backtests and may be rejected.')) return;
+  fetch(`/api/ribs/deploy/${encodeURIComponent('{{ strategy_id }}')}`, {method: 'POST'})
+    .then(r => r.json())
+    .then(j => {
+      const el = document.getElementById('deploy-result');
+      if(j.success) el.innerHTML = `<div class='alert alert-success'>${j.message || 'Deployed'}</div>`;
+      else el.innerHTML = `<div class='alert alert-danger'>${j.error || j.message || 'Deploy failed'}</div>`;
+    })
+    .catch(e => {
+      document.getElementById('deploy-result').innerHTML = `<div class='alert alert-danger'>Error: ${e}</div>`;
+    })
+});
+</script>
+{% endblock %}

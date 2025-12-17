@@ -87,6 +87,9 @@ def _update_state_file(field: str, value: Any) -> None:
 def api_binance_credentials():
     ctx = _get_bot_context()
     dashboard_data = _get_dashboard_data(ctx)
+    # Ensure expected dashboard structure exists (tests may provide empty dict)
+    dashboard_data.setdefault("system_status", {})
+    dashboard_data.setdefault("optimized_system_status", {})
 
     status_fn = ctx.get("get_binance_credential_status")
     apply_credentials = ctx.get("apply_binance_credentials")
@@ -95,15 +98,8 @@ def api_binance_credentials():
     ultimate_trader = ctx.get("ultimate_trader")
     optimized_trader = ctx.get("optimized_trader")
 
-    if not all(
-        [
-            callable(status_fn),
-            callable(apply_credentials),
-            credentials_store,
-            ultimate_trader,
-            optimized_trader,
-        ]
-    ):
+    # Only require the minimal credential services for saving/loading credentials.
+    if not all([callable(status_fn), callable(apply_credentials), credentials_store]):
         return jsonify({"error": "Binance credential services unavailable"}), 500
 
     method = request.method
@@ -174,11 +170,11 @@ def api_binance_credentials():
         dashboard_data["binance_credentials"] = status
         dashboard_data["binance_logs"] = status.get("logs", [])
 
-        ultimate_status = (
-            status.get("ultimate_status") or ultimate_trader.get_real_trading_status()
+        ultimate_status = status.get("ultimate_status") or (
+            ultimate_trader.get_real_trading_status() if ultimate_trader else {}
         )
-        optimized_status = (
-            status.get("optimized_status") or optimized_trader.get_real_trading_status()
+        optimized_status = status.get("optimized_status") or (
+            optimized_trader.get_real_trading_status() if optimized_trader else {}
         )
 
         if account_type == "spot":

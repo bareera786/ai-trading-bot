@@ -17,11 +17,27 @@ def main(max_age_seconds: int = 6 * 3600):
     with open(status_path, "r") as sf:
         status = json.load(sf)
 
+    # Prefer explicit latest_checkpoint info, but fall back to last_completed
     latest = status.get("latest_checkpoint") or {}
     mtime = latest.get("mtime")
+
     if mtime is None:
-        print("No checkpoint info in status file")
-        return 1
+        # Fall back to using last_completed ISO timestamp if available
+        last_completed = status.get("last_completed")
+        if last_completed:
+            try:
+                # Parse ISO timestamp and compute seconds since completion
+                # Use datetime parsing without introducing new deps
+                from datetime import datetime
+
+                comp_ts = datetime.fromisoformat(last_completed)
+                mtime = comp_ts.timestamp()
+            except Exception:
+                print("No checkpoint info in status file")
+                return 1
+        else:
+            print("No checkpoint info in status file")
+            return 1
 
     age = int(time.time() - float(mtime))
     print(f"Latest checkpoint age: {age} seconds")

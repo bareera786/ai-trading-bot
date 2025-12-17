@@ -100,6 +100,47 @@ class TradingRIBSOptimizer:
                 "position_size": 0.01 + solution[8] * 0.09,  # 1-10%
                 "max_positions": int(1 + solution[9] * 4),  # 1-5
             }
+            # Sanitize / clamp parameter ranges to avoid pathological values
+            # (e.g., negative take_profit or zero position size can lead to
+            # strategies that never generate trades). Keep conservative bounds.
+            try:
+                params["rsi_period"] = max(1, min(100, int(params["rsi_period"])))
+            except Exception:
+                params["rsi_period"] = 14
+            try:
+                params["macd_fast"] = max(2, int(params["macd_fast"]))
+            except Exception:
+                params["macd_fast"] = 8
+            try:
+                params["macd_slow"] = max(
+                    params["macd_fast"] + 1, int(params["macd_slow"])
+                )
+            except Exception:
+                params["macd_slow"] = params["macd_fast"] + 13
+            try:
+                params["bbands_period"] = max(2, min(100, int(params["bbands_period"])))
+            except Exception:
+                params["bbands_period"] = 14
+            try:
+                params["atr_period"] = max(1, min(100, int(params["atr_period"])))
+            except Exception:
+                params["atr_period"] = 7
+
+            # Numeric ranges that must remain positive and sensible
+            params["risk_multiplier"] = max(
+                0.01, min(10.0, float(params.get("risk_multiplier", 0.5)))
+            )
+            params["take_profit"] = max(0.1, float(params.get("take_profit", 1.5)))
+            params["stop_loss"] = max(0.1, float(params.get("stop_loss", 0.5)))
+            params["position_size"] = max(
+                0.001, min(1.0, float(params.get("position_size", 0.01)))
+            )
+            try:
+                params["max_positions"] = max(
+                    1, min(20, int(params.get("max_positions", 1)))
+                )
+            except Exception:
+                params["max_positions"] = 1
             return params
         except Exception as e:
             self.logger.error(f"Failed to decode solution: {e}")
@@ -507,12 +548,26 @@ class TradingRIBSOptimizer:
                 total_safe = int(total) if int(total) > 0 else 1
                 progress = int(100.0 * (float(iteration) / float(total_safe)))
 
+                # Guard archive stats generation: optimizer internals (or underlying
+                # ribs library) may sometimes raise during stats collection. Ensure
+                # we always write a JSON-serializable status file and include any
+                # observed error message to aid diagnostics.
+                try:
+                    archive_stats = self.get_archive_stats() or {}
+                except Exception as e:
+                    archive_stats = {}
+                    status_error = str(e)
+                else:
+                    status_error = None
+
                 status = {
                     "running": True,
                     "current_iteration": int(iteration),
                     "progress_percent": progress,
-                    "archive_stats": self.get_archive_stats(),
+                    "archive_stats": archive_stats,
                 }
+                if status_error:
+                    status["error"] = status_error
 
                 # Also include latest_checkpoint metadata if available
                 try:

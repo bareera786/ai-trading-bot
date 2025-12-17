@@ -7,7 +7,7 @@ from typing import Any, Iterable
 from flask import Blueprint, current_app, jsonify, request, session
 from flask_login import current_user, login_required
 
-from app.models import UserTrade
+from app.models import User, UserTrade
 from app.runtime import symbols
 
 
@@ -263,7 +263,11 @@ def api_market_data():
     dashboard_data = _dashboard_data(ctx)
     get_market_data = _callable(ctx, "get_real_market_data")
 
-    active = set(symbols.get_user_trading_universe(current_user) if current_user.is_authenticated else symbols.get_active_trading_universe())
+    active = set(
+        symbols.get_user_trading_universe(current_user)
+        if current_user.is_authenticated
+        else symbols.get_active_trading_universe()
+    )
     market_data = {}
     if get_market_data:
         for symbol in active:
@@ -330,6 +334,18 @@ def api_crt_data():
 @metrics_bp.route("/api/trades")
 def api_trades():
     ctx = _ctx()
+    try:
+        current_app.logger.info(
+            f"[MERGED_VIEW_REQUEST] args={dict(request.args)} cookies={dict(request.cookies)} remote={request.remote_addr}"
+        )
+    except Exception:
+        current_app.logger.exception("[MERGED_VIEW_REQUEST] failed to log")
+    try:
+        current_app.logger.debug(
+            f"[MERGED_VIEW_ENTER] remote_addr={request.remote_addr} args={dict(request.args)} cookies={dict(request.cookies)}"
+        )
+    except Exception:
+        current_app.logger.exception("[MERGED_VIEW_ENTER] failed to log request intro")
     mode = request.args.get("mode", "ultimate").lower()
     trader = _pick_trader(ctx, mode)
     if not trader:
@@ -363,6 +379,99 @@ def api_trades():
     start_idx = (page - 1) * per_page
     paginated = trades[start_idx : start_idx + per_page]
 
+    # Optional: merge DB `UserTrade` rows into the response for admin users
+    merge_db = str(request.args.get("merge_db", "")).lower() in ("1", "true", "yes")
+    try:
+        current_app.logger.info(
+            f"[MERGED_VIEW_HDR] headers_present={{'X-Debug-Merged': bool(request.headers.get('X-Debug-Merged'))}} args={dict(request.args)} remote={request.remote_addr}"
+        )
+    except Exception:
+        current_app.logger.exception("[MERGED_VIEW_HDR] failed to log headers")
+    if merge_db:
+        # Diagnostic helper: if a debug header is present from localhost, return
+        # the evaluated auth_state in the response to aid troubleshooting.
+        # Temporary debugging shortcut: if the special header is present,
+        # return the evaluated auth/session state in the response body.
+        # NOTE: This is intentionally permissive for staging debugging and
+        # should be removed before any public production rollout.
+        if request.headers.get("X-Debug-Merged"):
+            try:
+                debug_auth = {
+                    "current_user_authenticated": bool(
+                        getattr(current_user, "is_authenticated", False)
+                    ),
+                    "current_user_id": getattr(current_user, "id", None),
+                    "session_user_id": session.get("user_id"),
+                    "cookies": dict(request.cookies),
+                    "args": dict(request.args),
+                }
+            except Exception as exc:  # pragma: no cover - defensive
+                debug_auth = {"error": str(exc)}
+            return jsonify({"debug": debug_auth}), 200
+        # Accept either Flask-Login current_user or session-based user_id
+        # Add diagnostics: log auth/session state when an admin merged view is requested
+        try:
+            auth_state = {
+                "current_user_authenticated": bool(
+                    getattr(current_user, "is_authenticated", False)
+                ),
+                "current_user_id": getattr(current_user, "id", None),
+                "session_user_id": session.get("user_id"),
+                "remote_addr": request.remote_addr,
+                "cookies": dict(request.cookies),
+            }
+            # Use app logger to preserve structured logs
+            current_app.logger.info(f"[MERGED_VIEW] auth_state={auth_state}")
+        except Exception:
+            current_app.logger.exception(
+                "[MERGED_VIEW] Failed to log auth/session state"
+            )
+
+        if not getattr(current_user, "is_authenticated", False):
+            user_id = session.get("user_id")
+            if not user_id:
+                current_app.logger.warning(
+                    "[MERGED_VIEW] blocked: unauthenticated request with no session user_id"
+                )
+                return (
+                    jsonify({"error": "Authentication required for merged view"}),
+                    401,
+                )
+            user = User.query.get(user_id)
+        else:
+            user = User.query.get(getattr(current_user, "id", None))
+
+        if not user or not getattr(user, "is_admin", False):
+            return jsonify({"error": "Admin privileges required for merged view"}), 403
+
+        db_trades = []
+        q = UserTrade.query
+        if symbol:
+            q = q.filter_by(symbol=symbol)
+        for ut in q.order_by(UserTrade.timestamp.desc()).limit(200).all():
+            db_trades.append(
+                {
+                    "db_id": ut.id,
+                    "symbol": ut.symbol,
+                    "side": ut.side,
+                    "quantity": ut.quantity,
+                    "price": ut.entry_price,
+                    "type": ut.trade_type,
+                    "status": ut.status,
+                    "signal": ut.signal_source,
+                    "confidence": ut.confidence_score,
+                    "timestamp": ut.timestamp.isoformat() if ut.timestamp else None,
+                    "source": "db",
+                    "user_id": ut.user_id,
+                }
+            )
+
+        # Combine and re-paginate
+        combined = trades + db_trades
+        combined.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+        start_idx = (page - 1) * per_page
+        paginated = combined[start_idx : start_idx + per_page]
+
     for trade in paginated:
         for key, value in list(trade.items()):
             if isinstance(value, float):
@@ -383,6 +492,30 @@ def api_trades():
             "timestamp": time.time(),
         }
     )
+
+
+@metrics_bp.route("/api/debug/merged_auth")
+def api_debug_merged_auth():
+    """Local-only debug endpoint to inspect auth/session state for merged view troubleshooting."""
+    # Restrict to localhost for safety
+    if request.remote_addr not in ("127.0.0.1", "::1", "localhost"):
+        return jsonify({"error": "Forbidden"}), 403
+
+    try:
+        auth_state = {
+            "current_user_authenticated": bool(
+                getattr(current_user, "is_authenticated", False)
+            ),
+            "current_user_id": getattr(current_user, "id", None),
+            "session_user_id": session.get("user_id"),
+            "remote_addr": request.remote_addr,
+            "cookies": dict(request.cookies),
+        }
+    except Exception as exc:
+        current_app.logger.exception("Failed to collect merged auth debug state")
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify({"debug": auth_state}), 200
 
 
 @metrics_bp.route("/api/signal_source_performance")

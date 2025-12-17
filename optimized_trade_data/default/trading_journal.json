@@ -1,0 +1,51 @@
+[
+  {
+    "timestamp": "2025-12-16T10:21:43.167692",
+    "event_type": "REAL_TRADING_DISABLED",
+    "payload": {
+      "reason": "credentials_cleared"
+    }
+  },
+  {
+    "timestamp": "2025-12-17T00:55:04.810473",
+    "event_type": "REAL_TRADING_DISABLED",
+    "payload": {
+      "reason": "credentials_cleared"
+    }
+  },
+  {
+    "timestamp": "2025-12-17T01:27:54.392508",
+    "event_type": "REAL_TRADING_DISABLED",
+    "payload": {
+      "reason": "credentials_cleared"
+    }
+  },
+  {
+    "timestamp": "2025-12-17T14:13:08.796713",
+    "event_type": "REAL_TRADING_DISABLED",
+    "payload": {
+      "reason": "credentials_cleared"
+    }
+  },
+  {
+    "timestamp": "2025-12-17T14:19:59.550323",
+    "event_type": "REAL_TRADING_DISABLED",
+    "payload": {
+      "reason": "credentials_cleared"
+    }
+  },
+  {
+    "timestamp": "2025-12-17T14:37:23.693798",
+    "event_type": "REAL_TRADING_DISABLED",
+    "payload": {
+      "reason": "credentials_cleared"
+    }
+  },
+  {
+    "timestamp": "2025-12-17T14:57:27.460176",
+    "event_type": "REAL_TRADING_DISABLED",
+    "payload": {
+      "reason": "credentials_cleared"
+    }
+  }
+]

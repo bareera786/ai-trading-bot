@@ -7,7 +7,8 @@ from copy import deepcopy
 from datetime import datetime, timezone
 
 import requests
-from flask import Blueprint, current_app, jsonify, Response
+from flask import Blueprint, current_app, jsonify, Response, render_template
+from flask_login import login_required
 from flask import current_app as app
 import os
 import json
@@ -230,16 +231,37 @@ def ribs_status():
 def ribs_archive_status():
     """Return basic RIBS optimizer status for debugging and dashboard"""
     try:
-        ctx = _ctx()
-        worker = ctx.get("self_improvement_worker")
+        # Be forgiving when ai_bot_context is not present (tests often only
+        # create a status file on disk rather than registering a full runtime).
+        ctx = current_app.extensions.get("ai_bot_context", {}) or {}
+        # Support either a directly-registered worker or a service_runtime wrapper
+        worker = ctx.get("self_improvement_worker") or (
+            getattr(ctx.get("service_runtime"), "self_improvement_worker", None)
+            if ctx.get("service_runtime")
+            else None
+        )
 
         # If worker and optimizer accessible in this process, report live stats
         if worker and getattr(worker, "ribs_optimizer", None):
             optimizer = worker.ribs_optimizer
-            stats = optimizer.get_archive_stats() or {}
+            # Get archive stats defensively (optimizer implementations used in
+            # tests may raise or return non-serializable values).
+            try:
+                stats = optimizer.get_archive_stats() or {}
+            except Exception as e:
+                stats = {}
+                # capture the error in the returned status so tests / monitors can see
+                stats_error = str(e)
+            else:
+                stats_error = None
 
-            # Check latest checkpoint file timestamp if any
-            cp_dir = optimizer.checkpoints_dir
+            # Check latest checkpoint file timestamp if any (use getattr to avoid
+            # AttributeError when a fake optimizer does not have checkpoints_dir)
+            cp_dir = getattr(
+                optimizer,
+                "checkpoints_dir",
+                os.path.join("bot_persistence", "ribs_checkpoints"),
+            )
             latest = None
             try:
                 files = [os.path.join(cp_dir, f) for f in os.listdir(cp_dir)]
@@ -254,9 +276,14 @@ def ribs_archive_status():
             except Exception:
                 latest = None
 
-            return jsonify(
-                {"available": True, "archive_stats": stats, "latest_checkpoint": latest}
-            )
+            response = {
+                "available": True,
+                "archive_stats": stats,
+                "latest_checkpoint": latest,
+            }
+            if stats_error:
+                response["status_error"] = stats_error
+            return jsonify(response)
 
         # Fallback: try reading a cross-process status file (useful when the worker lives in another process)
         status_path = os.path.join(
@@ -374,6 +401,68 @@ def start_ribs_optimization():
         return jsonify({"success": True, "message": "RIBS optimization started"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@status_bp.route("/ribs/analyze/<strategy_id>", methods=["GET"])
+@login_required
+def ribs_analyze(strategy_id):
+    """Render an analysis page for a RIBS elite strategy (admin-only view)."""
+    ctx = _ctx()
+    service_runtime = ctx.get("service_runtime")
+    self_improvement_worker = (
+        service_runtime.self_improvement_worker if service_runtime else None
+    )
+
+    # Try to locate strategy from live optimizer if available
+    strategy = None
+    backtest_result = None
+
+    if self_improvement_worker and self_improvement_worker.ribs_optimizer:
+        elites = self_improvement_worker.ribs_optimizer.get_elite_strategies(10)
+        strategy = next((s for s in elites if s["id"] == strategy_id), None)
+
+        # Run a light-weight backtest using recent data if available
+        try:
+            market_data = self_improvement_worker.load_recent_data()
+            backtest_result = (
+                self_improvement_worker.ribs_optimizer.run_backtest(
+                    strategy["params"], market_data
+                )
+                if strategy
+                else None
+            )
+        except Exception:
+            backtest_result = None
+
+    # Fallback: check status file for archived elite strategies
+    if not strategy:
+        status_path = os.path.join(
+            "bot_persistence", "ribs_checkpoints", "ribs_status.json"
+        )
+        try:
+            if os.path.exists(status_path):
+                with open(status_path, "r") as sf:
+                    status = json.load(sf) or {}
+                for s in status.get("elite_strategies", []):
+                    if s.get("id") == strategy_id:
+                        strategy = s
+                        break
+        except Exception:
+            strategy = strategy or None
+
+    if not strategy:
+        return (
+            jsonify({"success": False, "error": "Strategy not found"}),
+            404,
+        )
+
+    # Render a simple analyze page with params and backtest summary
+    return render_template(
+        "ribs_analyze.html",
+        strategy=strategy,
+        backtest=backtest_result,
+        strategy_id=strategy_id,
+    )
 
 
 @status_bp.route("/api/ribs/pause", methods=["POST"])

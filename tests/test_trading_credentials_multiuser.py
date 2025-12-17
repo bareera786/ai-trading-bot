@@ -14,6 +14,8 @@ class SimpleUser:
     def __init__(self, user_id: int):
         self.id = user_id
         self.is_authenticated = True
+        # Flask-Login expects an is_active attribute/property
+        self.is_active = True
 
     def get_id(self):
         return str(self.id)
@@ -51,40 +53,55 @@ def test_credentials_endpoint_scopes_by_user(tmp_path):
         "apply_binance_credentials": lambda account_type, creds: True,
         "binance_credentials_store": store,
         "binance_log_manager": None,
+        "binance_credential_service": type(
+            "_",
+            (),
+            {
+                "test_credentials": staticmethod(
+                    lambda api_key, api_secret, testnet=True: {"connected": False}
+                )
+            },
+        )(),
     }
 
-    with app.test_client() as client:
-        with app.app_context():
-            app.extensions = {"ai_bot_context": ctx}
+    # Use separate test clients to simulate different users to avoid session caching
+    # issues when switching user identities within the same client instance.
+    with app.test_client() as client1:
+        client1.application.extensions = {"ai_bot_context": ctx}
+        with client1.session_transaction() as session:
+            session["_user_id"] = str(1)
+            session["_fresh"] = True
+        resp = client1.post(
+            "/api/binance/credentials",
+            json={"apiKey": "U1KEY", "apiSecret": "U1SEC", "accountType": "spot"},
+        )
+        assert resp.status_code == 200
 
-            # Post credentials as user 1
-            from flask_login import login_user
+    with app.test_client() as client2:
+        client2.application.extensions = {"ai_bot_context": ctx}
+        with client2.session_transaction() as session:
+            session["_user_id"] = str(2)
+            session["_fresh"] = True
+        resp = client2.post(
+            "/api/binance/credentials",
+            json={"apiKey": "U2KEY", "apiSecret": "U2SEC", "accountType": "spot"},
+        )
+        assert resp.status_code == 200
+    # Check isolation
+    creds1 = store.get_credentials("spot", user_id=1)
+    creds2 = store.get_credentials("spot", user_id=2)
+    assert creds1["api_key"] == "U1KEY"
+    assert creds2["api_key"] == "U2KEY"
 
-            login_user(SimpleUser(1))
-            resp = client.post(
-                "/api/binance/credentials",
-                json={"apiKey": "U1KEY", "apiSecret": "U1SEC", "accountType": "spot"},
-            )
-            assert resp.status_code == 200
-
-            # Post credentials as user 2
-            login_user(SimpleUser(2))
-            resp = client.post(
-                "/api/binance/credentials",
-                json={"apiKey": "U2KEY", "apiSecret": "U2SEC", "accountType": "spot"},
-            )
-            assert resp.status_code == 200
-
-            # Check isolation
-            creds1 = store.get_credentials("spot", user_id=1)
-            creds2 = store.get_credentials("spot", user_id=2)
-            assert creds1["api_key"] == "U1KEY"
-            assert creds2["api_key"] == "U2KEY"
-
-            # Test credential validation endpoint (should respond, even if not connected)
-            resp = client.post(
-                "/api/binance/credentials/test", json={"apiKey": "X", "apiSecret": "Y"}
-            )
-            assert resp.status_code == 200
-            data = resp.get_json()
-            assert "connected" in data
+    # Test credential validation endpoint (should respond, even if not connected)
+    with app.test_client() as client3:
+        client3.application.extensions = {"ai_bot_context": ctx}
+        with client3.session_transaction() as session:
+            session["_user_id"] = str(1)
+            session["_fresh"] = True
+        resp = client3.post(
+            "/api/binance/credentials/test", json={"apiKey": "X", "apiSecret": "Y"}
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "connected" in data

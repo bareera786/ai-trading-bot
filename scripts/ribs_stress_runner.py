@@ -61,7 +61,12 @@ def main(iterations: int = 500):
     market_data = {"ohlcv": pd.DataFrame({"close": prices})}
 
     # Run optimization in a separate thread so we can watch progress
-    status_path = os.path.join(opt.checkpoints_dir, "ribs_status.json")
+    # Be defensive: Fake/mock optimizers used in tests may not have a checkpoints_dir
+    # attribute, so fall back to the project's default path.
+    cp_dir = getattr(opt, "checkpoints_dir", None) or os.path.join(
+        "bot_persistence", "ribs_checkpoints"
+    )
+    status_path = os.path.join(cp_dir, "ribs_status.json")
 
     def runner():
         opt.run_optimization_cycle(market_data, iterations=iterations)

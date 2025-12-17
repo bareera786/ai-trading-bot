@@ -160,7 +160,8 @@ class SelfImprovementWorker:
     def _fix_config_reset(self) -> None:
         """Auto-fix: Reset configuration to stable defaults."""
         try:
-            self.logger.info("🔧 Auto-fix: Resetting configuration to defaults")
+            if self.logger:
+                self.logger.info("🔧 Auto-fix: Resetting configuration to defaults")
 
             # Reset trading parameters to conservative defaults
             defaults = {
@@ -170,18 +171,25 @@ class SelfImprovementWorker:
                 "take_profit_multiplier": 2.0,
             }
 
+            # Ensure defaults are present (set missing or overwrite to conservative defaults)
             for key, value in defaults.items():
-                if key in self.trading_config:
+                try:
                     self.trading_config[key] = value
+                except Exception:
+                    # If trading_config is not a mutable mapping, ignore
+                    pass
 
-            self.logger.info("✅ Configuration reset to defaults")
+            if self.logger:
+                self.logger.info("✅ Configuration reset to defaults")
         except Exception as e:
-            self.logger.error(f"❌ Config reset failed: {e}")
+            if self.logger:
+                self.logger.error(f"❌ Config reset failed: {e}")
 
     def _fix_memory_cleanup(self) -> None:
         """Auto-fix: Clean up memory and cached data."""
         try:
-            self.logger.info("🔧 Auto-fix: Performing memory cleanup")
+            if self.logger:
+                self.logger.info("🔧 Auto-fix: Performing memory cleanup")
 
             # Clear old snapshots (keep last 5)
             snapshots = sorted(self.snapshot_dir.glob("*.json"))
@@ -193,9 +201,11 @@ class SelfImprovementWorker:
             while len(self.performance_trends) > 100:
                 self.performance_trends.popleft()
 
-            self.logger.info("✅ Memory cleanup completed")
+            if self.logger:
+                self.logger.info("✅ Memory cleanup completed")
         except Exception as e:
-            self.logger.error(f"❌ Memory cleanup failed: {e}")
+            if self.logger:
+                self.logger.error(f"❌ Memory cleanup failed: {e}")
 
     def _fix_correlation_rebalancing(self) -> None:
         """Auto-fix: Rebalance portfolio correlations."""
@@ -218,7 +228,13 @@ class SelfImprovementWorker:
         try:
             webhook = os.getenv("RIBS_ALERT_WEBHOOK")
             if webhook:
-                requests.post(webhook, json={"text": msg}, timeout=5)
+                try:
+                    import requests
+
+                    requests.post(webhook, json={"text": msg}, timeout=5)
+                except Exception as e:
+                    if self.logger:
+                        self.logger.debug("Failed to POST ribs alert webhook: %s", e)
         except Exception:
             if self.logger:
                 self.logger.debug("Failed to send RIBS alert webhook")
@@ -769,10 +785,19 @@ class SelfImprovementWorker:
                 self._log(
                     "🧬 Starting continuous RIBS optimization cycle (200 iterations)"
                 )
-                elite_strategies = self.ribs_optimizer.run_optimization_cycle(
-                    market_data=market_data, iterations=200
-                )
-                self._log("🧬 Completed continuous RIBS optimization cycle")
+                try:
+                    elite_strategies = self.ribs_optimizer.run_optimization_cycle(
+                        market_data=market_data, iterations=200
+                    )
+                    if not elite_strategies:
+                        self._log("⚠️ RIBS returned no elite strategies for this cycle")
+                    else:
+                        self._log(
+                            f"🧬 Completed continuous RIBS optimization cycle, elites={len(elite_strategies)}"
+                        )
+                except Exception as e:
+                    self._log(f"❌ RIBS optimization failed during run: {e}")
+                    elite_strategies = []
 
                 # Deploy top 3 strategies to paper trading
                 for i, (solution, objective, behavior) in enumerate(

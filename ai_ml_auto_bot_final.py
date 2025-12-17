@@ -54,7 +54,7 @@ import base64
 import io
 from io import BytesIO
 from types import SimpleNamespace
-from typing import Optional
+from typing import Optional, Any
 
 from app.extensions import db, init_extensions, login_manager, socketio
 from app.routes import register_blueprints
@@ -4317,6 +4317,11 @@ TRADING_CONFIG = {
     "ribs_max_elite_strategies": 5,
     "ribs_auto_deploy_elites": True,
     "ribs_checkpoint_interval": 50,
+    # Optional: when True, automated/system trades will also be recorded to
+    # the database table `user_trade` using `record_user_trade`.
+    # Set `system_trade_user_id` to the user id that should own those trades.
+    "record_system_trades_to_db": False,
+    "system_trade_user_id": None,
 }
 
 OPTIMIZED_TRADING_CONFIG = {
@@ -4377,6 +4382,29 @@ TRADING_CONFIG["futures_manual_auto_trade"] = os.getenv(
     "ENABLE_AUTO_TRADING", "0"
 ).lower() in ("1", "true", "yes")
 
+# Allow enabling system trade DB recording via environment variables
+if os.getenv("RECORD_SYSTEM_TRADES_TO_DB") is not None:
+    TRADING_CONFIG["record_system_trades_to_db"] = os.getenv(
+        "RECORD_SYSTEM_TRADES_TO_DB"
+    ).lower() in ("1", "true", "yes")
+
+if os.getenv("SYSTEM_TRADE_USER_ID"):
+    try:
+        TRADING_CONFIG["system_trade_user_id"] = int(os.getenv("SYSTEM_TRADE_USER_ID"))
+    except Exception:
+        TRADING_CONFIG["system_trade_user_id"] = os.getenv("SYSTEM_TRADE_USER_ID")
+
+# Log the effective system trade recording configuration at startup so it's
+# easy to find in service logs during deployments and debugging.
+try:
+    log_component_event(
+        "STARTUP",
+        f"TRADING_CONFIG.record_system_trades_to_db={TRADING_CONFIG.get('record_system_trades_to_db')} SYSTEM_TRADE_USER_ID={TRADING_CONFIG.get('system_trade_user_id')}",
+        level=logging.INFO,
+    )
+except Exception:
+    # Best-effort logging; do not crash startup for logging failures
+    pass
 # Set testnet mode from environment
 testnet_override = os.getenv("USE_TESTNET", "").lower()
 if testnet_override in ("0", "false", "no"):
@@ -10488,6 +10516,75 @@ class UltimateAIAutoTrader:
 
         return analytics
 
+    def _maybe_record_system_trade(self, trade_record: dict[str, Any]) -> None:
+        """If enabled by TRADING_CONFIG, record an automated trade to the DB.
+
+        This is a safe best-effort call to the module-level `record_user_trade`
+        function. If no `system_trade_user_id` is configured, nothing is done.
+        """
+        try:
+            cfg = TRADING_CONFIG
+            if not cfg.get("record_system_trades_to_db"):
+                log_component_event(
+                    "TRADE_HISTORY",
+                    "System trade recording is disabled (record_system_trades_to_db=False)",
+                    level=logging.DEBUG,
+                )
+                return
+
+            user_id = cfg.get("system_trade_user_id")
+            if not user_id:
+                # Nothing to do without a configured user id
+                log_component_event(
+                    "TRADE_HISTORY",
+                    "System trade recording skipped: no system_trade_user_id configured",
+                    level=logging.DEBUG,
+                )
+                return
+
+            symbol = trade_record.get("symbol")
+            side = trade_record.get("side")
+            quantity = (
+                trade_record.get("quantity") or trade_record.get("base_received") or 0
+            )
+            price = trade_record.get("price") or trade_record.get("entry_price") or 0
+            trade_type = (
+                trade_record.get("type") or trade_record.get("action_type") or "system"
+            )
+            signal_source = trade_record.get("signal")
+            confidence = trade_record.get("confidence")
+
+            # Call module-level helper to persist to DB
+            ok = record_user_trade(
+                user_id,
+                symbol,
+                side,
+                quantity,
+                price,
+                trade_type=trade_type,
+                signal_source=signal_source,
+                confidence_score=confidence,
+            )
+
+            if ok:
+                log_component_event(
+                    "TRADE_HISTORY",
+                    f"Recorded system trade to DB for user_id={user_id}: {symbol} {side} qty={quantity} price={price}",
+                    level=logging.INFO,
+                )
+            else:
+                log_component_event(
+                    "TRADE_HISTORY",
+                    f"Failed to record system trade to DB for user_id={user_id}: {symbol} {side} qty={quantity} price={price}",
+                    level=logging.WARNING,
+                )
+        except Exception as e:  # pragma: no cover - best effort
+            log_component_event(
+                "TRADE_HISTORY",
+                f"Failed to record system trade: {e}",
+                level=logging.WARNING,
+            )
+
     def _calculate_qfm_performance_correlations(
         self, qfm_history, strategy_name, window
     ):
@@ -12969,6 +13066,11 @@ class UltimateAIAutoTrader:
                     trade_data["real_order_id"] = real_order_id
 
                 self.trade_history.add_trade(trade_data)
+                # Optionally persist system (automated) trades to the DB
+                try:
+                    self._maybe_record_system_trade(trade_data)
+                except Exception:
+                    pass
                 self.bot_efficiency["total_trades"] += 1
 
                 action_msg = (
@@ -13157,6 +13259,16 @@ class UltimateAIAutoTrader:
             if real_order_id:
                 trade_data["real_order_id"] = real_order_id
             self.trade_history.add_trade(trade_data)
+            # Optionally persist system (automated) trades to the DB
+            try:
+                self._maybe_record_system_trade(trade_data)
+            except Exception:
+                pass
+            # Optionally persist system (automated) trades to the DB
+            try:
+                self._maybe_record_system_trade(trade_data)
+            except Exception:
+                pass
 
             action_msg = (
                 f"🎯 {self.profile_prefix} SELL"
@@ -13687,6 +13799,16 @@ class UltimateAIAutoTrader:
         if real_order_id:
             trade_data["real_order_id"] = real_order_id
         self.trade_history.add_trade(trade_data)
+        # Optionally persist system (automated) trades to the DB
+        try:
+            self._maybe_record_system_trade(trade_data)
+        except Exception:
+            pass
+        # Optionally persist system (automated) trades to the DB
+        try:
+            self._maybe_record_system_trade(trade_data)
+        except Exception:
+            pass
 
         self.safety_manager.register_trade_result(symbol, pnl)
 

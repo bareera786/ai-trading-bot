@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, Mapping
+import os
 
 # Global reference to the background task manager
 _background_task_manager: BackgroundTaskManager | None = None
@@ -80,13 +81,20 @@ class BackgroundTaskManager:
             )
 
         if self.self_improvement_worker:
-            try:
-                self.self_improvement_worker.start()
-                self._log("✅ Self-improvement worker started")
-            except Exception as exc:  # pragma: no cover - defensive logging
+            # Allow tests/CI to opt-out of starting the self-improvement worker
+            if os.getenv("SKIP_BACKGROUND_TASKS") or os.getenv("PYTEST_CURRENT_TEST"):
                 self._log(
-                    f"⚠️ Failed to start self-improvement worker: {exc}", warning=True
+                    "ℹ️ Skipping self-improvement worker start due to test/CI environment"
                 )
+            else:
+                try:
+                    self.self_improvement_worker.start()
+                    self._log("✅ Self-improvement worker started")
+                except Exception as exc:  # pragma: no cover - defensive logging
+                    self._log(
+                        f"⚠️ Failed to start self-improvement worker: {exc}",
+                        warning=True,
+                    )
 
         if start_ultimate_training and self.model_training_worker:
             try:
@@ -184,6 +192,15 @@ class BackgroundTaskManager:
     # ------------------------------------------------------------------
     def _start_service(self, service: Any | None, label: str) -> None:
         if not service:
+            return
+        # Respect test/CI environments: allow opting-out of starting long-running
+        # background processes by setting SKIP_BACKGROUND_TASKS=1 or running under
+        # pytest (PYTEST_CURRENT_TEST present). This prevents background workers
+        # from interfering with unit tests.
+        if os.getenv("SKIP_BACKGROUND_TASKS") or os.getenv("PYTEST_CURRENT_TEST"):
+            self._log(
+                f"ℹ️ Skipping start of {label} due to SKIP_BACKGROUND_TASKS/PYTEST environment"
+            )
             return
         try:
             service.start()

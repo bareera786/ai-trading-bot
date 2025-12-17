@@ -78,6 +78,13 @@ def login():
             db.session.commit()
 
             login_user(user)
+            # Also set session-based user_id for compatibility with endpoints
+            try:
+                from flask import session
+
+                session["user_id"] = user.id
+            except Exception:
+                logger.debug("Could not set session user_id for compatibility")
             logger.info(
                 f"User {username} logged in successfully from IP {request.remote_addr}"
             )

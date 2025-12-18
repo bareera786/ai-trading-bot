@@ -215,6 +215,44 @@ setInterval(updateRIBSStatusWidget, 2000);
 // Initial update
 updateRIBSStatusWidget();
 
+function showRibsToast(msg, kind = 'info') {
+    const container = document.getElementById('ribs-toast-container');
+    if (!container) return;
+    const el = document.createElement('div');
+    el.className = `toast toast-${kind}`;
+    el.textContent = msg;
+    container.appendChild(el);
+    setTimeout(() => { el.remove(); }, 5000);
+}
+
+function startRIBSOptimization() {
+    fetch('/api/ribs/start', {method: 'POST'})
+        .then(r => r.json())
+        .then(j => {
+            if (j && j.success) {
+                showRibsToast('RIBS optimization started', 'info');
+            } else {
+                showRibsToast('Failed to start RIBS: ' + (j.error || 'unknown'), 'danger');
+            }
+            setTimeout(updateRIBSStatusWidget, 800);
+        })
+        .catch(() => showRibsToast('Failed to start RIBS', 'danger'));
+}
+
+function pauseRIBSOptimization() {
+    fetch('/api/ribs/pause', {method: 'POST'})
+        .then(r => r.json())
+        .then(j => {
+            if (j && j.success) {
+                showRibsToast('RIBS optimization paused', 'info');
+            } else {
+                showRibsToast('Failed to pause RIBS: ' + (j.error || 'unknown'), 'danger');
+            }
+            setTimeout(updateRIBSStatusWidget, 800);
+        })
+        .catch(() => showRibsToast('Failed to pause RIBS', 'danger'));
+}
+
         {% if ribs_optimization.elite_strategies|default([]) %}
         <div class="params-grid">
             {% set latest = ribs_optimization.elite_strategies[0] %}

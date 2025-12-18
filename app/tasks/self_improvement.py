@@ -61,6 +61,9 @@ class SelfImprovementWorker:
 
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
+        # Dedicated controls for RIBS continuous optimizer
+        self._ribs_stop_event = threading.Event()
+        self._ribs_thread: Optional[threading.Thread] = None
 
         # Telemetry and drift detection
         self.success_rates = deque(maxlen=20)  # Last 20 cycles for better analysis
@@ -776,7 +779,8 @@ class SelfImprovementWorker:
             self._log("⚠️ RIBS optimization not available or disabled")
             return
 
-        while not self._stop_event.is_set():
+        # honor both global stop and ribs-specific stop
+        while not self._stop_event.is_set() and not self._ribs_stop_event.is_set():
             try:
                 # Load recent market data
                 market_data = self.load_recent_data(hours=168)  # 7 days
@@ -819,11 +823,50 @@ class SelfImprovementWorker:
                 self._update_ribs_dashboard_data()
 
                 # Sleep until next optimization cycle (6 hours)
-                self._stop_event.wait(21600)
+                # Wait respecting ribs-specific stop request
+                self._ribs_stop_event.wait(21600)
 
             except Exception as e:
                 self._log(f"❌ RIBS optimization failed: {e}")
                 self._stop_event.wait(300)  # Retry in 5 minutes
+
+    def start_ribs_optimization(self) -> bool:
+        """Start the continuous RIBS optimization in a background thread.
+
+        Returns True if a new thread was started, False if already running or not available.
+        """
+        if not self.ribs_enabled or not self.ribs_optimizer:
+            return False
+        # if already running, do nothing
+        if self._ribs_thread and self._ribs_thread.is_alive():
+            return False
+
+        # clear any previous stop request and start new thread
+        self._ribs_stop_event.clear()
+        t = threading.Thread(
+            target=self.continuous_ribs_optimization, name="RIBSWorker", daemon=True
+        )
+        self._ribs_thread = t
+        t.start()
+        return True
+
+    def stop_ribs_optimization(self) -> bool:
+        """Request the ribs optimization to stop and join the thread.
+
+        Returns True if the thread was signaled (and was running), False otherwise.
+        """
+        if not (self._ribs_thread and self._ribs_thread.is_alive()):
+            return False
+        try:
+            self._ribs_stop_event.set()
+            self._ribs_thread.join(timeout=10.0)
+        except Exception:
+            pass
+        finally:
+            self._ribs_thread = None
+            # ensure we clear the stop event so it can be restarted later
+            self._ribs_stop_event.clear()
+        return True
 
     def load_recent_data(self, hours: int = 168) -> Dict:
         """Load recent market data for RIBS optimization"""

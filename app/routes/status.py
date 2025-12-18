@@ -403,15 +403,59 @@ def start_ribs_optimization():
         )
 
     try:
-        # Start RIBS optimization in background thread
-        import threading
+        started = False
+        # Prefer the worker's managed start method if available
+        starter = getattr(self_improvement_worker, "start_ribs_optimization", None)
+        if callable(starter):
+            started = starter()
+        else:
+            # Fallback: spawn a thread (legacy behavior)
+            import threading
 
-        ribs_thread = threading.Thread(
-            target=self_improvement_worker.continuous_ribs_optimization, daemon=True
+            ribs_thread = threading.Thread(
+                target=self_improvement_worker.continuous_ribs_optimization, daemon=True
+            )
+            ribs_thread.start()
+            started = True
+
+        if started:
+            return jsonify({"success": True, "message": "RIBS optimization started"})
+        return (
+            jsonify({"success": False, "error": "RIBS already running or unavailable"}),
+            400,
         )
-        ribs_thread.start()
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
-        return jsonify({"success": True, "message": "RIBS optimization started"})
+
+@status_bp.route("/api/ribs/pause", methods=["POST"])
+def pause_ribs_optimization():
+    """Pause/stop the running RIBS optimization loop."""
+    ctx = _ctx()
+    service_runtime = ctx.get("service_runtime")
+    self_improvement_worker = (
+        service_runtime.self_improvement_worker if service_runtime else None
+    )
+
+    if not self_improvement_worker or not self_improvement_worker.ribs_enabled:
+        return (
+            jsonify({"success": False, "error": "RIBS optimization not available"}),
+            400,
+        )
+
+    try:
+        stopper = getattr(self_improvement_worker, "stop_ribs_optimization", None)
+        stopped = False
+        if callable(stopper):
+            stopped = stopper()
+        else:
+            # Fallback: use generic stop which stops entire worker
+            self_improvement_worker.stop()
+            stopped = True
+
+        if stopped:
+            return jsonify({"success": True, "message": "RIBS optimization paused"})
+        return jsonify({"success": False, "error": "RIBS not running"}), 400
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

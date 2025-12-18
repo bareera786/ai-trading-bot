@@ -19,6 +19,18 @@ class DummyWorker:
         # quick mark to indicate start
         self.started = True
 
+    def start_ribs_optimization(self):
+        if self.started:
+            return False
+        self.started = True
+        return True
+
+    def stop_ribs_optimization(self):
+        if not self.started:
+            return False
+        self.started = False
+        return True
+
 
 class DummyRuntime:
     def __init__(self):

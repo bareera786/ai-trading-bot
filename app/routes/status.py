@@ -361,14 +361,27 @@ def api_ribs_progress():
         with open(status_path, "r") as sf:
             status = json.load(sf)
 
-        # Provide a minimal progress view
-        progress = {
-            "running": status.get("running", False),
-            "current_iteration": status.get("current_iteration"),
-            "progress_percent": status.get("progress_percent"),
-            "archive_stats": status.get("archive_stats", {}),
-            "latest_checkpoint": status.get("latest_checkpoint"),
-        }
+            # Provide a minimal progress view
+            # Compute checkpoint age (seconds) for frontend
+            latest = status.get("latest_checkpoint") or {}
+            mtime = latest.get("mtime")
+            age = None
+            try:
+                if mtime is not None:
+                    age = int(time.time() - float(mtime))
+            except Exception:
+                age = None
+
+            # Provide a minimal progress view including health
+            progress = {
+                "running": status.get("running", False),
+                "current_iteration": status.get("current_iteration"),
+                "progress_percent": status.get("progress_percent"),
+                "archive_stats": status.get("archive_stats", {}),
+                "latest_checkpoint": latest,
+                "latest_checkpoint_age_seconds": age,
+                "healthy": (age is not None and age <= 3600),
+            }
         return jsonify(progress)
     except Exception as e:
         return jsonify({"status": "error", "error": str(e)}), 500

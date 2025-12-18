@@ -7,7 +7,7 @@ Type=oneshot
 User=aibot
 WorkingDirectory=/home/aibot/ai-bot
 EnvironmentFile=/home/aibot/ai-bot/config/deploy.env.production
-ExecStart=/home/aibot/ai-bot/.venv/bin/python /home/aibot/ai-bot/scripts/check_ribs_health.py --status-path /home/aibot/ai-bot/bot_persistence/ribs_checkpoints/ribs_status.json --max-age-seconds 3600 --webhook "$RIBS_ALERT_WEBHOOK"
+ExecStart=/home/aibot/ai-bot/.venv/bin/python /home/aibot/ai-bot/scripts/check_ribs_health.py --status-path /home/aibot/ai-bot/bot_persistence/ribs_checkpoints/ribs_status.json --max-age-seconds 3600
 
 [Install]
 WantedBy=multi-user.target

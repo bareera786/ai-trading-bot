@@ -394,7 +394,7 @@
         }
 
         .page-section.active {
-            display: block;
+            display: block !important;
         }
 
         /* Admin dashboard typography alignment */

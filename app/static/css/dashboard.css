@@ -1069,6 +1069,26 @@
     margin-bottom: var(--spacing-xl);
 }
 
+.ribs-dashboard-page .ribs-logs {
+    margin-bottom: var(--spacing-xl);
+}
+
+.ribs-dashboard-page .ribs-logs h4 {
+    margin-bottom: var(--spacing-lg);
+}
+
+.ribs-dashboard-page .ribs-logs #ribs-logs-container {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    max-height: 400px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
 .ribs-dashboard-page .btn {
     background: var(--primary);
     color: white;

@@ -552,5 +552,40 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<div class="ribs-logs">
+    <h4>RIBS Logs</h4>
+    <div id="ribs-logs-container" style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: var(--spacing-lg); max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 1.4;">
+        <div id="ribs-logs-content">Loading logs...</div>
+    </div>
+    <button class="btn btn-info" onclick="refreshRIBSLogs()" style="margin-top: var(--spacing-md);">Refresh Logs</button>
+</div>
+
+<script>
+// Function to refresh RIBS logs
+function refreshRIBSLogs() {
+    const container = document.getElementById('ribs-logs-content');
+    container.textContent = 'Loading logs...';
+
+    fetch('/api/ribs/logs')
+    .then(r => r.json())
+    .then(data => {
+        if (data.logs && data.logs.length > 0) {
+            container.innerHTML = data.logs.map(log => `<div style="margin-bottom: 4px;">${log}</div>`).join('');
+        } else {
+            container.textContent = 'No RIBS logs found.';
+        }
+    })
+    .catch(error => {
+        container.textContent = 'Error loading logs: ' + error.message;
+    });
+}
+
+// Load logs on page load
+document.addEventListener('DOMContentLoaded', function() {
+    refreshRIBSLogs();
+});
+</script>
+
 <!-- jshint ignore: end -->
 <!-- eslint-enable -->

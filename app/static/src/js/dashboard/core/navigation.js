@@ -25,6 +25,7 @@ export function initNavigation() {
     'user-management': { title: 'User Management', subtitle: 'Manage user accounts and permissions' },
     'admin-settings': { title: 'Admin Settings', subtitle: 'Configure admin-only settings and payment address' },
     'admin-dashboard': { title: 'Admin Dashboard', subtitle: 'Industrial-grade overview and controls for administrators.' },
+    'ribs-dashboard': { title: 'RIBS Evolution', subtitle: 'Quality Diversity Optimization for trading strategies using RIBS.' },
   };
 
   navItems.forEach((item) => {

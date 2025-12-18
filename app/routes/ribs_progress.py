@@ -3,6 +3,7 @@
 from flask import Blueprint, jsonify
 import os
 import json
+import time
 
 ribs_progress_bp = Blueprint("ribs_progress", __name__)
 
@@ -22,13 +23,25 @@ def api_ribs_progress():
     try:
         with open(status_path, "r") as sf:
             status = json.load(sf)
+        # Compute checkpoint age (seconds) for frontend health indicators
+        latest_ck = status.get("latest_checkpoint") or {}
+        ck_mtime = latest_ck.get("mtime")
+        ck_age = None
+        try:
+            if ck_mtime is not None:
+                ck_age = int(time.time() - float(ck_mtime))
+        except Exception:
+            ck_age = None
 
         progress = {
             "running": status.get("running", False),
             "current_iteration": status.get("current_iteration"),
             "progress_percent": status.get("progress_percent"),
             "archive_stats": status.get("archive_stats", {}),
-            "latest_checkpoint": status.get("latest_checkpoint"),
+            "latest_checkpoint": latest_ck,
+            "latest_checkpoint_age_seconds": ck_age,
+            # Simple health: consider healthy if checkpoint age <= 3600s
+            "healthy": (ck_age is not None and ck_age <= 3600),
         }
         return jsonify(progress)
     except Exception as e:

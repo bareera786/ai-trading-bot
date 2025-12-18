@@ -234,7 +234,51 @@
                             <div class="card-value"><span class="status-indicator" id="si-health">UNKNOWN</span></div>
                             <p class="card-subtitle" id="si-health-desc">Self-improvement status</p>
                         </div>
+                        <div class="dashboard-card">
+                            <div class="card-header"><span class="card-icon">🧬</span><h3 class="card-title">RIBS Health</h3></div>
+                            <div class="card-value"><span id="admin-ribs-status">UNKNOWN</span></div>
+                            <p class="card-subtitle" id="admin-ribs-sub">Last checkpoint: --</p>
+                        </div>
                     </div>
+
+                    <script>
+                    // Lightweight admin ribs health updater
+                    function updateAdminRIBSHealth() {
+                        fetch('/api/ribs/progress')
+                        .then(r => {
+                            if (!r.ok) throw new Error('no-status');
+                            return r.json();
+                        })
+                        .then(data => {
+                            const el = document.getElementById('admin-ribs-status');
+                            const sub = document.getElementById('admin-ribs-sub');
+                            if (!el) return;
+                            if (data.status === 'missing') {
+                                el.textContent = 'UNAVAILABLE';
+                                el.className = 'text-muted';
+                                if (sub) sub.textContent = 'RIBS status missing';
+                                return;
+                            }
+                            const healthy = data.healthy ? 'OK' : 'STALE';
+                            el.textContent = healthy;
+                            el.className = data.healthy ? 'status-indicator status-success' : 'status-indicator status-warning';
+                            if (sub) {
+                                const age = data.latest_checkpoint_age_seconds;
+                                sub.textContent = age != null ? `Last checkpoint: ${age}s ago` : 'Last checkpoint: unknown';
+                            }
+                        })
+                        .catch(() => {
+                            const el = document.getElementById('admin-ribs-status');
+                            if (el) {
+                                el.textContent = 'ERROR';
+                                el.className = 'text-danger';
+                            }
+                        });
+                    }
+                    // Update every 30s
+                    setInterval(updateAdminRIBSHealth, 30000);
+                    updateAdminRIBSHealth();
+                    </script>
 
                     <!-- Performance Charts -->
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin:2rem 0;">

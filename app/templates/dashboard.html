@@ -171,6 +171,14 @@
                         </h2>
                         <p class="section-helper">Industrial-grade overview and controls for administrators.</p>
                     </div>
+
+                    <script>
+                    // Helper to avoid redeclaring block-scoped variables in inline onclicks
+                    function scrollToRibsLogs() {
+                        const el = document.getElementById('ribs-logs-section');
+                        if (el) el.scrollIntoView({behavior: 'smooth'});
+                    }
+                    </script>
                     <div class="dashboard-grid">
                         <div class="dashboard-card">
                             <div class="card-header"><span class="card-icon">👥</span><h3 class="card-title">Total Users</h3></div>
@@ -239,6 +247,16 @@
                             <div class="card-value"><span id="admin-ribs-status">UNKNOWN</span></div>
                             <div style="margin-top:0.5rem;"><button id="admin-ribs-action" class="btn btn-sm btn-primary">Start</button></div>
                             <p class="card-subtitle" id="admin-ribs-sub">Last checkpoint: --</p>
+                        </div>
+                    </div>
+
+                    <!-- RIBS Evolution Controls -->
+                    <div class="ribs-toolbar admin-ribs-toolbar">
+                        <div class="ribs-toolbar-title">RIBS Evolution</div>
+                        <div class="ribs-toolbar-actions">
+                            <button class="btn btn-info" onclick="refreshRIBSLogs(); scrollToRibsLogs();">🔄 Refresh Logs</button>
+                            <button class="btn btn-secondary" onclick="scrollToRibsLogs();">📜 View Logs</button>
+                            <a href="#" class="btn btn-primary" data-page="ribs-dashboard">🧬 Go to RIBS Dashboard</a>
                         </div>
                     </div>
 

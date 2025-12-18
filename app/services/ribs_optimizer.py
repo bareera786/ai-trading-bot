@@ -569,6 +569,35 @@ class TradingRIBSOptimizer:
                 if status_error:
                     status["error"] = status_error
 
+                # Include elite strategies and behavior arrays for dashboard visualizations
+                try:
+                    elites = self.get_elite_strategies(top_n=10) or []
+                    status.setdefault("archive_stats", {})["elites"] = elites
+
+                    # Prepare behavior arrays expected by the front-end
+                    behaviors_x = [
+                        e.get("behavior", [None, None, None])[0] for e in elites
+                    ]
+                    behaviors_y = [
+                        e.get("behavior", [None, None, None])[1] for e in elites
+                    ]
+                    behaviors_z = [
+                        e.get("behavior", [None, None, None])[2] for e in elites
+                    ]
+                    objectives = [e.get("objective") for e in elites]
+
+                    status["behaviors_x"] = behaviors_x
+                    status["behaviors_y"] = behaviors_y
+                    status["behaviors_z"] = behaviors_z
+                    status["objectives"] = objectives
+                    status["elite_strategies"] = elites
+                except Exception as e:
+                    # Best-effort only; do not fail the progress write if elites can't be sampled
+                    self.logger.warning(
+                        f"Failed to extract behavior data for dashboard: {e}"
+                    )
+                    pass
+
                 # Also include latest_checkpoint metadata if available
                 try:
                     files = [

@@ -1,6 +1,6 @@
 """Lightweight RIBS progress endpoint (separate blueprint to avoid touching status.py)
 """
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, current_app
 import os
 import json
 import time
@@ -33,6 +33,48 @@ def api_ribs_progress():
         except Exception:
             ck_age = None
 
+        # Try to get behavior data from status file first
+        behaviors_x = status.get("behaviors_x", [])
+        behaviors_y = status.get("behaviors_y", [])
+        behaviors_z = status.get("behaviors_z", [])
+        objectives = status.get("objectives", [])
+
+        # If behavior data is empty, try to get it from the checkpoint
+        if not behaviors_x:
+            try:
+                # Try to load the latest checkpoint and extract elite strategies
+                checkpoint_path = status.get("latest_checkpoint", {}).get("path")
+                if checkpoint_path and os.path.exists(checkpoint_path):
+                    # Import here to avoid circular imports
+                    from app.services.ribs_optimizer import TradingRIBSOptimizer
+
+                    # Create a temporary optimizer instance just to load the checkpoint
+                    temp_optimizer = TradingRIBSOptimizer()
+                    temp_optimizer.load_checkpoint(checkpoint_path)
+
+                    # Get elite strategies
+                    elites = temp_optimizer.get_elite_strategies(top_n=10) or []
+                    if elites:
+                        behaviors_x = [
+                            e.get("behavior", [None, None, None])[0] for e in elites
+                        ]
+                        behaviors_y = [
+                            e.get("behavior", [None, None, None])[1] for e in elites
+                        ]
+                        behaviors_z = [
+                            e.get("behavior", [None, None, None])[2] for e in elites
+                        ]
+                        objectives = [e.get("objective") for e in elites]
+                        print(f"DEBUG: Extracted {len(elites)} elites from checkpoint")
+                    else:
+                        print("DEBUG: No elites returned from get_elite_strategies")
+                else:
+                    print(f"DEBUG: Checkpoint path not found: {checkpoint_path}")
+            except Exception as e:
+                # Silently fail, use empty arrays
+                print(f"DEBUG: Failed to extract behavior data: {e}")
+                pass
+
         progress = {
             "running": status.get("running", False),
             "current_iteration": status.get("current_iteration"),
@@ -42,6 +84,11 @@ def api_ribs_progress():
             "latest_checkpoint_age_seconds": ck_age,
             # Simple health: consider healthy if checkpoint age <= 3600s
             "healthy": (ck_age is not None and ck_age <= 3600),
+            # Include behavior data for 3D visualization
+            "behaviors_x": behaviors_x,
+            "behaviors_y": behaviors_y,
+            "behaviors_z": behaviors_z,
+            "objectives": objectives,
         }
         return jsonify(progress)
     except Exception as e:

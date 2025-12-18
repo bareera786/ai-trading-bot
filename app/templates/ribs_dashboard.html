@@ -1,8 +1,76 @@
 <!-- jsHint ignore: start -->
 <!-- eslint-disable -->
 <!-- jshint ignore: start -->
+{% if is_full_page %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RIBS Dashboard - {{ version_label }}</title>
+    <style>
+        :root {
+            --primary: #00d4aa;
+            --primary-light: #26debc;
+            --primary-dark: #00b894;
+            --primary-gradient: linear-gradient(135deg, #00d4aa 0%, #26debc 50%, #00b894 100%);
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #e9ecef;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --border-color: #dee2e6;
+            --success: #28a745;
+            --danger: #dc3545;
+            --info: #17a2b8;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-size-sm: 14px;
+            --font-size-md: 16px;
+            --font-size-lg: 18px;
+            --font-size-xl: 24px;
+            --font-size-2xl: 32px;
+            --font-size-3xl: 48px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --spacing-2xl: 48px;
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+            --radius-xl: 12px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+            --transition-normal: 0.2s ease;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            background: var(--bg-primary);
+            font-family: var(--font-family);
+            color: var(--text-primary);
+        }
+    </style>
+    <!-- Plotly.js CDN for 3D visualization -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+{% endif %}
 <div class="ribs-dashboard">
     <h2>🧬 RIBS Strategy Evolution</h2>
+
+    <div class="ribs-toolbar">
+        <div class="ribs-toolbar-title">RIBS Controls</div>
+        <div class="ribs-toolbar-actions">
+            <button class="btn btn-info" onclick="refreshRIBSLogs(); scrollToRibsLogs();">
+                🔄 Refresh Logs
+            </button>
+            <button class="btn btn-secondary" onclick="scrollToRibsLogs();">
+                📜 View Logs
+            </button>
+        </div>
+    </div>
 
     <div class="ribs-stats">
         <div class="stat-card">
@@ -33,12 +101,29 @@
 
     <div class="ribs-visualization">
         <h4>Behavior Space (3D Scatter)</h4>
+        <div id="debug-info" style="background: #f0f0f0; padding: 10px; margin-bottom: 10px; font-family: monospace; font-size: 12px;"></div>
         <div id="ribs-3d-plot"></div>
         <script id="ribs-data" type="text/plain">{{ ribs_optimization|tojson }}</script>
 
         <script>
         // RIBS Dashboard JavaScript functions
         const ribsData = JSON.parse(document.getElementById('ribs-data').textContent || '{}');
+
+        // Debug: Show what data we received
+        console.log('RIBS Data received:', ribsData);
+        console.log('behaviors_x length:', ribsData.behaviors_x ? ribsData.behaviors_x.length : 'undefined');
+        console.log('objectives length:', ribsData.objectives ? ribsData.objectives.length : 'undefined');
+
+        // Show debug info on page
+        const debugEl = document.getElementById('debug-info');
+        if (debugEl) {
+            debugEl.innerHTML = `
+                <strong>Debug Info:</strong><br>
+                behaviors_x: ${ribsData.behaviors_x ? ribsData.behaviors_x.length : 'undefined'} items<br>
+                objectives: ${ribsData.objectives ? ribsData.objectives.length : 'undefined'} items<br>
+                archive_stats: ${JSON.stringify(ribsData.archive_stats)}
+            `;
+        }
 
         // Set dynamic styles
         const progressBar = document.querySelector('.progress-bar');
@@ -47,53 +132,88 @@
         }
 
         // Plotly 3D visualization of RIBS archive
-        if (typeof Plotly !== 'undefined') {
+        function showPlotlyError(message) {
+            document.getElementById('ribs-3d-plot').innerHTML = `<div class="no-data">${message}</div>`;
+        }
+
+        function ensurePlotlyLoaded(cb) {
+            if (window.Plotly) return cb();
+            const existing = document.getElementById('plotly-cdn');
+            if (existing) {
+                existing.addEventListener('load', cb);
+                existing.addEventListener('error', () => showPlotlyError('Plotly failed to load. Check network or install Plotly.'));
+                return;
+            }
+            const s = document.createElement('script');
+            s.id = 'plotly-cdn';
+            s.src = 'https://cdn.plot.ly/plotly-latest.min.js';
+            s.async = true;
+            s.onload = cb;
+            s.onerror = () => showPlotlyError('Plotly failed to load. Check network or install Plotly.');
+            document.head.appendChild(s);
+        }
+
+        function renderRIBS3D(ribsData) {
             const behaviorsX = ribsData.behaviors_x || [];
+            if (!(behaviorsX.length > 0 && behaviorsX.some(x => x !== null))) {
+                document.getElementById('ribs-3d-plot').innerHTML = '<div class="no-data">3D visualization will appear once RIBS collects more elite strategies.<br>Current archive size: ' + (ribsData.archive_stats?.num_elites || 0) + ' elites<br><small>Keep optimization running to build the archive.</small></div>';
+                return;
+            }
+
             const behaviorsY = ribsData.behaviors_y || [];
             const behaviorsZ = ribsData.behaviors_z || [];
             const objectives = ribsData.objectives || [];
 
-            if (behaviorsX.length > 0) {
-                Plotly.newPlot('ribs-3d-plot', {
-                    data: [{
-                        x: behaviorsX,
-                        y: behaviorsY,
-                        z: behaviorsZ,
-                        mode: 'markers',
-                        marker: {
-                            size: 8,
-                            color: objectives,
-                            colorscale: 'Viridis',
-                            showscale: true,
-                            colorbar: {
-                                title: 'Total Return %'
-                            }
-                        },
-                        type: 'scatter3d'
-                    }],
-                    layout: {
-                        title: 'RIBS Archive: Return vs Drawdown vs Win Rate',
-                        scene: {
-                            xaxis: {title: 'Sharpe Ratio'},
-                            yaxis: {title: 'Max Drawdown %'},
-                            zaxis: {title: 'Win Rate'}
-                        },
-                        margin: {l: 0, r: 0, t: 40, b: 0},
-                        height: 500
+            const plotData = [{
+                x: behaviorsX,
+                y: behaviorsY,
+                z: behaviorsZ,
+                mode: 'markers',
+                marker: {
+                    size: 8,
+                    color: objectives,
+                    colorscale: 'Viridis',
+                    showscale: true,
+                    colorbar: { title: 'Total Return %' }
+                },
+                type: 'scatter3d'
+            }];
+            const layout = {
+                title: 'RIBS Archive: Return vs Drawdown vs Win Rate',
+                scene: { xaxis: {title: 'Sharpe Ratio'}, yaxis: {title: 'Max Drawdown %'}, zaxis: {title: 'Win Rate'} },
+                margin: {l: 0, r: 0, t: 40, b: 0},
+                height: 500
+            };
+
+            ensurePlotlyLoaded(() => {
+                try {
+                    if (window.Plotly && typeof Plotly.react === 'function') {
+                        Plotly.react('ribs-3d-plot', plotData, layout);
+                    } else if (window.Plotly) {
+                        Plotly.newPlot('ribs-3d-plot', plotData, layout);
+                    } else {
+                        showPlotlyError('Plotly not available after loading.');
                     }
-                });
-            } else {
-                document.getElementById('ribs-3d-plot').innerHTML =
-                    '<div class="no-data">No RIBS data available yet. Optimization in progress...</div>';
-            }
-        } else {
-            document.getElementById('ribs-3d-plot').innerHTML =
-                '<div class="no-data">Plotly not loaded. Install plotly for 3D visualization.</div>';
+                } catch (e) {
+                    console.warn('Plotly error:', e);
+                    showPlotlyError('Plotly visualization error. See console for details.');
+                }
+            });
         }
+
+        // Try to render immediately using server-provided data
+        renderRIBS3D(ribsData);
         </script>
     </div>
 
     <!-- Toast container for non-blocking notifications -->
+    <script>
+    // Helper to avoid redeclaring block-scoped variables in inline onclick handlers
+    function scrollToRibsLogs() {
+        const el = document.getElementById('ribs-logs-section');
+        if (el) el.scrollIntoView({behavior: 'smooth'});
+    }
+    </script>
     <div id="ribs-toast-container" style="position:fixed;top:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:10px;"></div>
 
     <div class="elite-strategies">
@@ -253,19 +373,10 @@ function pauseRIBSOptimization() {
         .catch(() => showRibsToast('Failed to pause RIBS', 'danger'));
 }
 
-        {% if ribs_optimization.elite_strategies|default([]) %}
-        <div class="params-grid">
-            {% set latest = ribs_optimization.elite_strategies[0] %}
-            {% for key, value in latest.params.items() %}
-            <div class="param-item">
-                <label>{{ key|replace('_', ' ')|title }}</label>
-                <span class="param-value">{{ value|round(3) if value is number else value }}</span>
-            </div>
-            {% endfor %}
+        <!-- Params will be populated client-side via AJAX -->
+        <div id="ribs-params-content">
+            <div class="no-data">No parameter data available</div>
         </div>
-        {% else %}
-        <div class="no-data">No parameter data available</div>
-        {% endif %}
     </div>
 </div>
 
@@ -553,7 +664,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<div class="ribs-logs">
+<div class="ribs-logs" id="ribs-logs-section">
     <h4>RIBS Logs</h4>
     <div id="ribs-logs-container" style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: var(--spacing-lg); max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 1.4;">
         <div id="ribs-logs-content">Loading logs...</div>
@@ -587,5 +698,121 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<script>
+// Client-side updater: fetch archive (elite strategies) and progress and update UI
+async function fetchAndRenderArchive() {
+    try {
+        const res = await fetch('/api/ribs/export');
+        if (!res.ok) throw new Error('No archive');
+        const data = await res.json();
+        const elites = data.elite_strategies || [];
+        renderEliteTable(elites);
+        if (elites.length > 0) renderParams(elites[0]);
+    } catch (e) {
+        // archive export may not be available in some deployments; ignore silently
+        console.warn('Failed to fetch RIBS archive:', e);
+    }
+}
+
+function renderEliteTable(elites) {
+    const tbody = document.querySelector('.elite-strategies tbody');
+    if (!tbody) return;
+    if (!elites || elites.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No elite strategies found yet. RIBS optimization is running...</td></tr>`;
+        return;
+    }
+    const rows = elites.slice(0, 5).map((s, idx) => {
+        const id = s.id || `elite_${idx+1}`;
+        const objective = (typeof s.objective === 'number') ? `${s.objective.toFixed(2)}%` : (s.objective || '-');
+        const sharpe = (s.behavior && s.behavior[0] != null) ? Number(s.behavior[0]).toFixed(2) : '-';
+        const draw = (s.behavior && s.behavior[1] != null) ? `${Number(s.behavior[1]).toFixed(2)}%` : '-';
+        const win = (s.behavior && s.behavior[2] != null) ? `${(s.behavior[2]*100).toFixed(1)}%` : '-';
+        return `
+            <tr>
+                <td>#${idx+1}</td>
+                <td class="${s.objective>0 ? 'positive' : 'negative'}">${objective}</td>
+                <td>${sharpe}</td>
+                <td>${draw}</td>
+                <td>${win}</td>
+                <td>
+                    <button class="btn btn-sm btn-success deploy-ribs-btn" data-strategy-id="${id}">🚀 Deploy</button>
+                    <button class="btn btn-sm btn-info analyze-ribs-btn" data-strategy-id="${id}">📊 Analyze</button>
+                    <button class="btn btn-sm btn-warning export-ribs-btn" data-strategy-id="${id}">💾 Export</button>
+                </td>
+            </tr>`;
+    }).join('');
+    tbody.innerHTML = rows;
+    attachRIBSButtons();
+}
+
+function renderParams(latest) {
+    const container = document.getElementById('ribs-params-content');
+    if (!container) return;
+    if (!latest || !latest.params) {
+        container.innerHTML = `<div class="no-data">No parameter data available</div>`;
+        return;
+    }
+    const params = latest.params;
+    const items = Object.keys(params).map(k => {
+        const v = params[k];
+        const val = (typeof v === 'number') ? v.toFixed(3) : String(v);
+        const label = k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+        return `<div class="param-item"><label>${label}</label><span class="param-value">${val}</span></div>`;
+    }).join('');
+    container.innerHTML = `<div class="params-grid">${items}</div>`;
+}
+
+function attachRIBSButtons() {
+    document.querySelectorAll('.deploy-ribs-btn').forEach(btn => {
+        btn.onclick = function() { deployRIBSStrategy(this.dataset.strategyId); };
+    });
+    document.querySelectorAll('.analyze-ribs-btn').forEach(btn => {
+        btn.onclick = function() { analyzeRIBSStrategy(this.dataset.strategyId); };
+    });
+    document.querySelectorAll('.export-ribs-btn').forEach(btn => {
+        btn.onclick = function() { window.location = `/api/ribs/export/${this.dataset.strategyId}`; };
+    });
+}
+
+async function fetchAndUpdateProgress() {
+    try {
+        const r = await fetch('/api/ribs/progress');
+        if (!r.ok) return;
+        const data = await r.json();
+        // Update debug info panel
+        const debugEl = document.getElementById('debug-info');
+        if (debugEl) {
+            debugEl.innerHTML = `<strong>Debug Info:</strong><br>behaviors_x: ${data.behaviors_x ? data.behaviors_x.length : 0} items<br>objectives: ${data.objectives ? data.objectives.length : 0} items<br>archive_stats: ${JSON.stringify(data.archive_stats)}`;
+        }
+
+        // Update 3D plot if behaviors available
+        const px = data.behaviors_x || [];
+        if (px.length > 0) {
+            const py = data.behaviors_y || [];
+            const pz = data.behaviors_z || [];
+            const objectives = data.objectives || [];
+            const plotData = [{ x: px, y: py, z: pz, mode: 'markers', marker: {size: 8, color: objectives, colorscale: 'Viridis', showscale: true, colorbar: {title: 'Total Return %'} }, type: 'scatter3d' }];
+            const layout = { title: 'RIBS Archive: Return vs Drawdown vs Win Rate', scene: { xaxis: {title: 'Sharpe Ratio'}, yaxis: {title: 'Max Drawdown %'}, zaxis: {title: 'Win Rate'} }, margin: {l:0,r:0,t:40,b:0}, height: 500 };
+            if (typeof Plotly !== 'undefined') {
+                try { Plotly.react('ribs-3d-plot', plotData, layout); } catch (e) { Plotly.newPlot('ribs-3d-plot', plotData, layout); }
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to update progress:', e);
+    }
+}
+
+// Initial load and polling
+document.addEventListener('DOMContentLoaded', function() {
+    fetchAndRenderArchive();
+    fetchAndUpdateProgress();
+    setInterval(fetchAndRenderArchive, 10000); // every 10s
+    setInterval(fetchAndUpdateProgress, 5000); // every 5s
+});
+</script>
+{% if is_full_page %}
+</body>
+</html>
+{% endif %}
 <!-- jshint ignore: end -->
 <!-- eslint-enable -->

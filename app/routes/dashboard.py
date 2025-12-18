@@ -175,6 +175,7 @@ def ribs_dashboard():
             "ribs_dashboard.html",
             version_label=version_label,
             ribs_optimization=ribs_optimization,
+            is_full_page=True,
         )
     )
     response.headers[

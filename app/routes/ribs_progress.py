@@ -4,7 +4,6 @@ from flask import Blueprint, jsonify
 import os
 import json
 import time
-import subprocess
 
 ribs_progress_bp = Blueprint("ribs_progress", __name__)
 
@@ -57,15 +56,13 @@ def api_ribs_logs():
         if not os.path.exists(log_path):
             return jsonify({"logs": [], "message": "Log file not found"}), 404
 
-        # Get last 100 lines and filter for RIBS
-        result = subprocess.run(
-            ["tail", "-100", log_path], capture_output=True, text=True, timeout=10
-        )
-        if result.returncode != 0:
-            return jsonify({"logs": [], "error": "Failed to read logs"}), 500
+        # Read last 1000 lines and filter for RIBS
+        with open(log_path, "r") as f:
+            lines = f.readlines()[-1000:]  # Last 1000 lines
 
-        lines = result.stdout.splitlines()
-        ribs_logs = [line for line in lines if "ribs" in line.lower() or "RIBS" in line]
+        ribs_logs = [
+            line.strip() for line in lines if "ribs" in line.lower() or "RIBS" in line
+        ]
 
         return jsonify({"logs": ribs_logs[-50:]})  # Last 50 RIBS logs
     except Exception as e:

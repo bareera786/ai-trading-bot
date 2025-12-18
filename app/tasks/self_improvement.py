@@ -102,6 +102,10 @@ class SelfImprovementWorker:
             "correlation_rebalancing": self._fix_correlation_rebalancing,
         }
 
+        # RIBS auto-deploy tracking
+        self.best_ribs_objective = -float("inf")
+        self.deployed_ribs_strategies = set()
+
         # Snapshot paths
         self.snapshot_dir = (
             self.project_root / "bot_persistence" / "self_improvement_snapshots"
@@ -779,6 +783,8 @@ class SelfImprovementWorker:
             self._log("⚠️ RIBS optimization not available or disabled")
             return
 
+        self._log("🧬 Starting continuous RIBS optimization thread")
+
         # honor both global stop and ribs-specific stop
         while not self._stop_event.is_set() and not self._ribs_stop_event.is_set():
             try:
@@ -803,21 +809,30 @@ class SelfImprovementWorker:
                     self._log(f"❌ RIBS optimization failed during run: {e}")
                     elite_strategies = []
 
-                # Deploy top 3 strategies to paper trading
-                for i, (solution, objective, behavior) in enumerate(
-                    elite_strategies[:3]
-                ):
-                    strategy_id = (
-                        f"ribs_strategy_{datetime.now().strftime('%Y%m%d_%H%M')}_{i}"
-                    )
-                    self.deploy_strategy(solution, strategy_id)
-
-                    # Log deployment
-                    self._log(
-                        f"🧬 Deployed RIBS strategy {strategy_id}: "
-                        f"Objective={objective:.2f}, "
-                        f"Behavior={behavior}"
-                    )
+                # Auto-deploy the best strategy if it improved
+                if elite_strategies:
+                    best_solution, best_objective, best_behavior = elite_strategies[0]
+                    if best_objective > self.best_ribs_objective:
+                        strategy_id = (
+                            f"ribs_best_{datetime.now().strftime('%Y%m%d_%H%M')}"
+                        )
+                        res = self.deploy_strategy(best_solution, strategy_id)
+                        if res.get("success"):
+                            self.best_ribs_objective = best_objective
+                            self.deployed_ribs_strategies.add(strategy_id)
+                            self._log(
+                                f"🧬 Auto-deployed improved RIBS strategy {strategy_id}: "
+                                f"Objective={best_objective:.2f}, "
+                                f"Behavior={best_behavior}"
+                            )
+                        else:
+                            self._log(
+                                f"❌ Failed to auto-deploy RIBS strategy: {res.get('message')}"
+                            )
+                    else:
+                        self._log(
+                            f"🧬 Best RIBS objective {best_objective:.2f} not improved from {self.best_ribs_objective:.2f}, skipping auto-deploy"
+                        )
 
                 # Update dashboard with RIBS data
                 self._update_ribs_dashboard_data()

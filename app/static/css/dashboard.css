@@ -926,33 +926,38 @@
         }
 
 /* RIBS Dashboard Styles */
-.ribs-dashboard-page .ribs-dashboard {
+.ribs-dashboard-page .ribs-dashboard,
+.ribs-dashboard {
     font-family: var(--font-family);
     color: var(--text-primary);
 }
 
-.ribs-dashboard-page .ribs-dashboard h2 {
+.ribs-dashboard-page .ribs-dashboard h2,
+.ribs-dashboard h2 {
     font-size: var(--font-size-xl);
     font-weight: 600;
     margin-bottom: var(--spacing-xl);
     color: var(--text-primary);
 }
 
-.ribs-dashboard-page .ribs-dashboard h4 {
+.ribs-dashboard-page .ribs-dashboard h4,
+.ribs-dashboard h4 {
     font-size: var(--font-size-lg);
     font-weight: 500;
     margin-bottom: var(--spacing-lg);
     color: var(--text-primary);
 }
 
-.ribs-dashboard-page .ribs-stats {
+.ribs-dashboard-page .ribs-stats,
+.ribs-dashboard .ribs-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: var(--spacing-lg);
     margin-bottom: var(--spacing-xl);
 }
 
-.ribs-dashboard-page .stat-card {
+.ribs-dashboard-page .stat-card,
+.ribs-dashboard .stat-card {
     background: var(--bg-tertiary);
     border-radius: var(--radius-lg);
     padding: var(--spacing-xl);
@@ -963,7 +968,8 @@
     text-align: center;
 }
 
-.ribs-dashboard-page .stat-card::before {
+.ribs-dashboard-page .stat-card::before,
+.ribs-dashboard .stat-card::before {
     content: '';
     position: absolute;
     top: 0;
@@ -974,34 +980,40 @@
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
-.ribs-dashboard-page .stat-card:hover {
+.ribs-dashboard-page .stat-card:hover,
+.ribs-dashboard .stat-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
     border-color: var(--primary);
 }
 
-.ribs-dashboard-page .stat-card h4 {
+.ribs-dashboard-page .stat-card h4,
+.ribs-dashboard .stat-card h4 {
     font-size: var(--font-size-md);
     font-weight: 500;
     margin-bottom: var(--spacing-md);
     color: var(--text-secondary);
 }
 
-.ribs-dashboard-page .big-number {
+.ribs-dashboard-page .big-number,
+.ribs-dashboard .big-number {
     font-size: var(--font-size-3xl);
     font-weight: 700;
     color: var(--text-primary);
 }
 
-.ribs-dashboard-page .big-number.positive {
+.ribs-dashboard-page .big-number.positive,
+.ribs-dashboard .big-number.positive {
     color: var(--success);
 }
 
-.ribs-dashboard-page .big-number.negative {
+.ribs-dashboard-page .big-number.negative,
+.ribs-dashboard .big-number.negative {
     color: var(--danger);
 }
 
-.ribs-dashboard-page .progress {
+.ribs-dashboard-page .progress,
+.ribs-dashboard .progress {
     background: var(--bg-secondary);
     border-radius: var(--radius-sm);
     height: 8px;
@@ -1009,33 +1021,39 @@
     overflow: hidden;
 }
 
-.ribs-dashboard-page .progress-bar {
+.ribs-dashboard-page .progress-bar,
+.ribs-dashboard .progress-bar {
     background: var(--primary-gradient);
     height: 100%;
     border-radius: var(--radius-sm);
     transition: width var(--transition-normal);
 }
 
-.ribs-dashboard-page .ribs-visualization {
+.ribs-dashboard-page .ribs-visualization,
+.ribs-dashboard .ribs-visualization {
     margin-bottom: var(--spacing-xl);
 }
 
-.ribs-dashboard-page .ribs-visualization h4 {
+.ribs-dashboard-page .ribs-visualization h4,
+.ribs-dashboard .ribs-visualization h4 {
     margin-bottom: var(--spacing-lg);
 }
 
-.ribs-dashboard-page .ribs-visualization #ribs-3d-plot {
+.ribs-dashboard-page .ribs-visualization #ribs-3d-plot,
+.ribs-dashboard .ribs-visualization #ribs-3d-plot {
     background: var(--bg-secondary);
     border-radius: var(--radius-lg);
     padding: var(--spacing-lg);
     border: 1px solid var(--border-color);
 }
 
-.ribs-dashboard-page .elite-strategies {
+.ribs-dashboard-page .elite-strategies,
+.ribs-dashboard .elite-strategies {
     margin-bottom: var(--spacing-xl);
 }
 
-.ribs-dashboard-page .elite-strategies .table {
+.ribs-dashboard-page .elite-strategies .table,
+.ribs-dashboard .elite-strategies .table {
     background: var(--bg-tertiary);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-color);
@@ -1043,41 +1061,50 @@
 }
 
 .ribs-dashboard-page .elite-strategies .table th,
-.ribs-dashboard-page .elite-strategies .table td {
+.ribs-dashboard .elite-strategies .table th,
+.ribs-dashboard-page .elite-strategies .table td,
+.ribs-dashboard .elite-strategies .table td {
     padding: var(--spacing-md);
     border-bottom: 1px solid var(--border-color);
 }
 
-.ribs-dashboard-page .elite-strategies .table th {
+.ribs-dashboard-page .elite-strategies .table th,
+.ribs-dashboard .elite-strategies .table th {
     background: var(--bg-secondary);
     font-weight: 600;
     color: var(--text-primary);
 }
 
-.ribs-dashboard-page .ribs-controls {
+.ribs-dashboard-page .ribs-controls,
+.ribs-dashboard .ribs-controls {
     margin-bottom: var(--spacing-xl);
 }
 
-.ribs-dashboard-page .control-buttons {
+.ribs-dashboard-page .control-buttons,
+.ribs-dashboard .control-buttons {
     display: flex;
     flex-wrap: wrap;
     gap: var(--spacing-md);
     align-items: center;
 }
 
-.ribs-dashboard-page .ribs-parameters {
+.ribs-dashboard-page .ribs-parameters,
+.ribs-dashboard .ribs-parameters {
     margin-bottom: var(--spacing-xl);
 }
 
-.ribs-dashboard-page .ribs-logs {
+.ribs-dashboard-page .ribs-logs,
+.ribs-dashboard .ribs-logs {
     margin-bottom: var(--spacing-xl);
 }
 
-.ribs-dashboard-page .ribs-logs h4 {
+.ribs-dashboard-page .ribs-logs h4,
+.ribs-dashboard .ribs-logs h4 {
     margin-bottom: var(--spacing-lg);
 }
 
-.ribs-dashboard-page .ribs-logs #ribs-logs-container {
+.ribs-dashboard-page .ribs-logs #ribs-logs-container,
+.ribs-dashboard .ribs-logs #ribs-logs-container {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
@@ -1089,7 +1116,8 @@
     line-height: 1.4;
 }
 
-.ribs-dashboard-page .btn {
+.ribs-dashboard-page .btn,
+.ribs-dashboard .btn {
     background: var(--primary);
     color: white;
     border: 1px solid var(--primary-dark);
@@ -1101,45 +1129,55 @@
     transition: all var(--transition-normal);
 }
 
-.ribs-dashboard-page .btn:hover {
+.ribs-dashboard-page .btn:hover,
+.ribs-dashboard .btn:hover {
     background: var(--primary-dark);
     transform: translateY(-1px);
 }
 
-.ribs-dashboard-page .btn-secondary {
+.ribs-dashboard-page .btn-secondary,
+.ribs-dashboard .btn-secondary {
     background: var(--bg-secondary);
     color: var(--text-primary);
 }
 
-.ribs-dashboard-page .btn-secondary:hover {
+.ribs-dashboard-page .btn-secondary:hover,
+.ribs-dashboard .btn-secondary:hover {
     background: var(--bg-tertiary);
 }
 
-.ribs-dashboard-page .btn-danger {
+.ribs-dashboard-page .btn-danger,
+.ribs-dashboard .btn-danger {
     background: var(--danger);
 }
 
-.ribs-dashboard-page .btn-danger:hover {
+.ribs-dashboard-page .btn-danger:hover,
+.ribs-dashboard .btn-danger:hover {
     background: var(--danger-dark);
 }
 
-.ribs-dashboard-page .btn-info {
+.ribs-dashboard-page .btn-info,
+.ribs-dashboard .btn-info {
     background: var(--info);
 }
 
-.ribs-dashboard-page .btn-info:hover {
+.ribs-dashboard-page .btn-info:hover,
+.ribs-dashboard .btn-info:hover {
     background: var(--info-dark);
 }
 
-.ribs-dashboard-page .btn-sm {
+.ribs-dashboard-page .btn-sm,
+.ribs-dashboard .btn-sm {
     padding: var(--spacing-sm) var(--spacing-md);
     font-size: var(--font-size-xs);
 }
 
-.ribs-dashboard-page .text-center {
+.ribs-dashboard-page .text-center,
+.ribs-dashboard .text-center {
     text-align: center;
 }
 
-.ribs-dashboard-page .text-muted {
+.ribs-dashboard-page .text-muted,
+.ribs-dashboard .text-muted {
     color: var(--text-secondary);
 }

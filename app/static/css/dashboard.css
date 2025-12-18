@@ -924,3 +924,202 @@
         .fade-in {
             animation: fadeIn 0.3s ease-out;
         }
+
+/* RIBS Dashboard Styles */
+.ribs-dashboard-page .ribs-dashboard {
+    font-family: var(--font-family);
+    color: var(--text-primary);
+}
+
+.ribs-dashboard-page .ribs-dashboard h2 {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    margin-bottom: var(--spacing-xl);
+    color: var(--text-primary);
+}
+
+.ribs-dashboard-page .ribs-dashboard h4 {
+    font-size: var(--font-size-lg);
+    font-weight: 500;
+    margin-bottom: var(--spacing-lg);
+    color: var(--text-primary);
+}
+
+.ribs-dashboard-page .ribs-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.ribs-dashboard-page .stat-card {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    border: 1px solid var(--border-color);
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+}
+
+.ribs-dashboard-page .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--primary-gradient);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.ribs-dashboard-page .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary);
+}
+
+.ribs-dashboard-page .stat-card h4 {
+    font-size: var(--font-size-md);
+    font-weight: 500;
+    margin-bottom: var(--spacing-md);
+    color: var(--text-secondary);
+}
+
+.ribs-dashboard-page .big-number {
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.ribs-dashboard-page .big-number.positive {
+    color: var(--success);
+}
+
+.ribs-dashboard-page .big-number.negative {
+    color: var(--danger);
+}
+
+.ribs-dashboard-page .progress {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    height: 8px;
+    margin: var(--spacing-md) 0;
+    overflow: hidden;
+}
+
+.ribs-dashboard-page .progress-bar {
+    background: var(--primary-gradient);
+    height: 100%;
+    border-radius: var(--radius-sm);
+    transition: width var(--transition-normal);
+}
+
+.ribs-dashboard-page .ribs-visualization {
+    margin-bottom: var(--spacing-xl);
+}
+
+.ribs-dashboard-page .ribs-visualization h4 {
+    margin-bottom: var(--spacing-lg);
+}
+
+.ribs-dashboard-page .ribs-visualization #ribs-3d-plot {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    border: 1px solid var(--border-color);
+}
+
+.ribs-dashboard-page .elite-strategies {
+    margin-bottom: var(--spacing-xl);
+}
+
+.ribs-dashboard-page .elite-strategies .table {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.ribs-dashboard-page .elite-strategies .table th,
+.ribs-dashboard-page .elite-strategies .table td {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ribs-dashboard-page .elite-strategies .table th {
+    background: var(--bg-secondary);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.ribs-dashboard-page .ribs-controls {
+    margin-bottom: var(--spacing-xl);
+}
+
+.ribs-dashboard-page .control-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    align-items: center;
+}
+
+.ribs-dashboard-page .ribs-parameters {
+    margin-bottom: var(--spacing-xl);
+}
+
+.ribs-dashboard-page .btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.ribs-dashboard-page .btn:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.ribs-dashboard-page .btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.ribs-dashboard-page .btn-secondary:hover {
+    background: var(--bg-tertiary);
+}
+
+.ribs-dashboard-page .btn-danger {
+    background: var(--danger);
+}
+
+.ribs-dashboard-page .btn-danger:hover {
+    background: var(--danger-dark);
+}
+
+.ribs-dashboard-page .btn-info {
+    background: var(--info);
+}
+
+.ribs-dashboard-page .btn-info:hover {
+    background: var(--info-dark);
+}
+
+.ribs-dashboard-page .btn-sm {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-xs);
+}
+
+.ribs-dashboard-page .text-center {
+    text-align: center;
+}
+
+.ribs-dashboard-page .text-muted {
+    color: var(--text-secondary);
+}

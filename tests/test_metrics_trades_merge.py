@@ -16,7 +16,7 @@ def test_api_trades_merge_db():
         db.create_all()
 
         # Create admin user and a DB trade
-        admin = User(username="admin", email="admin@example.com", is_admin=True)
+        admin = User(username="admin", email="admin@example.com", is_admin=True)  # type: ignore
         admin.set_password("pass")
         db.session.add(admin)
         db.session.commit()
@@ -81,7 +81,7 @@ def test_api_trades_merge_db_with_json_login():
         db.create_all()
 
         # Create admin user and a DB trade
-        admin = User(username="admin", email="admin@example.com", is_admin=True)
+        admin = User(username="admin", email="admin@example.com", is_admin=True)  # type: ignore
         admin.set_password("pass")
         db.session.add(admin)
         db.session.commit()
@@ -144,7 +144,7 @@ def test_api_trades_merge_db_debug_header():
         db.create_all()
 
         # Create admin user
-        admin = User(username="admin", email="admin@example.com", is_admin=True)
+        admin = User(username="admin", email="admin@example.com", is_admin=True)  # type: ignore
         admin.set_password("pass")
         db.session.add(admin)
         db.session.commit()

@@ -1080,37 +1080,6 @@
     margin-bottom: var(--spacing-xl);
 }
 
-.ribs-dashboard-page .ribs-toolbar,
-.ribs-dashboard .ribs-toolbar {
-    display: flex;
-    gap: var(--spacing-md);
-    align-items: center;
-    margin: var(--spacing-md) 0 var(--spacing-lg) 0;
-}
-
-.ribs-dashboard .ribs-toolbar .ribs-toolbar-title,
-.ribs-dashboard-page .ribs-toolbar .ribs-toolbar-title,
-.admin-ribs-toolbar .ribs-toolbar-title {
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-right: var(--spacing-md);
-}
-
-.ribs-dashboard .ribs-toolbar .ribs-toolbar-actions,
-.ribs-dashboard-page .ribs-toolbar .ribs-toolbar-actions,
-.admin-ribs-toolbar .ribs-toolbar-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.admin-ribs-toolbar {
-    align-items: center;
-    padding: var(--spacing-sm) var(--spacing-md);
-    background: var(--bg-secondary);
-    border-radius: var(--radius-md);
-}
-
 .ribs-dashboard-page .control-buttons,
 .ribs-dashboard .control-buttons {
     display: flex;

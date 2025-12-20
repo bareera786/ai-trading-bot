@@ -14,7 +14,7 @@ def test_system_trade_records_to_db():
         db.create_all()
 
         # Create a system user to attribute automated trades to
-        user = User(username="system_user", email="system@example.com")
+        user = User(username="system_user", email="system@example.com")  # type: ignore
         user.set_password("pass")
         db.session.add(user)
         db.session.commit()

@@ -35,6 +35,9 @@ class TradingRIBSOptimizer:
         self.checkpoints_dir = "bot_persistence/ribs_checkpoints"
         os.makedirs(self.checkpoints_dir, exist_ok=True)
 
+        # Try to load latest checkpoint
+        self.load_latest_checkpoint()
+
         self.logger.info("RIBS Trading Optimizer initialized")
 
     def load_config(self, config_path: str) -> Dict:
@@ -763,10 +766,37 @@ class TradingRIBSOptimizer:
             self.best_objective = checkpoint["best_objective"]
             self.history = checkpoint["history"]
 
+            # Recreate emitters with the loaded archive
+            self.emitters = self.create_emitters()
+            self.scheduler = ribs.schedulers.Scheduler(self.archive, self.emitters)
+
             self.logger.info(f"RIBS checkpoint loaded: {checkpoint_path}")
 
         except Exception as e:
             self.logger.error(f"Failed to load checkpoint: {e}")
+
+    def load_latest_checkpoint(self):
+        """Load the most recent checkpoint if available"""
+        try:
+            checkpoint_files = [
+                f
+                for f in os.listdir(self.checkpoints_dir)
+                if f.startswith("ribs_checkpoint_") and f.endswith(".pkl")
+            ]
+            if not checkpoint_files:
+                self.logger.info("No RIBS checkpoints found, starting fresh")
+                return
+
+            # Sort by timestamp in filename (format: ribs_checkpoint_YYYYMMDD_HHMMSS.pkl)
+            checkpoint_files.sort(reverse=True)
+            latest_checkpoint = checkpoint_files[0]
+            checkpoint_path = os.path.join(self.checkpoints_dir, latest_checkpoint)
+
+            self.load_checkpoint(checkpoint_path)
+            self.logger.info(f"Loaded latest RIBS checkpoint: {latest_checkpoint}")
+
+        except Exception as e:
+            self.logger.error(f"Failed to load latest checkpoint: {e}")
 
     def get_archive_stats(self) -> Dict:
         """Get current archive statistics"""

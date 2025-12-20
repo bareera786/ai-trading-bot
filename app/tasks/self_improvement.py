@@ -7,10 +7,11 @@ import threading
 import time
 from collections import deque
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Dict
 from datetime import datetime, timedelta
 import statistics
 import json
+import requests
 
 # Data science imports for RIBS
 try:
@@ -124,7 +125,7 @@ class SelfImprovementWorker:
         )
         if self.ribs_enabled:
             try:
-                self.ribs_optimizer = TradingRIBSOptimizer()
+                self.ribs_optimizer = TradingRIBSOptimizer()  # type: ignore
                 self._log("🧬 RIBS Quality Diversity Optimizer initialized")
             except Exception as e:
                 self._log(f"❌ Failed to initialize RIBS optimizer: {e}")
@@ -134,7 +135,8 @@ class SelfImprovementWorker:
     def _fix_model_retraining(self) -> None:
         """Auto-fix: Retrain models when accuracy drops."""
         try:
-            self.logger.info("🔧 Auto-fix: Retraining models due to low accuracy")
+            if self.logger:
+                self.logger.info("🔧 Auto-fix: Retraining models due to low accuracy")
 
             # Force retrain ultimate ML system
             if hasattr(self.ultimate_ml_system, "retrain_models"):
@@ -144,14 +146,17 @@ class SelfImprovementWorker:
             if hasattr(self.optimized_ml_system, "retrain_models"):
                 self.optimized_ml_system.retrain_models()
 
-            self.logger.info("✅ Model retraining completed")
+            if self.logger:
+                self.logger.info("✅ Model retraining completed")
         except Exception as e:
-            self.logger.error(f"❌ Model retraining failed: {e}")
+            if self.logger:
+                self.logger.error(f"❌ Model retraining failed: {e}")
 
     def _fix_indicator_optimization(self) -> None:
         """Auto-fix: Optimize indicator weights based on performance."""
         try:
-            self.logger.info("🔧 Auto-fix: Optimizing indicator weights")
+            if self.logger:
+                self.logger.info("🔧 Auto-fix: Optimizing indicator weights")
 
             # Analyze which indicators performed best in recent cycles
             best_indicators = self._analyze_indicator_performance()
@@ -159,10 +164,12 @@ class SelfImprovementWorker:
             # Update trading config with optimized weights
             if best_indicators:
                 self.trading_config["indicator_weights"] = best_indicators
-                self.logger.info(f"✅ Updated indicator weights: {best_indicators}")
+                if self.logger:
+                    self.logger.info(f"✅ Updated indicator weights: {best_indicators}")
 
         except Exception as e:
-            self.logger.error(f"❌ Indicator optimization failed: {e}")
+            if self.logger:
+                self.logger.error(f"❌ Indicator optimization failed: {e}")
 
     def _fix_config_reset(self) -> None:
         """Auto-fix: Reset configuration to stable defaults."""
@@ -217,7 +224,8 @@ class SelfImprovementWorker:
     def _fix_correlation_rebalancing(self) -> None:
         """Auto-fix: Rebalance portfolio correlations."""
         try:
-            self.logger.info("🔧 Auto-fix: Rebalancing portfolio correlations")
+            if self.logger:
+                self.logger.info("🔧 Auto-fix: Rebalancing portfolio correlations")
 
             # Analyze current portfolio correlations
             correlations = self._calculate_portfolio_correlations()
@@ -227,9 +235,11 @@ class SelfImprovementWorker:
                 adjustments = self._calculate_correlation_adjustments(correlations)
                 self.trading_config["correlation_adjustments"] = adjustments
 
-            self.logger.info("✅ Correlation rebalancing completed")
+            if self.logger:
+                self.logger.info("✅ Correlation rebalancing completed")
         except Exception as e:
-            self.logger.error(f"❌ Correlation rebalancing failed: {e}")
+            if self.logger:
+                self.logger.error(f"❌ Correlation rebalancing failed: {e}")
 
     def _send_ribs_alert(self, msg: str) -> None:
         try:
@@ -817,7 +827,7 @@ class SelfImprovementWorker:
                             f"ribs_best_{datetime.now().strftime('%Y%m%d_%H%M')}"
                         )
                         res = self.deploy_strategy(best_solution, strategy_id)
-                        if res.get("success"):
+                        if isinstance(res, dict) and res.get("success"):
                             self.best_ribs_objective = best_objective
                             self.deployed_ribs_strategies.add(strategy_id)
                             self._log(
@@ -826,8 +836,13 @@ class SelfImprovementWorker:
                                 f"Behavior={best_behavior}"
                             )
                         else:
+                            message = (
+                                res.get("message")
+                                if isinstance(res, dict)
+                                else "Unknown error"
+                            )
                             self._log(
-                                f"❌ Failed to auto-deploy RIBS strategy: {res.get('message')}"
+                                f"❌ Failed to auto-deploy RIBS strategy: {message}"
                             )
                     else:
                         self._log(
@@ -883,22 +898,25 @@ class SelfImprovementWorker:
             self._ribs_stop_event.clear()
         return True
 
-    def load_recent_data(self, hours: int = 168) -> Dict:
+    def load_recent_data(self, hours: int = 168) -> dict:
         """Load recent market data for RIBS optimization"""
         try:
             # This should load actual market data from your data sources
             # For now, return a placeholder structure
+            if not DATA_SCIENCE_AVAILABLE:
+                return {"error": "Data science libraries not available"}
+
             market_data = {
-                "ohlcv": pd.DataFrame(
+                "ohlcv": pd.DataFrame(  # type: ignore
                     {
-                        "timestamp": pd.date_range(
+                        "timestamp": pd.date_range(  # type: ignore
                             end=datetime.now(), periods=1000, freq="1H"
                         ),
-                        "open": np.random.uniform(40000, 60000, 1000),
-                        "high": np.random.uniform(40000, 60000, 1000),
-                        "low": np.random.uniform(40000, 60000, 1000),
-                        "close": np.random.uniform(40000, 60000, 1000),
-                        "volume": np.random.uniform(1000000, 5000000, 1000),
+                        "open": np.random.uniform(40000, 60000, 1000),  # type: ignore
+                        "high": np.random.uniform(40000, 60000, 1000),  # type: ignore
+                        "low": np.random.uniform(40000, 60000, 1000),  # type: ignore
+                        "close": np.random.uniform(40000, 60000, 1000),  # type: ignore
+                        "volume": np.random.uniform(1000000, 5000000, 1000),  # type: ignore
                     }
                 )
             }
@@ -910,6 +928,10 @@ class SelfImprovementWorker:
     def deploy_strategy(self, solution, strategy_id: str):
         """Deploy a RIBS-generated strategy"""
         try:
+            if not self.ribs_optimizer:
+                self._log("❌ RIBS optimizer not available")
+                return False
+
             # Decode the solution into trading parameters
             params = self.ribs_optimizer.decode_solution(solution)
 
@@ -979,7 +1001,8 @@ class SelfImprovementWorker:
                 return {"success": False, "message": msg}
 
             if backtest.get("win_rate", 0.0) < deploy_cfg["min_win_rate"]:
-                msg = f"Backtest win_rate {(backtest.get('win_rate')*100):.1f}% < required {(deploy_cfg['min_win_rate']*100):.1f}%"
+                win_rate = backtest.get("win_rate", 0.0)
+                msg = f"Backtest win_rate {(win_rate*100):.1f}% < required {(deploy_cfg['min_win_rate']*100):.1f}%"
                 self._log(f"❌ Deploy gating rejected strategy: {msg}")
                 return {"success": False, "message": msg}
 

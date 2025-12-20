@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any, Mapping, MutableMapping, Sequence
 
+from app.services import record_user_trade
+
 
 def build_ai_bot_context_payload(
     *,
@@ -97,6 +99,8 @@ def build_ai_bot_context_payload(
         "get_user_portfolio_data": get_user_portfolio_data,
         "update_live_portfolio_pnl": update_live_portfolio_pnl,
         "trade_history": trade_history,
+        "record_user_trade": record_user_trade,
+        "record_user_trade": record_user_trade,
         "apply_binance_credentials": apply_binance_credentials,
         "get_binance_credential_status": get_binance_credential_status,
         "binance_credentials_store": binance_credentials_store,

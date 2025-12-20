@@ -4,6 +4,7 @@ from app.models import User
 from app.extensions import db, limiter
 from flask import request
 from app.services.binance import BinanceCredentialStore, BinanceCredentialService
+from typing import Optional
 
 admin_user_api_bp = Blueprint("admin_user_api", __name__, url_prefix="/api/users")
 
@@ -102,8 +103,12 @@ def admin_get_user_credentials(user_id):
     if not getattr(current_user, "is_admin", False):
         return jsonify({"error": "Forbidden"}), 403
     ctx = current_app.extensions.get("ai_bot_context") or {}
-    credentials_store: BinanceCredentialStore = ctx.get("binance_credentials_store")
-    credential_service: BinanceCredentialService = ctx.get("binance_credential_service")
+    credentials_store: Optional[BinanceCredentialStore] = ctx.get(
+        "binance_credentials_store"
+    )
+    credential_service: Optional[BinanceCredentialService] = ctx.get(
+        "binance_credential_service"
+    )
     if not credentials_store:
         return jsonify({"error": "Credential store unavailable"}), 500
 
@@ -134,7 +139,9 @@ def admin_set_user_credentials(user_id):
     account_type = data.get("accountType") or data.get("account_type") or "spot"
 
     ctx = current_app.extensions.get("ai_bot_context") or {}
-    credentials_store: BinanceCredentialStore = ctx.get("binance_credentials_store")
+    credentials_store: Optional[BinanceCredentialStore] = ctx.get(
+        "binance_credentials_store"
+    )
     if not credentials_store:
         return jsonify({"error": "Credential store unavailable"}), 500
 
@@ -161,7 +168,9 @@ def admin_clear_user_credentials(user_id):
     account_type = data.get("accountType") or data.get("account_type")
 
     ctx = current_app.extensions.get("ai_bot_context") or {}
-    credentials_store: BinanceCredentialStore = ctx.get("binance_credentials_store")
+    credentials_store: Optional[BinanceCredentialStore] = ctx.get(
+        "binance_credentials_store"
+    )
     if not credentials_store:
         return jsonify({"error": "Credential store unavailable"}), 500
 
@@ -189,7 +198,9 @@ def admin_test_user_credentials(user_id):
     testnet = data.get("testnet", True)
 
     ctx = current_app.extensions.get("ai_bot_context") or {}
-    credential_service: BinanceCredentialService = ctx.get("binance_credential_service")
+    credential_service: Optional[BinanceCredentialService] = ctx.get(
+        "binance_credential_service"
+    )
     if not credential_service:
         return jsonify({"error": "Credential service unavailable"}), 500
 

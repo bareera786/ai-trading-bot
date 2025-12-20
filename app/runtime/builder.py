@@ -5,7 +5,7 @@ from __future__ import annotations
 from importlib import import_module
 from typing import Any, Optional
 
-from . import symbols
+from app.services import record_user_trade
 from .context import (
     IndicatorRuntime,
     RuntimeContext,
@@ -14,6 +14,8 @@ from .context import (
 )
 from .indicators import INDICATOR_SIGNAL_OPTIONS
 from .payloads import build_ai_bot_context_payload
+from . import symbols
+from .symbols import get_training_universe
 
 LEGACY_RUNTIME_MODULE = "ai_ml_auto_bot_final"
 
@@ -106,7 +108,7 @@ def _build_payload_from_module(
         parallel_engine=_require_attr(module, "parallel_engine"),
         strategy_manager=_require_attr(module, "strategy_manager"),
         backtest_manager=_require_attr(module, "backtest_manager"),
-        get_active_trading_universe=symbols.get_training_universe,
+        get_active_trading_universe=get_training_universe,
         get_real_market_data=_require_attr(module, "get_real_market_data"),
         get_trending_pairs=_require_attr(module, "get_trending_pairs"),
         get_user_trader=_require_attr(module, "get_user_trader"),
@@ -133,8 +135,12 @@ def _build_payload_from_module(
         persistence_manager=_require_attr(module, "persistence_manager"),
         persistence_scheduler=_require_attr(module, "persistence_scheduler"),
         persistence_runtime=_require_attr(module, "persistence_runtime"),
-        background_runtime=_require_attr(module, "background_runtime"),
-        background_task_manager=_require_attr(module, "background_task_manager"),
+        background_runtime=getattr(
+            module, "background_runtime", None
+        ),  # Optional, will be built if missing
+        background_task_manager=getattr(
+            module, "background_task_manager", None
+        ),  # Optional, will be built if missing
         service_runtime=_require_attr(module, "service_runtime"),
         realtime_update_service=_require_attr(module, "realtime_update_service"),
         market_data_service=_require_attr(module, "market_data_service"),
@@ -173,12 +179,52 @@ def assemble_runtime_context(
     if dashboard_data is not None:
         symbols.attach_dashboard_data(dashboard_data)
 
+    # Try to get background_runtime from module, build it if missing
+    background_runtime = payload.get("background_runtime")
+    if background_runtime is None and payload.get("background_task_manager") is None:
+        # Build background runtime if not available
+        try:
+            from .background import build_background_runtime
+
+            background_runtime = build_background_runtime(
+                update_callback=payload.get("update_live_portfolio_pnl"),
+                bot_logger=getattr(module, "logger", None),
+                market_data_service=payload.get("market_data_service"),
+                futures_market_data_service=payload.get("futures_market_data_service"),
+                realtime_update_service=payload.get("realtime_update_service"),
+                persistence_scheduler=payload.get("persistence_scheduler"),
+                self_improvement_worker=getattr(
+                    payload.get("service_runtime"), "self_improvement_worker", None
+                )
+                if payload.get("service_runtime")
+                else None,
+                model_training_worker=getattr(
+                    payload.get("service_runtime"), "model_training_worker", None
+                )
+                if payload.get("service_runtime")
+                else None,
+                trading_config=payload.get("trading_config", {}),
+                flask_app=flask_app,
+            )
+            # Set it on the module for future use
+            setattr(module, "background_runtime", background_runtime)
+            payload["background_runtime"] = background_runtime
+            payload["background_task_manager"] = getattr(
+                background_runtime, "background_task_manager", None
+            )
+        except Exception as exc:
+            # Log but don't fail - background runtime is optional
+            import logging
+
+            logger = logging.getLogger("ai_trading_bot")
+            logger.warning("Failed to build background runtime: %s", exc)
+
     runtime = _build_context(
         payload,
         indicator_runtime=indicator_runtime,
         symbol_runtime=_build_symbol_runtime(),
         persistence_runtime=payload.get("persistence_runtime"),
-        background_runtime=payload.get("background_runtime"),
+        background_runtime=background_runtime,
         service_runtime=payload.get("service_runtime"),
     )
 

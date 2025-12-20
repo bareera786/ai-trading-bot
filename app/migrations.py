@@ -116,6 +116,7 @@ def migrate_database() -> None:
         trade_statements = {
             "signal_source": "ALTER TABLE user_trade ADD COLUMN signal_source VARCHAR(50)",
             "confidence_score": "ALTER TABLE user_trade ADD COLUMN confidence_score FLOAT",
+            "leverage": "ALTER TABLE user_trade ADD COLUMN leverage INTEGER DEFAULT 1",
             "cost_basis": "ALTER TABLE user_trade ADD COLUMN cost_basis FLOAT DEFAULT 0.0",
             "realized_gains": "ALTER TABLE user_trade ADD COLUMN realized_gains FLOAT DEFAULT 0.0",
             "holding_period": "ALTER TABLE user_trade ADD COLUMN holding_period INTEGER DEFAULT 0",

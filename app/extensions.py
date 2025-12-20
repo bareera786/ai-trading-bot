@@ -17,6 +17,10 @@ except (
         def init_app(self, app):
             return None
 
+        def send(self, msg):
+            # No-op for fallback
+            pass
+
 
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy

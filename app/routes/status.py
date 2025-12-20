@@ -522,33 +522,6 @@ def ribs_analyze(strategy_id):
     )
 
 
-@status_bp.route("/api/ribs/pause", methods=["POST"])
-def pause_ribs_optimization():
-    """Pause RIBS optimization"""
-    ctx = _ctx()
-    service_runtime = ctx.get("service_runtime")
-    self_improvement_worker = (
-        service_runtime.self_improvement_worker if service_runtime else None
-    )
-
-    if not self_improvement_worker:
-        return (
-            jsonify(
-                {"success": False, "error": "Self-improvement worker not available"}
-            ),
-            400,
-        )
-
-    try:
-        # Set stop event to pause optimization
-        if hasattr(self_improvement_worker, "_stop_event"):
-            self_improvement_worker._stop_event.set()
-
-        return jsonify({"success": True, "message": "RIBS optimization paused"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
 @status_bp.route("/api/ribs/reset", methods=["POST"])
 def reset_ribs_archive():
     """Reset RIBS archive"""
@@ -699,6 +672,19 @@ def export_ribs_archive():
             },
         )
     except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@status_bp.route("/performance/metrics")
+def performance_metrics():
+    """Get real-time performance metrics"""
+    try:
+        from ai_ml_auto_bot_final import performance_monitor
+
+        metrics = performance_monitor.get_metrics()
+        return jsonify({"success": True, "metrics": metrics})
+    except Exception as e:
+        current_app.logger.error(f"Failed to get performance metrics: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 

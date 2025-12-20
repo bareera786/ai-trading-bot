@@ -833,6 +833,7 @@ def api_futures_trade():
                 "manual_futures",
                 signal_source,
                 confidence_score,
+                leverage,
             )
             return jsonify(
                 {

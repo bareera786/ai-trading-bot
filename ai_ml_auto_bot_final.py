@@ -40,6 +40,11 @@ import subprocess
 from decimal import Decimal, ROUND_DOWN
 from logging.handlers import RotatingFileHandler
 from collections import deque, defaultdict
+import asyncio
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import functools
+from cachetools import TTLCache, cached
+import hashlib
 
 warnings.filterwarnings("ignore")
 from datetime import datetime, timedelta
@@ -125,443 +130,11 @@ from app.runtime.symbols import (
 )
 from app.runtime.symbols import normalize_symbol as _normalize_symbol
 
-try:
-    import talib  # type: ignore
+import talib  # type: ignore
 
-    _TALIB_AVAILABLE = True
-    _TALIB_IMPORT_ERROR = None
-except ImportError as _talib_exc:
-    _TALIB_AVAILABLE = False
-    _TALIB_IMPORT_ERROR = str(_talib_exc)
-    try:
-        import pandas_ta as ta
-
-        # Define fallback functions for common TA-Lib indicators using pandas-ta
-        # Note: pandas-ta returns pandas Series; convert to numpy arrays to match TA-Lib behavior
-        def _rsi_fallback(prices, timeperiod=14):
-            return ta.rsi(pd.Series(prices), length=timeperiod).fillna(0).values
-
-        def _macd_fallback(prices, fastperiod=12, slowperiod=26, signalperiod=9):
-            macd_df = ta.macd(
-                pd.Series(prices), fast=fastperiod, slow=slowperiod, signal=signalperiod
-            )
-            return (
-                macd_df["MACD"].fillna(0).values,
-                macd_df["SIGNAL"].fillna(0).values,
-                macd_df["HIST"].fillna(0).values,
-            )
-
-        def _sma_fallback(prices, timeperiod=30):
-            return ta.sma(pd.Series(prices), length=timeperiod).fillna(0).values
-
-        def _stoch_fallback(
-            high, low, close, fastk_period=5, slowk_period=3, slowd_period=3
-        ):
-            stoch_df = ta.stoch(
-                pd.Series(high),
-                pd.Series(low),
-                pd.Series(close),
-                k=fastk_period,
-                d=slowk_period,
-                smooth_k=slowd_period,
-            )
-            return (
-                stoch_df["STOCHk"].fillna(0).values,
-                stoch_df["STOCHd"].fillna(0).values,
-            )
-
-        def _adx_fallback(high, low, close, timeperiod=14):
-            return (
-                ta.adx(
-                    pd.Series(high), pd.Series(low), pd.Series(close), length=timeperiod
-                )
-                .fillna(0)
-                .values
-            )
-
-        def _atr_fallback(high, low, close, timeperiod=14):
-            return (
-                ta.atr(
-                    pd.Series(high), pd.Series(low), pd.Series(close), length=timeperiod
-                )
-                .fillna(0)
-                .values
-            )
-
-        def _obv_fallback(close, volume):
-            return ta.obv(pd.Series(close), pd.Series(volume)).fillna(0).values
-
-        def _bbands_fallback(close, timeperiod=5, nbdevup=2, nbdevdn=2, matype=0):
-            bb_df = ta.bbands(pd.Series(close), length=timeperiod, std=nbdevup)
-            return (
-                bb_df["BBU"].fillna(0).values,
-                bb_df["BBM"].fillna(0).values,
-                bb_df["BBL"].fillna(0).values,
-            )
-
-        def _ema_fallback(close, timeperiod=30):
-            return ta.ema(pd.Series(close), length=timeperiod).fillna(0).values
-
-        def _mfi_fallback(high, low, close, volume, timeperiod=14):
-            return (
-                ta.mfi(
-                    pd.Series(high),
-                    pd.Series(low),
-                    pd.Series(close),
-                    pd.Series(volume),
-                    length=timeperiod,
-                )
-                .fillna(0)
-                .values
-            )
-
-        def _cci_fallback(high, low, close, timeperiod=14):
-            return (
-                ta.cci(
-                    pd.Series(high), pd.Series(low), pd.Series(close), length=timeperiod
-                )
-                .fillna(0)
-                .values
-            )
-
-        # Candlestick patterns (return last value as int, matching TA-Lib)
-        def _cdlhammer_fallback(open, high, low, close):
-            return (
-                ta.cdl_pattern(
-                    pd.Series(open),
-                    pd.Series(high),
-                    pd.Series(low),
-                    pd.Series(close),
-                    name="hammer",
-                )
-                .fillna(0)
-                .astype(int)
-                .values
-            )
-
-        def _cdlengulfing_fallback(open, high, low, close):
-            return (
-                ta.cdl_pattern(
-                    pd.Series(open),
-                    pd.Series(high),
-                    pd.Series(low),
-                    pd.Series(close),
-                    name="engulfing",
-                )
-                .fillna(0)
-                .astype(int)
-                .values
-            )
-
-        def _cdlmorningstar_fallback(open, high, low, close):
-            return (
-                ta.cdl_pattern(
-                    pd.Series(open),
-                    pd.Series(high),
-                    pd.Series(low),
-                    pd.Series(close),
-                    name="morningstar",
-                )
-                .fillna(0)
-                .astype(int)
-                .values
-            )
-
-        def _cdlhangingman_fallback(open, high, low, close):
-            return (
-                ta.cdl_pattern(
-                    pd.Series(open),
-                    pd.Series(high),
-                    pd.Series(low),
-                    pd.Series(close),
-                    name="hangingman",
-                )
-                .fillna(0)
-                .astype(int)
-                .values
-            )
-
-        def _cdleveningstar_fallback(open, high, low, close):
-            return (
-                ta.cdl_pattern(
-                    pd.Series(open),
-                    pd.Series(high),
-                    pd.Series(low),
-                    pd.Series(close),
-                    name="eveningstar",
-                )
-                .fillna(0)
-                .astype(int)
-                .values
-            )
-
-        # Assign to talib namespace for seamless fallback
-        talib = SimpleNamespace()
-        talib.RSI = _rsi_fallback
-        talib.MACD = _macd_fallback
-        talib.SMA = _sma_fallback
-        talib.STOCH = _stoch_fallback
-        talib.ADX = _adx_fallback
-        talib.ATR = _atr_fallback
-        talib.OBV = _obv_fallback
-        talib.BBANDS = _bbands_fallback
-        talib.EMA = _ema_fallback
-        talib.MFI = _mfi_fallback
-        talib.CCI = _cci_fallback
-        talib.CDLHAMMER = _cdlhammer_fallback
-        talib.CDLENGULFING = _cdlengulfing_fallback
-        talib.CDLMORNINGSTAR = _cdlmorningstar_fallback
-        talib.CDLHANGINGMAN = _cdlhangingman_fallback
-        talib.CDLEVENINGSTAR = _cdleveningstar_fallback
-    except ImportError:
-        # pandas-ta not available, create basic fallback implementations
-        import warnings
-
-        warnings.warn(
-            "pandas-ta not available, using basic TA-Lib fallbacks. Some indicators may be less accurate."
-        )
-
-        def _rsi_fallback(prices, timeperiod=14):
-            """Basic RSI implementation using pandas"""
-            if len(prices) < timeperiod + 1:
-                return np.zeros(len(prices))
-
-            prices_series = pd.Series(prices)
-            delta = prices_series.diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=timeperiod).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=timeperiod).mean()
-            rs = gain / loss
-            rsi = 100 - (100 / (1 + rs))
-            return rsi.fillna(0).values
-
-        def _macd_fallback(prices, fastperiod=12, slowperiod=26, signalperiod=9):
-            """Basic MACD implementation"""
-            prices_series = pd.Series(prices)
-            fast_ema = prices_series.ewm(span=fastperiod).mean()
-            slow_ema = prices_series.ewm(span=slowperiod).mean()
-            macd = fast_ema - slow_ema
-            signal = macd.ewm(span=signalperiod).mean()
-            hist = macd - signal
-            return macd.fillna(0).values, signal.fillna(0).values, hist.fillna(0).values
-
-        def _sma_fallback(prices, timeperiod=30):
-            """Simple moving average"""
-            return pd.Series(prices).rolling(window=timeperiod).mean().fillna(0).values
-
-        def _stoch_fallback(
-            high, low, close, fastk_period=5, slowk_period=3, slowd_period=3
-        ):
-            """Basic stochastic oscillator"""
-            high_series = pd.Series(high)
-            low_series = pd.Series(low)
-            close_series = pd.Series(close)
-
-            lowest_low = low_series.rolling(window=fastk_period).min()
-            highest_high = high_series.rolling(window=fastk_period).max()
-
-            k = 100 * ((close_series - lowest_low) / (highest_high - lowest_low))
-            d = k.rolling(window=slowd_period).mean()
-
-            return k.fillna(0).values, d.fillna(0).values
-
-        def _adx_fallback(high, low, close, timeperiod=14):
-            """Basic ADX implementation (simplified)"""
-            # This is a very basic ADX approximation
-            high_series = pd.Series(high)
-            low_series = pd.Series(low)
-            close_series = pd.Series(close)
-
-            tr = pd.concat(
-                [
-                    high_series - low_series,
-                    (high_series - close_series.shift(1)).abs(),
-                    (low_series - close_series.shift(1)).abs(),
-                ],
-                axis=1,
-            ).max(axis=1)
-
-            atr = tr.rolling(window=timeperiod).mean()
-            adx = (atr / close_series * 100).rolling(window=timeperiod).mean()
-            return adx.fillna(0).values
-
-        def _atr_fallback(high, low, close, timeperiod=14):
-            """Average True Range"""
-            high_series = pd.Series(high)
-            low_series = pd.Series(low)
-            close_series = pd.Series(close)
-
-            tr = pd.concat(
-                [
-                    high_series - low_series,
-                    (high_series - close_series.shift(1)).abs(),
-                    (low_series - close_series.shift(1)).abs(),
-                ],
-                axis=1,
-            ).max(axis=1)
-
-            return tr.rolling(window=timeperiod).mean().fillna(0).values
-
-        def _obv_fallback(close, volume):
-            """On Balance Volume"""
-            close_series = pd.Series(close)
-            volume_series = pd.Series(volume)
-
-            obv = pd.Series(index=close_series.index, dtype=float)
-            obv.iloc[0] = volume_series.iloc[0]
-
-            for i in range(1, len(close_series)):
-                if close_series.iloc[i] > close_series.iloc[i - 1]:
-                    obv.iloc[i] = obv.iloc[i - 1] + volume_series.iloc[i]
-                elif close_series.iloc[i] < close_series.iloc[i - 1]:
-                    obv.iloc[i] = obv.iloc[i - 1] - volume_series.iloc[i]
-                else:
-                    obv.iloc[i] = obv.iloc[i - 1]
-
-            return obv.fillna(0).values
-
-        def _bbands_fallback(close, timeperiod=5, nbdevup=2, nbdevdn=2, matype=0):
-            """Bollinger Bands"""
-            close_series = pd.Series(close)
-            sma = close_series.rolling(window=timeperiod).mean()
-            std = close_series.rolling(window=timeperiod).std()
-
-            upper = sma + (std * nbdevup)
-            lower = sma - (std * nbdevdn)
-
-            return upper.fillna(0).values, sma.fillna(0).values, lower.fillna(0).values
-
-        def _ema_fallback(prices, timeperiod=30):
-            """Exponential moving average"""
-            return pd.Series(prices).ewm(span=timeperiod).mean().fillna(0).values
-
-        def _mfi_fallback(high, low, close, volume, timeperiod=14):
-            """Money Flow Index (simplified)"""
-            high_series = pd.Series(high)
-            low_series = pd.Series(low)
-            close_series = pd.Series(close)
-            volume_series = pd.Series(volume)
-
-            typical_price = (high_series + low_series + close_series) / 3
-            money_flow = typical_price * volume_series
-
-            # Simplified MFI calculation
-            mfi = pd.Series(index=typical_price.index, dtype=float)
-            for i in range(timeperiod, len(typical_price)):
-                pos_flow = money_flow.iloc[i - timeperiod : i][
-                    typical_price.iloc[i - timeperiod : i].diff() > 0
-                ].sum()
-                neg_flow = money_flow.iloc[i - timeperiod : i][
-                    typical_price.iloc[i - timeperiod : i].diff() < 0
-                ].sum()
-                if neg_flow != 0:
-                    mfi.iloc[i] = 100 - (100 / (1 + (pos_flow / neg_flow)))
-                else:
-                    mfi.iloc[i] = 100
-
-            return mfi.fillna(0).values
-
-        def _cci_fallback(high, low, close, timeperiod=14):
-            """Commodity Channel Index (simplified)"""
-            high_series = pd.Series(high)
-            low_series = pd.Series(low)
-            close_series = pd.Series(close)
-
-            typical_price = (high_series + low_series + close_series) / 3
-            sma = typical_price.rolling(window=timeperiod).mean()
-            mad = (typical_price - sma).abs().rolling(window=timeperiod).mean()
-
-            cci = (typical_price - sma) / (0.015 * mad)
-            return cci.fillna(0).values
-
-        # Candlestick patterns (basic implementations)
-        def _cdlhammer_fallback(open, high, low, close):
-            """Basic hammer pattern detection"""
-            open_series = pd.Series(open)
-            high_series = pd.Series(high)
-            low_series = pd.Series(low)
-            close_series = pd.Series(close)
-
-            body = (close_series - open_series).abs()
-            lower_shadow = (
-                pd.concat([open_series, close_series], axis=1).min(axis=1) - low_series
-            )
-            upper_shadow = high_series - pd.concat(
-                [open_series, close_series], axis=1
-            ).max(axis=1)
-
-            hammer = ((lower_shadow > 2 * body) & (upper_shadow < body)).astype(int)
-            return hammer.values
-
-        def _cdlengulfing_fallback(open, high, low, close):
-            """Basic engulfing pattern detection"""
-            open_series = pd.Series(open)
-            close_series = pd.Series(close)
-
-            prev_body = (close_series.shift(1) - open_series.shift(1)).abs()
-            curr_body = (close_series - open_series).abs()
-
-            bullish_engulfing = (
-                (close_series > open_series)
-                & (close_series.shift(1) < open_series.shift(1))
-                & (close_series > open_series.shift(1))
-                & (open_series < close_series.shift(1))
-            ).astype(int)
-            bearish_engulfing = (
-                (close_series < open_series)
-                & (close_series.shift(1) > open_series.shift(1))
-                & (close_series < open_series.shift(1))
-                & (open_series > close_series.shift(1))
-            ).astype(int)
-
-            return (bullish_engulfing | bearish_engulfing).astype(int).values
-
-        def _cdlmorningstar_fallback(open, high, low, close):
-            """Basic morning star pattern (simplified)"""
-            close_series = pd.Series(close)
-
-            # Very basic morning star detection
-            star = (
-                (close_series.shift(2) < close_series.shift(1))
-                & (close_series.shift(1) < close_series)
-                & (close_series > close_series.shift(2))
-            ).astype(int)
-            return star.values
-
-        def _cdlhangingman_fallback(open, high, low, close):
-            """Basic hanging man pattern"""
-            return _cdlhammer_fallback(open, high, low, close)  # Same logic as hammer
-
-        def _cdleveningstar_fallback(open, high, low, close):
-            """Basic evening star pattern (simplified)"""
-            close_series = pd.Series(close)
-
-            # Very basic evening star detection
-            star = (
-                (close_series.shift(2) > close_series.shift(1))
-                & (close_series.shift(1) > close_series)
-                & (close_series < close_series.shift(2))
-            ).astype(int)
-            return star.values
-
-        # Assign to talib namespace for seamless fallback
-        talib = SimpleNamespace()
-        talib.RSI = _rsi_fallback
-        talib.MACD = _macd_fallback
-        talib.SMA = _sma_fallback
-        talib.STOCH = _stoch_fallback
-        talib.ADX = _adx_fallback
-        talib.ATR = _atr_fallback
-        talib.OBV = _obv_fallback
-        talib.BBANDS = _bbands_fallback
-        talib.EMA = _ema_fallback
-        talib.MFI = _mfi_fallback
-        talib.CCI = _cci_fallback
-        talib.CDLHAMMER = _cdlhammer_fallback
-        talib.CDLENGULFING = _cdlengulfing_fallback
-        talib.CDLMORNINGSTAR = _cdlmorningstar_fallback
-        talib.CDLHANGINGMAN = _cdlhangingman_fallback
-        talib.CDLEVENINGSTAR = _cdleveningstar_fallback
-
+# TA-Lib is available, use real functions
+_TALIB_AVAILABLE = True
+_TALIB_IMPORT_ERROR = None
 from scipy import stats
 from sklearn.ensemble import (
     RandomForestClassifier,
@@ -589,12 +162,7 @@ try:
     from binance.exceptions import BinanceAPIException
 except Exception:  # Optional dependency fallback for Binance REST client
     BinanceClient = None
-
-    class BinanceAPIException(Exception):
-        """Fallback Binance exception when python-binance is unavailable."""
-
-        def __init__(self, message="python-binance library not installed"):
-            super().__init__(message)
+    BinanceAPIException = Exception  # Fallback exception
 
 
 try:
@@ -1291,6 +859,12 @@ class ScalpingStrategy(BaseStrategy):
             },
         )
 
+        # Initialize QFM-related caches
+        self.feature_history = {}
+        self.velocity_cache = {}
+        self.acceleration_cache = {}
+        self.jerk_cache = {}
+
     def analyze_market(self, symbol, market_data, indicators=None):
         """Analyze for scalping opportunities"""
         if not market_data or len(market_data) < 10:
@@ -1344,1741 +918,7 @@ class ScalpingStrategy(BaseStrategy):
             },
         }
 
-
-class StrategyManager:
-    def get_all_performance(self):
-        """Get performance data for all strategies"""
-        return self.get_strategy_performance()
-
-    def initialize_adaptive_risk_management(self):
-        """Initialize adaptive risk management system"""
-        self.adaptive_risk = {
-            "qfm_regime_risk_multipliers": {
-                "trending_bull": 1.2,  # Increase risk in strong bull trends
-                "trending_bear": 1.1,  # Moderate increase in bear trends
-                "sideways": 0.7,  # Reduce risk in sideways markets
-                "volatile": 0.6,  # Significantly reduce risk in high volatility
-                "calm": 1.0,  # Normal risk in calm markets
-            },
-            "volatility_adjustments": {
-                "low_volatility": 1.1,  # Slightly increase risk when volatility is low
-                "normal_volatility": 1.0,  # Normal risk
-                "high_volatility": 0.5,  # Reduce risk significantly when volatility is high
-                "extreme_volatility": 0.3,  # Minimal risk in extreme volatility
-            },
-            "momentum_risk_multipliers": {
-                "strong_bullish": 1.15,  # Increase risk on strong bullish momentum
-                "moderate_bullish": 1.05,  # Slight increase on moderate bullish
-                "neutral": 1.0,  # Normal risk
-                "moderate_bearish": 0.9,  # Slight decrease on moderate bearish
-                "strong_bearish": 0.8,  # Decrease risk on strong bearish momentum
-            },
-            "current_regime": "neutral",
-            "regime_confidence": 0.0,
-            "volatility_percentile": 50.0,
-            "momentum_strength": 0.0,
-            "risk_adjustment_history": [],
-            "max_history_size": 1000,
-        }
-
-    def calculate_adaptive_position_size(
-        self, symbol, base_position_size, market_data=None, strategy_name=None
-    ):
-        """Calculate position size with adaptive risk management based on QFM analysis"""
-        if not market_data:
-            return base_position_size
-
-        # Get QFM features for risk assessment
-        qfm_features = {}
-        if self.qfm_engine:
-            qfm_features = self.qfm_engine.compute_realtime_features(
-                symbol, market_data[-1] if market_data else {}
-            )
-
-        if not qfm_features:
-            return base_position_size
-
-        # Determine current market regime
-        regime = self._classify_market_regime(qfm_features)
-        volatility_level = self._assess_volatility_level(qfm_features, symbol)
-        momentum_strength = self._calculate_momentum_strength(qfm_features)
-
-        # Calculate risk multipliers
-        regime_multiplier = self.adaptive_risk["qfm_regime_risk_multipliers"].get(
-            regime, 1.0
-        )
-        volatility_multiplier = self._get_volatility_multiplier(volatility_level)
-        momentum_multiplier = self._get_momentum_multiplier(momentum_strength)
-
-        # Combine multipliers with weights
-        combined_multiplier = (
-            regime_multiplier * 0.5
-            + volatility_multiplier * 0.3  # 50% weight on regime
-            + momentum_multiplier  # 30% weight on volatility
-            * 0.2  # 20% weight on momentum
-        )
-
-        # Apply strategy-specific adjustments
-        if strategy_name:
-            strategy_adjustment = self._get_strategy_risk_adjustment(
-                strategy_name, regime, volatility_level
-            )
-            combined_multiplier *= strategy_adjustment
-
-        # Calculate adaptive position size
-        adaptive_size = base_position_size * combined_multiplier
-
-        # Apply bounds (prevent excessive risk)
-        max_size_multiplier = 2.0  # Maximum 2x base position size
-        min_size_multiplier = 0.2  # Minimum 20% of base position size
-
-        adaptive_size = max(
-            min_size_multiplier * base_position_size,
-            min(max_size_multiplier * base_position_size, adaptive_size),
-        )
-
-        # Record adjustment for analytics
-        adjustment_record = {
-            "timestamp": time.time(),
-            "symbol": symbol,
-            "strategy": strategy_name,
-            "base_size": base_position_size,
-            "adaptive_size": adaptive_size,
-            "regime": regime,
-            "volatility_level": volatility_level,
-            "momentum_strength": momentum_strength,
-            "regime_multiplier": regime_multiplier,
-            "volatility_multiplier": volatility_multiplier,
-            "momentum_multiplier": momentum_multiplier,
-            "combined_multiplier": combined_multiplier,
-            "qfm_features": qfm_features,
-        }
-
-        self.adaptive_risk["risk_adjustment_history"].append(adjustment_record)
-
-        # Maintain history size
-        if (
-            len(self.adaptive_risk["risk_adjustment_history"])
-            > self.adaptive_risk["max_history_size"]
-        ):
-            self.adaptive_risk["risk_adjustment_history"] = self.adaptive_risk[
-                "risk_adjustment_history"
-            ][-self.adaptive_risk["max_history_size"] :]
-
-        # Update current state
-        self.adaptive_risk["current_regime"] = regime
-        self.adaptive_risk["regime_confidence"] = qfm_features.get("regime_score", 0.5)
-        self.adaptive_risk[
-            "volatility_percentile"
-        ] = self._calculate_volatility_percentile(qfm_features)
-        self.adaptive_risk["momentum_strength"] = momentum_strength
-
-        return adaptive_size
-
-    def _classify_market_regime(self, qfm_features):
-        """Classify current market regime based on QFM features"""
-        velocity = abs(qfm_features.get("velocity", 0))
-        acceleration = abs(qfm_features.get("acceleration", 0))
-        jerk = abs(qfm_features.get("jerk", 0))
-        regime_score = qfm_features.get("regime_score", 0.5)
-        trend_confidence = qfm_features.get("trend_confidence", 0.5)
-
-        # Regime classification logic
-        if trend_confidence > 0.7 and velocity > 0.3:
-            if qfm_features.get("velocity", 0) > 0:
-                return "trending_bull"
-            else:
-                return "trending_bear"
-        elif regime_score < 0.4 and velocity < 0.2:
-            return "sideways"
-        elif jerk > 0.5:
-            return "volatile"
-        else:
-            return "calm"
-
-    def _assess_volatility_level(self, qfm_features, symbol):
-        """Assess volatility level based on QFM jerk and other metrics"""
-        jerk = abs(qfm_features.get("jerk", 0))
-        volume_pressure = abs(qfm_features.get("volume_pressure", 0))
-
-        # Calculate volatility score
-        volatility_score = (jerk * 0.6) + (volume_pressure * 0.4)
-
-        # Classify volatility level
-        if volatility_score > 0.7:
-            return "extreme_volatility"
-        elif volatility_score > 0.4:
-            return "high_volatility"
-        elif volatility_score > 0.2:
-            return "normal_volatility"
-        else:
-            return "low_volatility"
-
-    def _calculate_momentum_strength(self, qfm_features):
-        """Calculate momentum strength from QFM features"""
-        velocity = qfm_features.get("velocity", 0)
-        acceleration = qfm_features.get("acceleration", 0)
-
-        # Combined momentum score
-        momentum_score = abs(velocity) + abs(acceleration)
-
-        return momentum_score
-
-    def _get_volatility_multiplier(self, volatility_level):
-        """Get risk multiplier based on volatility level"""
-        return self.adaptive_risk["volatility_adjustments"].get(volatility_level, 1.0)
-
-    def _get_momentum_multiplier(self, momentum_strength):
-        """Get risk multiplier based on momentum strength"""
-        if momentum_strength > 1.0:
-            return self.adaptive_risk["momentum_risk_multipliers"]["strong_bullish"]
-        elif momentum_strength > 0.5:
-            return self.adaptive_risk["momentum_risk_multipliers"]["moderate_bullish"]
-        elif momentum_strength > 0.2:
-            return self.adaptive_risk["momentum_risk_multipliers"]["neutral"]
-        elif momentum_strength > 0.1:
-            return self.adaptive_risk["momentum_risk_multipliers"]["moderate_bearish"]
-        else:
-            return self.adaptive_risk["momentum_risk_multipliers"]["strong_bearish"]
-
-    def _get_strategy_risk_adjustment(self, strategy_name, regime, volatility_level):
-        """Get strategy-specific risk adjustment"""
-        # Different strategies have different risk profiles
-        strategy_adjustments = {
-            "scalping": {
-                "volatile": 0.8,  # Reduce risk for scalping in volatile markets
-                "sideways": 1.2,  # Increase risk for scalping in sideways markets
-            },
-            "trend_following": {
-                "trending_bull": 1.3,  # Increase risk in trending markets
-                "trending_bear": 1.3,
-                "volatile": 0.7,  # Reduce risk in volatile markets
-            },
-            "mean_reversion": {
-                "sideways": 1.2,  # Increase risk in sideways markets
-                "volatile": 0.6,  # Reduce risk in volatile markets
-                "trending_bull": 0.8,  # Reduce risk in strong trends
-                "trending_bear": 0.8,
-            },
-            "momentum": {
-                "volatile": 0.9,  # Slightly reduce risk in volatile markets
-                "calm": 1.1,  # Slightly increase risk in calm markets
-            },
-        }
-
-        strategy_adjustment = strategy_adjustments.get(strategy_name, {})
-        return strategy_adjustment.get(
-            regime, strategy_adjustment.get(volatility_level, 1.0)
-        )
-
-    def _calculate_volatility_percentile(self, qfm_features):
-        """Calculate volatility percentile from QFM features"""
-        jerk = abs(qfm_features.get("jerk", 0))
-
-        # Simple percentile estimation based on jerk magnitude
-        # In practice, this would use historical data
-        if jerk > 0.8:
-            return 95.0
-        elif jerk > 0.6:
-            return 85.0
-        elif jerk > 0.4:
-            return 70.0
-        elif jerk > 0.2:
-            return 50.0
-        elif jerk > 0.1:
-            return 30.0
-        else:
-            return 10.0
-
-    def get_risk_management_status(self):
-        """Get current risk management status and recommendations"""
-        status = {
-            "current_regime": self.adaptive_risk["current_regime"],
-            "regime_confidence": self.adaptive_risk["regime_confidence"],
-            "volatility_percentile": self.adaptive_risk["volatility_percentile"],
-            "momentum_strength": self.adaptive_risk["momentum_strength"],
-            "risk_multipliers": {
-                "regime": self.adaptive_risk["qfm_regime_risk_multipliers"].get(
-                    self.adaptive_risk["current_regime"], 1.0
-                ),
-                "volatility": self._get_volatility_multiplier(
-                    self._assess_volatility_level_from_current_state()
-                ),
-                "momentum": self._get_momentum_multiplier(
-                    self.adaptive_risk["momentum_strength"]
-                ),
-            },
-            "recent_adjustments": self.adaptive_risk["risk_adjustment_history"][-10:]
-            if self.adaptive_risk["risk_adjustment_history"]
-            else [],
-            "recommendations": self._generate_risk_recommendations(),
-        }
-
-        return status
-
-    def _assess_volatility_level_from_current_state(self):
-        """Assess volatility level from current state"""
-        percentile = self.adaptive_risk["volatility_percentile"]
-
-        if percentile > 90:
-            return "extreme_volatility"
-        elif percentile > 75:
-            return "high_volatility"
-        elif percentile > 25:
-            return "normal_volatility"
-        else:
-            return "low_volatility"
-
-    def _generate_risk_recommendations(self):
-        """Generate risk management recommendations"""
-        recommendations = []
-
-        regime = self.adaptive_risk["current_regime"]
-        volatility_percentile = self.adaptive_risk["volatility_percentile"]
-        momentum_strength = self.adaptive_risk["momentum_strength"]
-
-        # Regime-based recommendations
-        if regime == "volatile":
-            recommendations.append(
-                {
-                    "type": "regime_risk",
-                    "priority": "high",
-                    "message": "High volatility detected - reducing position sizes by 40%",
-                    "action": "reduce_position_sizes",
-                }
-            )
-        elif regime in ["trending_bull", "trending_bear"]:
-            recommendations.append(
-                {
-                    "type": "regime_opportunity",
-                    "priority": "medium",
-                    "message": f'Strong {regime.split("_")[1]} trend detected - increasing position sizes by 15-20%',
-                    "action": "increase_position_sizes",
-                }
-            )
-
-        # Volatility-based recommendations
-        if volatility_percentile > 80:
-            recommendations.append(
-                {
-                    "type": "volatility_alert",
-                    "priority": "high",
-                    "message": f"Volatility at {volatility_percentile:.1f}th percentile - implement strict risk controls",
-                    "action": "implement_strict_risk_controls",
-                }
-            )
-
-        # Momentum-based recommendations
-        if momentum_strength > 1.0:
-            recommendations.append(
-                {
-                    "type": "momentum_opportunity",
-                    "priority": "medium",
-                    "message": f"Strong momentum detected (strength: {momentum_strength:.2f}) - consider increasing risk",
-                    "action": "increase_risk_exposure",
-                }
-            )
-
-        return recommendations
-
-    def update_strategy_risk_parameters(self, strategy_name, risk_parameters):
-        """Update risk parameters for a specific strategy"""
-        if strategy_name not in self.strategies:
-            return {"error": f"Strategy {strategy_name} not found"}
-
-        strategy = self.strategies[strategy_name]
-
-        # Update risk-related parameters
-        valid_params = [
-            "stop_loss_pct",
-            "take_profit_pct",
-            "max_position_size",
-            "risk_per_trade",
-        ]
-
-        for param, value in risk_parameters.items():
-            if param in valid_params:
-                if param == "stop_loss_pct" and 0.005 <= value <= 0.1:  # 0.5% to 10%
-                    strategy.parameters[param] = value
-                elif param == "take_profit_pct" and 0.01 <= value <= 0.2:  # 1% to 20%
-                    strategy.parameters[param] = value
-                elif param == "max_position_size" and 0.01 <= value <= 0.5:  # 1% to 50%
-                    strategy.parameters[param] = value
-                elif param == "risk_per_trade" and 0.005 <= value <= 0.05:  # 0.5% to 5%
-                    strategy.parameters[param] = value
-
-        return {
-            "status": "updated",
-            "strategy": strategy_name,
-            "updated_parameters": {
-                k: v for k, v in risk_parameters.items() if k in valid_params
-            },
-        }
-
-    def get_strategy_risk_profile(self, strategy_name):
-        """Get risk profile for a specific strategy"""
-        if strategy_name not in self.strategies:
-            return {"error": f"Strategy {strategy_name} not found"}
-
-        strategy = self.strategies[strategy_name]
-        params = strategy.parameters
-
-        risk_profile = {
-            "strategy_name": strategy_name,
-            "risk_parameters": {
-                "stop_loss_pct": params.get("stop_loss_pct", 0.02),
-                "take_profit_pct": params.get("take_profit_pct", 0.04),
-                "max_position_size": params.get("max_position_size", 0.1),
-                "risk_per_trade": params.get("risk_per_trade", 0.01),
-                "confidence_threshold": params.get("confidence_threshold", 0.5),
-            },
-            "risk_category": self._categorize_strategy_risk(strategy_name),
-            "recommended_adjustments": self._get_strategy_risk_recommendations(
-                strategy_name
-            ),
-        }
-
-        return risk_profile
-
-    def _categorize_strategy_risk(self, strategy_name):
-        """Categorize strategy risk level"""
-        risk_categories = {
-            "scalping": "high_risk",  # Quick trades, high frequency
-            "momentum": "medium_risk",  # Momentum can reverse quickly
-            "trend_following": "medium_risk",  # False signals possible
-            "breakout": "high_risk",  # Breakouts can fail
-            "mean_reversion": "medium_risk",  # Timing critical
-            "arbitrage": "low_risk",  # Statistical edge
-            "ml_based": "variable_risk",  # Depends on model accuracy
-        }
-
-        return risk_categories.get(strategy_name, "medium_risk")
-
-    def _get_strategy_risk_recommendations(self, strategy_name):
-        """Get risk management recommendations for a strategy"""
-        recommendations = []
-
-        strategy = self.strategies[strategy_name]
-        params = strategy.parameters
-
-        # Check stop loss
-        stop_loss = params.get("stop_loss_pct", 0.02)
-        if stop_loss > 0.05:
-            recommendations.append(
-                "Consider tightening stop loss for better risk control"
-            )
-        elif stop_loss < 0.01:
-            recommendations.append(
-                "Stop loss may be too tight, consider increasing to reduce false exits"
-            )
-
-        # Check take profit
-        take_profit = params.get("take_profit_pct", 0.04)
-        if take_profit > 0.1:
-            recommendations.append("Take profit target may be too ambitious")
-        elif take_profit < 0.02:
-            recommendations.append("Take profit target may be too conservative")
-
-        # Check position size
-        max_position = params.get("max_position_size", 0.1)
-        if max_position > 0.2:
-            recommendations.append(
-                "Maximum position size is high, consider reducing for risk control"
-            )
-        elif max_position < 0.05:
-            recommendations.append(
-                "Maximum position size is conservative, consider increasing for better returns"
-            )
-
-        return recommendations
-
-    def initialize_user_dashboard_features(self):
-        """Initialize user-specific dashboard features"""
-        self.user_dashboards = {
-            "custom_strategies": {},
-            "qfm_parameter_profiles": {},
-            "performance_dashboards": {},
-            "alert_preferences": {},
-            "custom_analytics": {},
-        }
-
-    def create_user_strategy_profile(
-        self, user_id, strategy_name, custom_parameters=None
-    ):
-        """Create a user-specific strategy profile with custom parameters"""
-        if strategy_name not in self.strategies:
-            return {"error": f"Strategy {strategy_name} not found"}
-
-        base_strategy = self.strategies[strategy_name]
-
-        # Create user profile
-        user_profile = {
-            "user_id": user_id,
-            "base_strategy": strategy_name,
-            "custom_parameters": custom_parameters or base_strategy.parameters.copy(),
-            "qfm_enhancements": {
-                "velocity_weight": 1.0,
-                "acceleration_weight": 1.0,
-                "jerk_weight": 1.0,
-                "regime_sensitivity": 1.0,
-                "trend_confidence_threshold": 0.6,
-            },
-            "performance_targets": {
-                "target_win_rate": 60.0,
-                "target_daily_pnl": 100.0,
-                "max_drawdown_limit": 0.05,
-                "risk_per_trade": 0.02,
-            },
-            "created_at": time.time(),
-            "last_modified": time.time(),
-            "is_active": True,
-        }
-
-        # Store user profile
-        if user_id not in self.user_dashboards["custom_strategies"]:
-            self.user_dashboards["custom_strategies"][user_id] = {}
-
-        self.user_dashboards["custom_strategies"][user_id][strategy_name] = user_profile
-
-        return {"status": "created", "profile": user_profile}
-
-    def update_user_strategy_parameters(
-        self, user_id, strategy_name, parameter_updates
-    ):
-        """Update user-specific strategy parameters"""
-        if user_id not in self.user_dashboards["custom_strategies"]:
-            return {"error": f"No custom strategies found for user {user_id}"}
-
-        user_strategies = self.user_dashboards["custom_strategies"][user_id]
-
-        if strategy_name not in user_strategies:
-            return {
-                "error": f"Custom strategy {strategy_name} not found for user {user_id}"
-            }
-
-        profile = user_strategies[strategy_name]
-
-        # Validate parameter updates
-        validated_updates = {}
-        for param, value in parameter_updates.items():
-            if self._validate_strategy_parameter(param, value):
-                validated_updates[param] = value
-            else:
-                return {"error": f"Invalid parameter value for {param}: {value}"}
-
-        # Apply updates
-        profile["custom_parameters"].update(validated_updates)
-        profile["last_modified"] = time.time()
-
-        return {"status": "updated", "updated_parameters": validated_updates}
-
-    def _validate_strategy_parameter(self, parameter_name, value):
-        """Validate strategy parameter values"""
-        parameter_bounds = {
-            "confidence_threshold": (0.1, 0.9),
-            "risk_multiplier": (0.1, 3.0),
-            "trend_strength_threshold": (0.1, 0.9),
-            "short_period": (5, 50),
-            "long_period": (20, 200),
-            "deviation_threshold": (1.0, 4.0),
-            "momentum_period": (5, 50),
-            "reversion_speed": (0.5, 2.0),
-        }
-
-        if parameter_name not in parameter_bounds:
-            return isinstance(value, (int, float)) and value > 0
-
-        min_val, max_val = parameter_bounds[parameter_name]
-        return isinstance(value, (int, float)) and min_val <= value <= max_val
-
-    def create_qfm_parameter_profile(self, user_id, profile_name, qfm_parameters):
-        """Create a user-specific QFM parameter profile"""
-        profile = {
-            "profile_name": profile_name,
-            "user_id": user_id,
-            "parameters": {
-                "velocity_sensitivity": qfm_parameters.get("velocity_sensitivity", 1.0),
-                "acceleration_sensitivity": qfm_parameters.get(
-                    "acceleration_sensitivity", 1.0
-                ),
-                "jerk_sensitivity": qfm_parameters.get("jerk_sensitivity", 1.0),
-                "volume_pressure_weight": qfm_parameters.get(
-                    "volume_pressure_weight", 1.0
-                ),
-                "trend_confidence_weight": qfm_parameters.get(
-                    "trend_confidence_weight", 1.0
-                ),
-                "regime_score_threshold": qfm_parameters.get(
-                    "regime_score_threshold", 0.5
-                ),
-                "entropy_threshold": qfm_parameters.get("entropy_threshold", 0.7),
-                "adaptive_learning_rate": qfm_parameters.get(
-                    "adaptive_learning_rate", 0.01
-                ),
-            },
-            "performance_history": [],
-            "created_at": time.time(),
-            "last_used": time.time(),
-        }
-
-        if user_id not in self.user_dashboards["qfm_parameter_profiles"]:
-            self.user_dashboards["qfm_parameter_profiles"][user_id] = {}
-
-        self.user_dashboards["qfm_parameter_profiles"][user_id][profile_name] = profile
-
-        return {"status": "created", "profile": profile}
-
-    def get_user_dashboard_data(self, user_id, dashboard_type="overview"):
-        """Get personalized dashboard data for a user"""
-        dashboard_data = {
-            "user_id": user_id,
-            "timestamp": time.time(),
-            "dashboard_type": dashboard_type,
-        }
-
-        # Custom strategies
-        user_strategies = self.user_dashboards["custom_strategies"].get(user_id, {})
-        dashboard_data["custom_strategies"] = {}
-
-        for strategy_name, profile in user_strategies.items():
-            if profile["is_active"]:
-                # Get current performance
-                base_perf = self.strategy_performance.get(strategy_name, {})
-                custom_perf = self._calculate_custom_strategy_performance(
-                    user_id, strategy_name
-                )
-
-                dashboard_data["custom_strategies"][strategy_name] = {
-                    "parameters": profile["custom_parameters"],
-                    "qfm_enhancements": profile["qfm_enhancements"],
-                    "performance": custom_perf,
-                    "base_performance": base_perf,
-                    "performance_targets": profile["performance_targets"],
-                    "last_modified": profile["last_modified"],
-                }
-
-        # QFM parameter profiles
-        qfm_profiles = self.user_dashboards["qfm_parameter_profiles"].get(user_id, {})
-        dashboard_data["qfm_profiles"] = list(qfm_profiles.keys())
-
-        # Performance analytics
-        if dashboard_type in ["overview", "performance"]:
-            dashboard_data[
-                "performance_analytics"
-            ] = self._generate_user_performance_analytics(user_id)
-
-        # Recommendations
-        if dashboard_type in ["overview", "recommendations"]:
-            dashboard_data["recommendations"] = self._generate_user_recommendations(
-                user_id
-            )
-
-        # Alerts
-        dashboard_data["alerts"] = self._get_user_alerts(user_id)
-
-        return dashboard_data
-
-    def _calculate_custom_strategy_performance(self, user_id, strategy_name):
-        """Calculate performance for user's custom strategy"""
-        # This would track performance of user's custom parameter settings
-        # For now, return base strategy performance with custom adjustments
-        base_perf = self.strategy_performance.get(strategy_name, {}).copy()
-
-        # Apply custom adjustments based on user parameters
-        user_profile = (
-            self.user_dashboards["custom_strategies"]
-            .get(user_id, {})
-            .get(strategy_name)
-        )
-        if user_profile:
-            # Simulate performance adjustment based on parameter optimization
-            param_score = self._calculate_parameter_optimization_score(
-                user_profile["custom_parameters"]
-            )
-            adjustment_factor = 1 + (param_score - 0.5) * 0.2  # ±20% adjustment
-
-            base_perf["adjusted_win_rate"] = min(
-                100, base_perf.get("win_rate", 0) * adjustment_factor
-            )
-            base_perf["parameter_score"] = param_score
-
-        return base_perf
-
-    def _calculate_parameter_optimization_score(self, parameters):
-        """Calculate how optimal the parameter settings are"""
-        # Simple heuristic scoring based on parameter values
-        score = 0
-        total_params = 0
-
-        # Confidence threshold scoring (optimal around 0.6-0.7)
-        if "confidence_threshold" in parameters:
-            threshold = parameters["confidence_threshold"]
-            optimal_score = 1 - abs(threshold - 0.65) / 0.35  # Peak at 0.65
-            score += optimal_score
-            total_params += 1
-
-        # Risk multiplier scoring (optimal around 1.0-1.5)
-        if "risk_multiplier" in parameters:
-            risk_mult = parameters["risk_multiplier"]
-            optimal_score = 1 - abs(risk_mult - 1.25) / 0.75
-            score += optimal_score
-            total_params += 1
-
-        # Trend strength threshold scoring (optimal around 0.6-0.7)
-        if "trend_strength_threshold" in parameters:
-            trend_thresh = parameters["trend_strength_threshold"]
-            optimal_score = 1 - abs(trend_thresh - 0.65) / 0.35
-            score += optimal_score
-            total_params += 1
-
-        return score / total_params if total_params > 0 else 0.5
-
-    def _generate_user_performance_analytics(self, user_id):
-        """Generate personalized performance analytics for user"""
-        analytics = {
-            "portfolio_overview": {},
-            "strategy_performance": {},
-            "qfm_effectiveness": {},
-            "risk_metrics": {},
-        }
-
-        user_strategies = self.user_dashboards["custom_strategies"].get(user_id, {})
-
-        if user_strategies:
-            total_pnl = 0
-            total_trades = 0
-            winning_trades = 0
-
-            for strategy_name, profile in user_strategies.items():
-                if profile["is_active"]:
-                    perf = self._calculate_custom_strategy_performance(
-                        user_id, strategy_name
-                    )
-                    analytics["strategy_performance"][strategy_name] = perf
-
-                    total_pnl += perf.get("total_pnl", 0)
-                    total_trades += perf.get("total_trades", 0)
-                    winning_trades += int(
-                        (perf.get("adjusted_win_rate", perf.get("win_rate", 0)) / 100)
-                        * perf.get("total_trades", 0)
-                    )
-
-            analytics["portfolio_overview"] = {
-                "total_pnl": total_pnl,
-                "total_trades": total_trades,
-                "win_rate": (winning_trades / total_trades * 100)
-                if total_trades > 0
-                else 0,
-                "active_strategies": len(
-                    [s for s in user_strategies.values() if s["is_active"]]
-                ),
-            }
-
-        # QFM effectiveness analysis
-        qfm_profiles = self.user_dashboards["qfm_parameter_profiles"].get(user_id, {})
-        if qfm_profiles:
-            analytics["qfm_effectiveness"] = self._analyze_qfm_profile_effectiveness(
-                qfm_profiles
-            )
-
-        return analytics
-
-    def _analyze_qfm_profile_effectiveness(self, qfm_profiles):
-        """Analyze effectiveness of user's QFM parameter profiles"""
-        effectiveness = {}
-
-        for profile_name, profile in qfm_profiles.items():
-            # Calculate effectiveness based on parameter balance
-            params = profile["parameters"]
-            balance_score = 1 - np.std(
-                list(params.values())
-            )  # Lower variance = better balance
-            sensitivity_score = np.mean(
-                [
-                    params.get("velocity_sensitivity", 1.0),
-                    params.get("acceleration_sensitivity", 1.0),
-                    params.get("jerk_sensitivity", 1.0),
-                ]
-            )
-
-            effectiveness[profile_name] = {
-                "balance_score": balance_score,
-                "sensitivity_score": sensitivity_score,
-                "overall_effectiveness": (balance_score + sensitivity_score) / 2,
-                "last_used": profile["last_used"],
-            }
-
-        return effectiveness
-
-    def _generate_user_recommendations(self, user_id):
-        """Generate personalized recommendations for user"""
-        recommendations = []
-
-        user_strategies = self.user_dashboards["custom_strategies"].get(user_id, {})
-
-        for strategy_name, profile in user_strategies.items():
-            if not profile["is_active"]:
-                continue
-
-            perf = self._calculate_custom_strategy_performance(user_id, strategy_name)
-
-            # Parameter optimization recommendations
-            param_score = perf.get("parameter_score", 0.5)
-            if param_score < 0.6:
-                recommendations.append(
-                    {
-                        "type": "parameter_optimization",
-                        "strategy": strategy_name,
-                        "message": f"Consider optimizing parameters for {strategy_name} (current score: {param_score:.2f})",
-                        "priority": "medium",
-                    }
-                )
-
-            # Performance-based recommendations
-            adjusted_win_rate = perf.get("adjusted_win_rate", perf.get("win_rate", 0))
-            if adjusted_win_rate < 50:
-                recommendations.append(
-                    {
-                        "type": "performance_improvement",
-                        "strategy": strategy_name,
-                        "message": f"{strategy_name} win rate could be improved with QFM tuning",
-                        "priority": "high",
-                    }
-                )
-
-        # QFM profile recommendations
-        qfm_profiles = self.user_dashboards["qfm_parameter_profiles"].get(user_id, {})
-        if len(qfm_profiles) < 2:
-            recommendations.append(
-                {
-                    "type": "qfm_profiles",
-                    "message": "Consider creating multiple QFM parameter profiles for different market conditions",
-                    "priority": "low",
-                }
-            )
-
-        return recommendations
-
-    def _get_user_alerts(self, user_id):
-        """Get alerts for user based on their preferences and strategy performance"""
-        alerts = []
-
-        user_strategies = self.user_dashboards["custom_strategies"].get(user_id, {})
-
-        for strategy_name, profile in user_strategies.items():
-            if not profile["is_active"]:
-                continue
-
-            perf = self._calculate_custom_strategy_performance(user_id, strategy_name)
-            targets = profile["performance_targets"]
-
-            # Check performance targets
-            current_win_rate = perf.get("adjusted_win_rate", perf.get("win_rate", 0))
-            if current_win_rate < targets["target_win_rate"] * 0.8:  # 20% below target
-                alerts.append(
-                    {
-                        "type": "performance_alert",
-                        "strategy": strategy_name,
-                        "message": f"{strategy_name} win rate ({current_win_rate:.1f}%) significantly below target",
-                        "severity": "high",
-                    }
-                )
-
-            # Check drawdown limits
-            # This would require tracking actual drawdown
-            max_drawdown = perf.get("max_drawdown", 0)
-            if max_drawdown > targets["max_drawdown_limit"]:
-                alerts.append(
-                    {
-                        "type": "risk_alert",
-                        "strategy": strategy_name,
-                        "message": f"{strategy_name} drawdown ({max_drawdown:.1%}) exceeds limit",
-                        "severity": "critical",
-                    }
-                )
-
-        return alerts
-
-    def export_user_dashboard_config(self, user_id):
-        """Export user's dashboard configuration for backup/sharing"""
-        config = {
-            "user_id": user_id,
-            "export_timestamp": time.time(),
-            "custom_strategies": self.user_dashboards["custom_strategies"].get(
-                user_id, {}
-            ),
-            "qfm_parameter_profiles": self.user_dashboards[
-                "qfm_parameter_profiles"
-            ].get(user_id, {}),
-            "alert_preferences": self.user_dashboards["alert_preferences"].get(
-                user_id, {}
-            ),
-            "custom_analytics": self.user_dashboards["custom_analytics"].get(
-                user_id, {}
-            ),
-        }
-
-        return config
-
-    def import_user_dashboard_config(self, user_id, config):
-        """Import user's dashboard configuration"""
-        if config.get("user_id") != user_id:
-            return {"error": "Configuration user_id mismatch"}
-
-        # Import custom strategies
-        if "custom_strategies" in config:
-            self.user_dashboards["custom_strategies"][user_id] = config[
-                "custom_strategies"
-            ]
-
-        # Import QFM profiles
-        if "qfm_parameter_profiles" in config:
-            self.user_dashboards["qfm_parameter_profiles"][user_id] = config[
-                "qfm_parameter_profiles"
-            ]
-
-        # Import other settings
-        for key in ["alert_preferences", "custom_analytics"]:
-            if key in config:
-                self.user_dashboards[key][user_id] = config[key]
-
-        return {"status": "imported", "imported_keys": list(config.keys())}
-
-    def initialize_ml_feedback_system(self):
-        """Initialize ML feedback system for continuous strategy improvement"""
-        self.ml_feedback = {
-            "performance_history": [],
-            "parameter_history": {},
-            "qfm_correlations": {},
-            "learning_rate": 0.01,
-            "adaptation_threshold": 0.05,  # Minimum improvement threshold
-            "max_history_size": 1000,
-            "feature_importance": {},
-            "last_adaptation": {},
-        }
-
-        # Initialize parameter history for each strategy
-        for strategy_name in self.strategies:
-            self.ml_feedback["parameter_history"][strategy_name] = []
-
-    def update_ml_feedback(self, strategy_name, trade_result, qfm_features=None):
-        """Update ML feedback system with trade results and QFM features"""
-        if strategy_name not in self.strategies:
-            return
-
-        strategy = self.strategies[strategy_name]
-
-        # Record performance data
-        performance_entry = {
-            "timestamp": time.time(),
-            "strategy": strategy_name,
-            "pnl": trade_result.get("pnl", 0),
-            "win": trade_result.get("pnl", 0) > 0,
-            "confidence": trade_result.get("confidence", 0),
-            "parameters": strategy.parameters.copy(),
-            "qfm_features": qfm_features or {},
-        }
-
-        self.ml_feedback["performance_history"].append(performance_entry)
-
-        # Maintain history size limit
-        if (
-            len(self.ml_feedback["performance_history"])
-            > self.ml_feedback["max_history_size"]
-        ):
-            self.ml_feedback["performance_history"] = self.ml_feedback[
-                "performance_history"
-            ][-self.ml_feedback["max_history_size"] :]
-
-        # Update parameter history
-        param_entry = {
-            "timestamp": time.time(),
-            "parameters": strategy.parameters.copy(),
-            "performance_score": self._calculate_performance_score(strategy_name),
-        }
-        self.ml_feedback["parameter_history"][strategy_name].append(param_entry)
-
-        # Keep only recent parameter history
-        if len(self.ml_feedback["parameter_history"][strategy_name]) > 50:
-            self.ml_feedback["parameter_history"][strategy_name] = self.ml_feedback[
-                "parameter_history"
-            ][strategy_name][-50:]
-
-        # Update QFM correlations
-        if qfm_features:
-            self._update_qfm_correlations(strategy_name, trade_result, qfm_features)
-
-        # Check if adaptation is needed
-        if self._should_adapt_parameters(strategy_name):
-            self._adapt_strategy_parameters(strategy_name)
-
-    def _calculate_performance_score(self, strategy_name, window=20):
-        """Calculate performance score for a strategy over recent trades"""
-        history = self.ml_feedback["performance_history"]
-        recent_trades = [h for h in history if h["strategy"] == strategy_name][-window:]
-
-        if not recent_trades:
-            return 0.0
-
-        # Calculate win rate
-        wins = sum(1 for t in recent_trades if t["win"])
-        win_rate = wins / len(recent_trades)
-
-        # Calculate average P&L
-        avg_pnl = np.mean([t["pnl"] for t in recent_trades])
-
-        # Calculate Sharpe-like ratio (risk-adjusted returns)
-        pnl_std = np.std([t["pnl"] for t in recent_trades])
-        sharpe_ratio = avg_pnl / pnl_std if pnl_std > 0 else 0
-
-        # Composite score
-        score = win_rate * 0.4 + sharpe_ratio * 0.4 + (avg_pnl / 100) * 0.2
-        return max(0, min(1, score))  # Normalize to [0,1]
-
-    def _update_qfm_correlations(self, strategy_name, trade_result, qfm_features):
-        """Update correlations between QFM features and trading performance"""
-        pnl = trade_result.get("pnl", 0)
-
-        for feature_name, feature_value in qfm_features.items():
-            if feature_name not in self.ml_feedback["qfm_correlations"]:
-                self.ml_feedback["qfm_correlations"][feature_name] = []
-
-            self.ml_feedback["qfm_correlations"][feature_name].append(
-                {
-                    "strategy": strategy_name,
-                    "feature_value": feature_value,
-                    "pnl": pnl,
-                    "timestamp": time.time(),
-                }
-            )
-
-            # Keep only recent correlations
-            if len(self.ml_feedback["qfm_correlations"][feature_name]) > 200:
-                self.ml_feedback["qfm_correlations"][feature_name] = self.ml_feedback[
-                    "qfm_correlations"
-                ][feature_name][-200:]
-
-    def _should_adapt_parameters(self, strategy_name):
-        """Determine if strategy parameters should be adapted based on performance"""
-        current_score = self._calculate_performance_score(strategy_name)
-        last_adaptation = self.ml_feedback["last_adaptation"].get(strategy_name, 0)
-        time_since_adaptation = time.time() - last_adaptation
-
-        # Adapt if performance is poor and enough time has passed (at least 1 hour)
-        if current_score < 0.4 and time_since_adaptation > 3600:
-            return True
-
-        # Adapt if performance has declined significantly from recent peak
-        param_history = self.ml_feedback["parameter_history"].get(strategy_name, [])
-        if len(param_history) >= 5:
-            recent_scores = [p["performance_score"] for p in param_history[-5:]]
-            peak_score = max(recent_scores)
-            if peak_score - current_score > self.ml_feedback["adaptation_threshold"]:
-                return True
-
-        return False
-
-    def _adapt_strategy_parameters(self, strategy_name):
-        """Adapt strategy parameters using ML feedback"""
-        strategy = self.strategies[strategy_name]
-        param_history = self.ml_feedback["parameter_history"].get(strategy_name, [])
-
-        if len(param_history) < 3:
-            return  # Need minimum history for adaptation
-
-        # Find best performing parameter sets
-        scored_params = [
-            (p["performance_score"], p["parameters"]) for p in param_history
-        ]
-        scored_params.sort(reverse=True)  # Best first
-
-        # Use weighted average of top 3 parameter sets
-        top_params = scored_params[:3]
-        total_score = sum(score for score, _ in top_params)
-
-        if total_score == 0:
-            return
-
-        # Calculate weighted average parameters
-        adapted_params = {}
-        param_keys = set()
-        for _, params in top_params:
-            param_keys.update(params.keys())
-
-        for param_key in param_keys:
-            weighted_sum = 0
-            total_weight = 0
-
-            for score, params in top_params:
-                if param_key in params:
-                    weight = score / total_score
-                    weighted_sum += params[param_key] * weight
-                    total_weight += weight
-
-            if total_weight > 0:
-                adapted_params[param_key] = weighted_sum / total_weight
-
-        # Apply adapted parameters with learning rate
-        learning_rate = self.ml_feedback["learning_rate"]
-        for param_key, new_value in adapted_params.items():
-            current_value = strategy.parameters.get(param_key, new_value)
-            adapted_value = current_value + (new_value - current_value) * learning_rate
-
-            # Apply bounds based on parameter type
-            if "threshold" in param_key:
-                adapted_value = max(0.1, min(0.9, adapted_value))
-            elif "multiplier" in param_key or "risk" in param_key:
-                adapted_value = max(0.1, min(3.0, adapted_value))
-            elif "period" in param_key:
-                adapted_value = max(5, min(100, int(adapted_value)))
-
-            strategy.parameters[param_key] = adapted_value
-
-        self.ml_feedback["last_adaptation"][strategy_name] = time.time()
-
-        log_component_event(
-            "STRATEGY_ADAPTATION",
-            f"Adapted parameters for {strategy_name}",
-            details={"adapted_params": adapted_params},
-        )
-
-    def get_ml_feedback_insights(self, strategy_name=None):
-        """Get ML feedback insights and recommendations"""
-        insights = {}
-
-        if strategy_name:
-            strategies = [strategy_name]
-        else:
-            strategies = list(self.strategies.keys())
-
-        for strat_name in strategies:
-            if strat_name not in self.ml_feedback["parameter_history"]:
-                continue
-
-            param_history = self.ml_feedback["parameter_history"][strat_name]
-            performance_history = [
-                h
-                for h in self.ml_feedback["performance_history"]
-                if h["strategy"] == strat_name
-            ]
-
-            if not param_history or not performance_history:
-                continue
-
-            # Calculate trends
-            recent_scores = [p["performance_score"] for p in param_history[-10:]]
-            score_trend = (
-                np.polyfit(range(len(recent_scores)), recent_scores, 1)[0]
-                if len(recent_scores) > 1
-                else 0
-            )
-
-            # Find best parameters
-            best_params = max(param_history, key=lambda x: x["performance_score"])[
-                "parameters"
-            ]
-
-            # Calculate QFM feature importance
-            qfm_importance = self._calculate_qfm_feature_importance(strat_name)
-
-            insights[strat_name] = {
-                "current_performance_score": self._calculate_performance_score(
-                    strat_name
-                ),
-                "performance_trend": score_trend,
-                "best_parameters": best_params,
-                "total_trades_analyzed": len(performance_history),
-                "qfm_feature_importance": qfm_importance,
-                "last_adaptation": self.ml_feedback["last_adaptation"].get(
-                    strat_name, 0
-                ),
-                "recommendations": self._generate_ml_recommendations(
-                    strat_name, score_trend, qfm_importance
-                ),
-            }
-
-        return insights
-
-    def _calculate_qfm_feature_importance(self, strategy_name):
-        """Calculate importance of QFM features for strategy performance"""
-        feature_importance = {}
-
-        for feature_name, correlations in self.ml_feedback["qfm_correlations"].items():
-            strategy_correlations = [
-                c for c in correlations if c["strategy"] == strategy_name
-            ]
-
-            if len(strategy_correlations) < 10:
-                continue
-
-            # Calculate correlation between feature value and P&L
-            feature_values = [c["feature_value"] for c in strategy_correlations]
-            pnl_values = [c["pnl"] for c in strategy_correlations]
-
-            try:
-                correlation = np.corrcoef(feature_values, pnl_values)[0, 1]
-                if not np.isnan(correlation):
-                    feature_importance[feature_name] = abs(correlation)
-            except:
-                continue
-
-        # Sort by importance
-        return dict(
-            sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)
-        )
-
-    def _generate_ml_recommendations(self, strategy_name, score_trend, qfm_importance):
-        """Generate ML-based recommendations for strategy improvement"""
-        recommendations = []
-
-        # Performance trend analysis
-        if score_trend < -0.01:
-            recommendations.append(
-                "Performance declining - consider parameter adaptation"
-            )
-        elif score_trend > 0.01:
-            recommendations.append(
-                "Performance improving - current parameters working well"
-            )
-
-        # QFM feature analysis
-        if qfm_importance:
-            top_features = list(qfm_importance.keys())[:3]
-            if top_features:
-                recommendations.append(
-                    f"Focus on QFM features: {', '.join(top_features)}"
-                )
-
-        # Strategy-specific recommendations
-        strategy = self.strategies[strategy_name]
-        current_win_rate = self.strategy_performance.get(strategy_name, {}).get(
-            "win_rate", 0
-        )
-
-        if current_win_rate < 40:
-            recommendations.append(
-                "Low win rate - consider increasing confidence thresholds"
-            )
-        elif current_win_rate > 70:
-            recommendations.append(
-                "High win rate - consider optimizing for higher returns"
-            )
-
-        return recommendations
-
-    def run_continuous_improvement(self):
-        """Run continuous improvement cycle for all strategies"""
-        improvement_results = {}
-
-        for strategy_name in self.strategies:
-            try:
-                # Check if improvement is needed
-                current_score = self._calculate_performance_score(strategy_name)
-                last_improvement = self.ml_feedback.get("last_improvement", {}).get(
-                    strategy_name, 0
-                )
-                time_since_improvement = time.time() - last_improvement
-
-                if current_score < 0.5 and time_since_improvement > 7200:  # 2 hours
-                    # Run optimization
-                    optimization_result = self.optimize_strategies_with_qfm()
-                    if (
-                        strategy_name in optimization_result
-                        and optimization_result[strategy_name]["status"] == "optimized"
-                    ):
-                        improvement_results[strategy_name] = {
-                            "action": "optimized",
-                            "result": optimization_result[strategy_name],
-                        }
-                        self.ml_feedback.setdefault("last_improvement", {})[
-                            strategy_name
-                        ] = time.time()
-
-                    # Run A/B test if no recent tests
-                    last_ab_test = self.ml_feedback.get("last_ab_test", {}).get(
-                        strategy_name, 0
-                    )
-                    if time.time() - last_ab_test > 86400:  # 24 hours
-                        ab_result = self.run_ab_testing(strategy_name)
-                        if "test_id" in ab_result:
-                            improvement_results[strategy_name] = {
-                                "action": "ab_test_started",
-                                "result": ab_result,
-                            }
-                            self.ml_feedback.setdefault("last_ab_test", {})[
-                                strategy_name
-                            ] = time.time()
-
-                else:
-                    improvement_results[strategy_name] = {
-                        "action": "no_action",
-                        "reason": "performance_satisfactory"
-                        if current_score >= 0.5
-                        else "recently_improved",
-                    }
-
-            except Exception as e:
-                improvement_results[strategy_name] = {
-                    "action": "error",
-                    "error": str(e),
-                }
-
-        return improvement_results
-
-    def optimize_strategies_with_qfm(self, market_data=None, performance_window=100):
-        """Optimize strategy parameters using QFM analytics and performance feedback"""
-        optimization_results = {}
-
-        for strategy_name, strategy in self.strategies.items():
-            try:
-                # Get current performance metrics
-                perf_data = self.strategy_performance.get(strategy_name, {})
-                win_rate = perf_data.get("win_rate", 0)
-                total_trades = perf_data.get("total_trades", 0)
-
-                # Skip optimization if insufficient data
-                if total_trades < 10:
-                    optimization_results[strategy_name] = {
-                        "status": "insufficient_data",
-                        "message": f"Need at least 10 trades, currently has {total_trades}",
-                    }
-                    continue
-
-                # Get QFM features for optimization
-                qfm_features = {}
-                if market_data and self.qfm_engine:
-                    for symbol in market_data.keys():
-                        features = self.qfm_engine.compute_realtime_features(
-                            symbol,
-                            market_data[symbol][-1] if market_data[symbol] else {},
-                        )
-                        qfm_features[symbol] = features
-
-                # Perform QFM-based parameter optimization
-                optimized_params = self._qfm_parameter_optimization(
-                    strategy, strategy_name, qfm_features, win_rate, total_trades
-                )
-
-                # Apply optimized parameters
-                if optimized_params:
-                    strategy.parameters.update(optimized_params)
-                    optimization_results[strategy_name] = {
-                        "status": "optimized",
-                        "old_parameters": strategy.parameters.copy(),
-                        "new_parameters": optimized_params,
-                        "expected_improvement": self._calculate_expected_improvement(
-                            strategy, optimized_params
-                        ),
-                    }
-                else:
-                    optimization_results[strategy_name] = {
-                        "status": "no_improvement",
-                        "message": "Current parameters are optimal",
-                    }
-
-            except Exception as e:
-                optimization_results[strategy_name] = {
-                    "status": "error",
-                    "message": str(e),
-                }
-
-        return optimization_results
-
-    def _qfm_parameter_optimization(
-        self, strategy, strategy_name, qfm_features, win_rate, total_trades
-    ):
-        """Perform QFM-based parameter optimization for a specific strategy"""
-        optimized_params = {}
-
-        # Base optimization parameters for all strategies
-        base_params = {
-            "confidence_threshold": strategy.parameters.get(
-                "confidence_threshold", 0.5
-            ),
-            "risk_multiplier": strategy.parameters.get("risk_multiplier", 1.0),
-            "trend_strength_threshold": strategy.parameters.get(
-                "trend_strength_threshold", 0.6
-            ),
-        }
-
-        # QFM-enhanced optimization logic
-        if qfm_features:
-            # Calculate average QFM metrics across symbols
-            avg_velocity = np.mean(
-                [f.get("velocity", 0) for f in qfm_features.values()]
-            )
-            avg_acceleration = np.mean(
-                [f.get("acceleration", 0) for f in qfm_features.values()]
-            )
-            avg_jerk = np.mean([f.get("jerk", 0) for f in qfm_features.values()])
-            avg_regime_score = np.mean(
-                [f.get("regime_score", 0.5) for f in qfm_features.values()]
-            )
-
-            # Adjust confidence threshold based on QFM regime
-            if avg_regime_score > 0.7:  # High confidence regime
-                optimized_params["confidence_threshold"] = min(
-                    0.8, base_params["confidence_threshold"] * 1.2
-                )
-            elif avg_regime_score < 0.3:  # Low confidence regime
-                optimized_params["confidence_threshold"] = max(
-                    0.3, base_params["confidence_threshold"] * 0.8
-                )
-
-            # Adjust risk multiplier based on QFM volatility (jerk)
-            if abs(avg_jerk) > 0.5:  # High volatility
-                optimized_params["risk_multiplier"] = max(
-                    0.5, base_params["risk_multiplier"] * 0.8
-                )
-            elif abs(avg_jerk) < 0.2:  # Low volatility
-                optimized_params["risk_multiplier"] = min(
-                    2.0, base_params["risk_multiplier"] * 1.1
-                )
-
-            # Adjust trend strength threshold based on momentum
-            momentum_strength = abs(avg_velocity) + abs(avg_acceleration)
-            if momentum_strength > 1.0:  # Strong momentum
-                optimized_params["trend_strength_threshold"] = min(
-                    0.8, base_params["trend_strength_threshold"] * 1.1
-                )
-            elif momentum_strength < 0.3:  # Weak momentum
-                optimized_params["trend_strength_threshold"] = max(
-                    0.4, base_params["trend_strength_threshold"] * 0.9
-                )
-
-        # Strategy-specific optimizations
-        if strategy_name == "trend_following":
-            optimized_params.update(
-                self._optimize_trend_following(strategy, qfm_features, win_rate)
-            )
-        elif strategy_name == "mean_reversion":
-            optimized_params.update(
-                self._optimize_mean_reversion(strategy, qfm_features, win_rate)
-            )
-        elif strategy_name == "momentum":
-            optimized_params.update(
-                self._optimize_momentum(strategy, qfm_features, win_rate)
-            )
-
-        return optimized_params
-
-    def _optimize_trend_following(self, strategy, qfm_features, win_rate):
-        """Optimize Trend Following strategy parameters"""
-        params = {}
-
-        # Adjust lookback periods based on QFM acceleration
-        if qfm_features:
-            avg_acceleration = np.mean(
-                [f.get("acceleration", 0) for f in qfm_features.values()]
-            )
-            current_short_period = strategy.parameters.get("short_period", 20)
-            current_long_period = strategy.parameters.get("long_period", 50)
-
-            if abs(avg_acceleration) > 0.3:  # High acceleration - shorter periods
-                params["short_period"] = max(10, int(current_short_period * 0.9))
-                params["long_period"] = max(20, int(current_long_period * 0.9))
-            elif abs(avg_acceleration) < 0.1:  # Low acceleration - longer periods
-                params["short_period"] = min(50, int(current_short_period * 1.1))
-                params["long_period"] = min(100, int(current_long_period * 1.1))
-
-        # Adjust trend threshold based on win rate
-        if win_rate < 40:
-            params["trend_threshold"] = (
-                strategy.parameters.get("trend_threshold", 0.02) * 1.2
-            )
-        elif win_rate > 60:
-            params["trend_threshold"] = (
-                strategy.parameters.get("trend_threshold", 0.02) * 0.9
-            )
-
-        return params
-
-    def _optimize_mean_reversion(self, strategy, qfm_features, win_rate):
-        """Optimize Mean Reversion strategy parameters"""
-        params = {}
-
-        # Adjust deviation thresholds based on QFM jerk (volatility)
-        if qfm_features:
-            avg_jerk = np.mean([f.get("jerk", 0) for f in qfm_features.values()])
-            current_deviation = strategy.parameters.get("deviation_threshold", 2.0)
-
-            if abs(avg_jerk) > 0.4:  # High volatility - wider thresholds
-                params["deviation_threshold"] = min(3.5, current_deviation * 1.2)
-            elif abs(avg_jerk) < 0.2:  # Low volatility - tighter thresholds
-                params["deviation_threshold"] = max(1.5, current_deviation * 0.9)
-
-        # Adjust reversion speed based on win rate
-        if win_rate < 45:
-            params["reversion_speed"] = (
-                strategy.parameters.get("reversion_speed", 0.8) * 0.9
-            )
-        elif win_rate > 65:
-            params["reversion_speed"] = (
-                strategy.parameters.get("reversion_speed", 0.8) * 1.1
-            )
-
-        return params
-
-    def _optimize_momentum(self, strategy, qfm_features, win_rate):
-        """Optimize Momentum strategy parameters"""
-        params = {}
-
-        # Adjust momentum periods based on QFM velocity
-        if qfm_features:
-            avg_velocity = np.mean(
-                [f.get("velocity", 0) for f in qfm_features.values()]
-            )
-            current_period = strategy.parameters.get("momentum_period", 14)
-
-            if abs(avg_velocity) > 0.4:  # Strong momentum - shorter periods
-                params["momentum_period"] = max(7, int(current_period * 0.8))
-            elif abs(avg_velocity) < 0.2:  # Weak momentum - longer periods
-                params["momentum_period"] = min(28, int(current_period * 1.2))
-
-        # Adjust momentum threshold based on win rate
-        if win_rate < 50:
-            params["momentum_threshold"] = (
-                strategy.parameters.get("momentum_threshold", 0.05) * 1.1
-            )
-        elif win_rate > 70:
-            params["momentum_threshold"] = (
-                strategy.parameters.get("momentum_threshold", 0.05) * 0.95
-            )
-
-        return params
-
-    def _calculate_expected_improvement(self, strategy, optimized_params):
-        """Calculate expected performance improvement from parameter changes"""
-        # Simple heuristic-based improvement calculation
-        improvement_factors = {
-            "confidence_threshold": 0.05,  # 5% improvement per 0.1 threshold change
-            "risk_multiplier": 0.03,  # 3% improvement per 0.1 risk change
-            "trend_strength_threshold": 0.04,  # 4% improvement per 0.1 threshold change
-        }
-
-        expected_improvement = 0.0
-        for param, new_value in optimized_params.items():
-            old_value = strategy.parameters.get(param, new_value)
-            if param in improvement_factors:
-                change = abs(new_value - old_value)
-                if param in ["confidence_threshold", "trend_strength_threshold"]:
-                    # For thresholds, smaller changes are better
-                    change = min(change, 0.2)  # Cap at 0.2 for reasonable improvements
-                expected_improvement += change * improvement_factors[param]
-
-        return min(expected_improvement, 0.25)  # Cap at 25% expected improvement
-
-    def run_ab_testing(self, strategy_name, variants=None, test_duration_hours=24):
-        """Run A/B testing for strategy variants with different QFM parameters"""
-        if strategy_name not in self.strategies:
-            return {"error": f"Strategy {strategy_name} not found"}
-
-        strategy = self.strategies[strategy_name]
-
-        # Default variants if none provided
-        if not variants:
-            variants = self._generate_strategy_variants(strategy, strategy_name)
-
-        # Initialize A/B test
-        test_id = f"{strategy_name}_ab_test_{int(time.time())}"
-        ab_test = {
-            "test_id": test_id,
-            "strategy_name": strategy_name,
-            "variants": variants,
-            "start_time": time.time(),
-            "duration_hours": test_duration_hours,
-            "results": {
-                variant["name"]: {"trades": 0, "wins": 0, "pnl": 0.0}
-                for variant in variants
-            },
-            "active": True,
-        }
-
-        # Store test configuration (would be persisted in production)
-        if not hasattr(self, "ab_tests"):
-            self.ab_tests = {}
-        self.ab_tests[test_id] = ab_test
-
-        return {
-            "test_id": test_id,
-            "variants": len(variants),
-            "duration_hours": test_duration_hours,
-            "status": "started",
-        }
-
-    def _generate_strategy_variants(self, strategy, strategy_name):
-        """Generate strategy variants for A/B testing"""
-        base_params = strategy.parameters.copy()
-        variants = []
-
-        # Variant 1: Conservative QFM tuning
-        conservative = base_params.copy()
-        conservative.update(
-            {
-                "confidence_threshold": min(
-                    0.8, base_params.get("confidence_threshold", 0.5) * 1.1
-                ),
-                "risk_multiplier": max(
-                    0.7, base_params.get("risk_multiplier", 1.0) * 0.9
-                ),
-                "qfm_sensitivity": 0.8,
-            }
-        )
-        variants.append(
-            {
-                "name": "conservative_qfm",
-                "parameters": conservative,
-                "description": "Conservative QFM-enhanced parameters",
-            }
-        )
-
-        # Variant 2: Aggressive QFM tuning
-        aggressive = base_params.copy()
-        aggressive.update(
-            {
-                "confidence_threshold": max(
-                    0.3, base_params.get("confidence_threshold", 0.5) * 0.9
-                ),
-                "risk_multiplier": min(
-                    1.5, base_params.get("risk_multiplier", 1.0) * 1.2
-                ),
-                "qfm_sensitivity": 1.2,
-            }
-        )
-        variants.append(
-            {
-                "name": "aggressive_qfm",
-                "parameters": aggressive,
-                "description": "Aggressive QFM-enhanced parameters",
-            }
-        )
-
-        # Variant 3: Balanced QFM tuning (baseline)
-        balanced = base_params.copy()
-        balanced["qfm_sensitivity"] = 1.0
-        variants.append(
-            {
-                "name": "balanced_qfm",
-                "parameters": balanced,
-                "description": "Balanced QFM-enhanced parameters",
-            }
-        )
-
-        return variants
-
-    def get_ab_test_results(self, test_id):
-        """Get results from an A/B test"""
-        if not hasattr(self, "ab_tests") or test_id not in self.ab_tests:
-            return {"error": f"A/B test {test_id} not found"}
-
-        test = self.ab_tests[test_id]
-
-        # Check if test should be completed
-        elapsed_hours = (time.time() - test["start_time"]) / 3600
-        if elapsed_hours >= test["duration_hours"]:
-            test["active"] = False
-            test["completed_at"] = time.time()
-
-        # Calculate performance metrics for each variant
-        results = {}
-        for variant_name, variant_results in test["results"].items():
-            trades = variant_results["trades"]
-            if trades > 0:
-                win_rate = (variant_results["wins"] / trades) * 100
-                avg_pnl = variant_results["pnl"] / trades
-                results[variant_name] = {
-                    "trades": trades,
-                    "win_rate": win_rate,
-                    "total_pnl": variant_results["pnl"],
-                    "avg_pnl": avg_pnl,
-                    "score": win_rate * 0.6 + (avg_pnl * 100) * 0.4,  # Composite score
-                }
-            else:
-                results[variant_name] = {
-                    "trades": 0,
-                    "win_rate": 0,
-                    "total_pnl": 0,
-                    "avg_pnl": 0,
-                    "score": 0,
-                }
-
-        # Determine winner
-        if results:
-            winner = max(results.items(), key=lambda x: x[1]["score"])
-            test["winner"] = winner[0]
-
-        return {
-            "test_id": test_id,
-            "active": test["active"],
-            "elapsed_hours": elapsed_hours,
-            "duration_hours": test["duration_hours"],
-            "results": results,
-            "winner": test.get("winner"),
-            "variants": test["variants"],
-        }
-
-    def apply_ab_test_winner(self, test_id):
-        """Apply the winning variant from an A/B test to the main strategy"""
-        test_results = self.get_ab_test_results(test_id)
-        if "error" in test_results:
-            return test_results
-
-        if not test_results.get("winner"):
-            return {"error": "No winner determined yet"}
-
-        winner_variant = None
-        for variant in test_results["variants"]:
-            if variant["name"] == test_results["winner"]:
-                winner_variant = variant
-                break
-
-        if not winner_variant:
-            return {"error": "Winner variant not found"}
-
-        strategy_name = test_results.get("strategy_name")
-        if strategy_name not in self.strategies:
-            return {"error": f"Strategy {strategy_name} not found"}
-
-        # Apply winning parameters
-        self.strategies[strategy_name].parameters.update(winner_variant["parameters"])
-
-        return {
-            "status": "applied",
-            "strategy": strategy_name,
-            "winner_variant": test_results["winner"],
-            "new_parameters": winner_variant["parameters"],
-        }
-
-
-# ==================== QUANTUM FUSION MOMENTUM ANALYTICS ENGINE ====================
-class QuantumFusionMomentumEngine:
-    """Advanced Quantum Fusion Momentum Analytics Engine for market analysis"""
-
-    def __init__(self):
-        self.feature_history = {}
-        self.market_regime_history = {}
-        self.velocity_cache = {}
-        self.acceleration_cache = {}
-        self.jerk_cache = {}
-        self.max_history_size = 1000
-
-    def compute_realtime_features(self, symbol, market_data):
-        """Compute real-time QFM features for a symbol"""
-        if not market_data or not isinstance(market_data, dict):
-            return {}
-
-        # Extract price data
-        close_price = market_data.get("close", market_data.get("price", 0))
-        volume = market_data.get("volume", 0)
-        high = market_data.get("high", close_price)
-        low = market_data.get("low", close_price)
-
-        # Initialize symbol history if needed
-        if symbol not in self.feature_history:
-            self.feature_history[symbol] = deque(maxlen=self.max_history_size)
-            self.velocity_cache[symbol] = deque(maxlen=self.max_history_size)
-            self.acceleration_cache[symbol] = deque(maxlen=self.max_history_size)
-            self.jerk_cache[symbol] = deque(maxlen=self.max_history_size)
+        # ==================== STRATEGY MANAGER ====================
 
         # Calculate QFM features
         features = self._calculate_qfm_features(symbol, close_price, volume, high, low)
@@ -3777,8 +1617,7 @@ class StrategyManager:
         return self.get_strategy_performance()
 
 
-# Initialize strategy manager with all new features
-strategy_manager = StrategyManager()
+# Strategy manager will be initialized after class definitions
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -4164,14 +2003,43 @@ def setup_application_logging(log_dir):
             log_entry = {
                 "timestamp": self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%fZ"),
                 "level": record.levelname,
-                "component": record.component,
+                "component": getattr(record, "component", "unknown"),
                 "message": record.getMessage(),
                 "logger": record.name,
             }
 
             # Add extra fields if present
-            if hasattr(record, "extra") and record.extra:
-                log_entry.update(record.extra)
+            if hasattr(record, "__dict__"):
+                extra_fields = {
+                    k: v
+                    for k, v in record.__dict__.items()
+                    if k
+                    not in [
+                        "name",
+                        "msg",
+                        "args",
+                        "levelname",
+                        "levelno",
+                        "pathname",
+                        "filename",
+                        "module",
+                        "exc_info",
+                        "exc_text",
+                        "stack_info",
+                        "lineno",
+                        "funcName",
+                        "created",
+                        "msecs",
+                        "relativeCreated",
+                        "thread",
+                        "threadName",
+                        "processName",
+                        "process",
+                        "message",
+                    ]
+                }
+                if extra_fields:
+                    log_entry.update(extra_fields)
 
             # Add exception info if present
             if record.exc_info:
@@ -4384,15 +2252,18 @@ TRADING_CONFIG["futures_manual_auto_trade"] = os.getenv(
 
 # Allow enabling system trade DB recording via environment variables
 if os.getenv("RECORD_SYSTEM_TRADES_TO_DB") is not None:
-    TRADING_CONFIG["record_system_trades_to_db"] = os.getenv(
-        "RECORD_SYSTEM_TRADES_TO_DB"
+    TRADING_CONFIG["record_system_trades_to_db"] = (
+        os.getenv("RECORD_SYSTEM_TRADES_TO_DB") or ""
     ).lower() in ("1", "true", "yes")
 
 if os.getenv("SYSTEM_TRADE_USER_ID"):
     try:
-        TRADING_CONFIG["system_trade_user_id"] = int(os.getenv("SYSTEM_TRADE_USER_ID"))
+        system_user_id = os.getenv("SYSTEM_TRADE_USER_ID")
+        if system_user_id is not None:
+            TRADING_CONFIG["system_trade_user_id"] = int(system_user_id)
     except Exception:
-        TRADING_CONFIG["system_trade_user_id"] = os.getenv("SYSTEM_TRADE_USER_ID")
+        system_user_id = os.getenv("SYSTEM_TRADE_USER_ID")
+        TRADING_CONFIG["system_trade_user_id"] = system_user_id
 
 # Log the effective system trade recording configuration at startup so it's
 # easy to find in service logs during deployments and debugging.
@@ -4643,6 +2514,7 @@ class CRTSignalGenerator:
     """
 
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
         self.signals_history = {}
         self.crt_config = {
             "timeframes": ["1h", "4h", "1d", "1w"],
@@ -4834,7 +2706,9 @@ class CRTSignalGenerator:
 
             # Linear regression trend
             x = np.arange(len(prices))
-            slope, intercept, r_value, p_value, std_err = stats.linregress(x, prices)
+            linreg_result = stats.linregress(x, prices)
+            slope = linreg_result.slope  # type: ignore
+            r_value = linreg_result.rvalue  # type: ignore
 
             # ADX for trend strength
             high = np.array(prices) * 1.01  # Simulated high
@@ -5406,46 +3280,19 @@ class SMCIndicatorModule:
 class QuantumFusionMomentumEngine:
     """Advanced Quantum Fusion Momentum Analytics Engine for market analysis"""
 
-    def __init__(self):
+    def __init__(self, history_length=64):
+        self.history_length = max(16, int(history_length))
+        self.fast_span = 8
+        self.slow_span = 21
+        self.state = defaultdict(self._new_state)
+        # Legacy attributes for backward compatibility
         self.feature_history = {}
         self.market_regime_history = {}
         self.velocity_cache = {}
         self.acceleration_cache = {}
         self.jerk_cache = {}
         self.max_history_size = 1000
-
-    def compute_realtime_features(self, symbol, market_data):
-        """Compute real-time QFM features for a symbol"""
-        if not market_data or not isinstance(market_data, dict):
-            return {}
-
-        # Extract price data
-        close_price = market_data.get("close", market_data.get("price", 0))
-        volume = market_data.get("volume", 0)
-        high = market_data.get("high", close_price)
-        low = market_data.get("low", close_price)
-
-        # Initialize symbol history if needed
-        if symbol not in self.feature_history:
-            self.feature_history[symbol] = deque(maxlen=self.max_history_size)
-            self.velocity_cache[symbol] = deque(maxlen=self.max_history_size)
-            self.acceleration_cache[symbol] = deque(maxlen=self.max_history_size)
-            self.jerk_cache[symbol] = deque(maxlen=self.max_history_size)
-
-        # Calculate QFM features
-        features = self._calculate_qfm_features(symbol, close_price, volume, high, low)
-
-        # Store in history
-        self.feature_history[symbol].append(
-            {
-                "timestamp": time.time(),
-                "features": features.copy(),
-                "price": close_price,
-                "volume": volume,
-            }
-        )
-
-        return features
+        print("⚡ Quantum Fusion Momentum Engine Initialized")
 
     def _calculate_qfm_features(self, symbol, price, volume, high, low):
         """Calculate comprehensive QFM features"""
@@ -5815,16 +3662,6 @@ class QuantumFusionMomentumEngine:
 
         return cycle_info
 
-    # ==================== STRATEGY MANAGER ====================
-    """Generates Quantum Fusion Momentum features and discretionary signals."""
-
-    def __init__(self, history_length=64):
-        self.history_length = max(16, int(history_length))
-        self.fast_span = 8
-        self.slow_span = 21
-        self.state = defaultdict(self._new_state)
-        print("⚡ Quantum Fusion Momentum Engine Initialized")
-
     def _new_state(self):
         return {
             "prices": deque(maxlen=self.history_length),
@@ -5862,19 +3699,9 @@ class QuantumFusionMomentumEngine:
             if col in work.columns:
                 work[col] = pd.to_numeric(work[col], errors="coerce")
 
-        close = (
-            work["close"]
-            .astype(float)
-            .fillna(method="ffill")
-            .fillna(method="bfill")
-            .fillna(0)
-        )
+        close = work["close"].astype(float).ffill().bfill().fillna(0)
         volume = (
-            work["volume"]
-            .astype(float)
-            .fillna(method="ffill")
-            .fillna(method="bfill")
-            .fillna(1.0)
+            work["volume"].astype(float).ffill().bfill().fillna(1.0)
             if "volume" in work.columns
             else pd.Series(1.0, index=close.index)
         )
@@ -6173,58 +4000,13 @@ class ParallelPredictionEngine:
         )
 
     def parallel_predict(self, symbols, market_data, ml_system):
-        """Parallel prediction for all symbols using joblib"""
+        """Optimized parallel prediction using performance optimizer"""
         try:
-
-            def predict_single(symbol):
-                try:
-                    if symbol in market_data:
-                        prediction = ml_system.predict_professional(
-                            symbol, market_data[symbol]
-                        )
-                        return symbol, prediction
-                    else:
-                        self.logger.warning(f"Symbol {symbol} not found in market data")
-                        return symbol, None
-                except Exception as e:
-                    getattr(
-                        self, "logger", __import__("logging").getLogger(__name__)
-                    ).error(
-                        f"Prediction failed for {symbol}: {str(e)}",
-                        extra={
-                            "symbol": symbol,
-                            "error_type": type(e).__name__,
-                            "market_data_available": symbol in market_data,
-                        },
-                    )
-                    return symbol, None
-
-            results = Parallel(n_jobs=self.max_workers, backend=self.parallel_backend)(
-                delayed(predict_single)(symbol) for symbol in symbols
+            return performance_optimizer.optimized_parallel_predict(
+                symbols, market_data, ml_system
             )
-
-            # Convert to dictionary
-            predictions = {symbol: pred for symbol, pred in results if pred is not None}
-            successful_predictions = len(predictions)
-            total_symbols = len(symbols)
-
-            getattr(self, "logger", __import__("logging").getLogger(__name__)).info(
-                f"Parallel predictions completed: {successful_predictions}/{total_symbols} symbols successful"
-            )
-
-            if successful_predictions == 0:
-                getattr(
-                    self, "logger", __import__("logging").getLogger(__name__)
-                ).warning("No successful predictions in parallel batch")
-
-            return predictions
-
         except Exception as e:
-            getattr(self, "logger", __import__("logging").getLogger(__name__)).error(
-                f"Parallel prediction system failed: {str(e)}",
-                extra={"total_symbols": len(symbols), "error_type": type(e).__name__},
-            )
-            # Fallback to sequential processing
+            # Fallback to original implementation
             return self.sequential_predict(symbols, market_data, ml_system)
 
     def __getstate__(self):
@@ -6249,33 +4031,13 @@ class ParallelPredictionEngine:
         return predictions
 
     def parallel_train_models(self, symbols, ml_system, use_real_data=True):
-        """Parallel model training for multiple symbols"""
+        """Optimized parallel training using performance optimizer"""
         try:
-
-            def train_single(symbol):
-                try:
-                    success = ml_system.train_advanced_model(
-                        symbol, use_real_data=use_real_data
-                    )
-                    return symbol, success
-                except Exception as e:
-                    print(f"❌ Training failed for {symbol}: {e}")
-                    return symbol, False
-
-            results = Parallel(n_jobs=self.max_workers, backend=self.parallel_backend)(
-                delayed(train_single)(symbol) for symbol in symbols
+            return performance_optimizer.optimized_parallel_train(
+                symbols, ml_system, use_real_data
             )
-
-            success_count = sum(1 for _, success in results if success)
-            print(
-                f"✅ Parallel training completed: {success_count}/{len(symbols)} successful"
-            )
-            return success_count
-
         except Exception as e:
-            print(
-                f"❌ Parallel training error: {e} — falling back to sequential training"
-            )
+            # Fallback to sequential training
             return self._sequential_train_models(symbols, ml_system, use_real_data)
 
     def _sequential_train_models(self, symbols, ml_system, use_real_data):
@@ -6296,7 +4058,248 @@ class ParallelPredictionEngine:
         return success_count
 
 
-# ==================== ADVANCED RISK MANAGEMENT SYSTEM ====================
+# ==================== PERFORMANCE OPTIMIZATION SYSTEM ====================
+class PerformanceOptimizer:
+    """Advanced performance optimization system with caching and async processing"""
+
+    def __init__(self, max_workers=None, cache_ttl=300):
+        self.max_workers = max_workers or min(32, (os.cpu_count() or 4) * 4)
+        self.cache_ttl = cache_ttl
+
+        # ML prediction cache (5 minute TTL)
+        self.prediction_cache = TTLCache(maxsize=1000, ttl=cache_ttl)
+
+        # Market data cache (30 second TTL)
+        self.market_data_cache = TTLCache(maxsize=500, ttl=30)
+
+        # Feature computation cache (10 minute TTL)
+        self.feature_cache = TTLCache(maxsize=2000, ttl=600)
+
+        # Thread pools for different workloads
+        self.cpu_executor = ThreadPoolExecutor(
+            max_workers=self.max_workers, thread_name_prefix="cpu_worker"
+        )
+        self.io_executor = ThreadPoolExecutor(
+            max_workers=min(16, self.max_workers), thread_name_prefix="io_worker"
+        )
+
+        # Async event loop for non-blocking operations
+        self.loop = asyncio.new_event_loop()
+        self.loop_thread = threading.Thread(target=self._run_event_loop, daemon=True)
+        self.loop_thread.start()
+
+    def _run_event_loop(self):
+        """Run async event loop in background thread"""
+        asyncio.set_event_loop(self.loop)
+        self.loop.run_forever()
+
+    def _cache_key(self, *args, **kwargs):
+        """Generate cache key from function arguments"""
+        key_data = str(args) + str(sorted(kwargs.items()))
+        return hashlib.md5(key_data.encode()).hexdigest()
+
+    def cached_predict(self, symbol, market_data, ml_system):
+        """Cached ML prediction to avoid redundant computations"""
+        return ml_system.predict_professional(symbol, market_data)
+
+    def cached_market_data(self, symbol):
+        """Cached market data retrieval"""
+        # This would integrate with your market data service
+        return get_real_market_data(symbol)
+
+    def cached_feature_computation(self, df, symbol):
+        """Cached feature computation for training data"""
+        return self.compute_training_features(df)  # type: ignore
+
+    async def async_predict_batch(self, symbols, market_data, ml_system):
+        """Async batch prediction with caching"""
+        tasks = []
+        for symbol in symbols:
+            if symbol in market_data:
+                task = self.loop.run_in_executor(
+                    self.cpu_executor,
+                    self.cached_predict,
+                    symbol,
+                    market_data[symbol],
+                    ml_system,
+                )
+                tasks.append(task)
+
+        if tasks:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            predictions = {}
+            for i, result in enumerate(results):
+                symbol = symbols[i]
+                if not isinstance(result, Exception):
+                    predictions[symbol] = result
+            return predictions
+        return {}
+
+    def optimized_parallel_predict(self, symbols, market_data, ml_system):
+        """Optimized parallel prediction with caching and async processing"""
+        try:
+            # Try async processing first
+            future = asyncio.run_coroutine_threadsafe(
+                self.async_predict_batch(symbols, market_data, ml_system), self.loop
+            )
+            return future.result(timeout=30)  # 30 second timeout
+        except Exception:
+            # Fallback to cached parallel processing
+            return self._fallback_parallel_predict(symbols, market_data, ml_system)
+
+    def _fallback_parallel_predict(self, symbols, market_data, ml_system):
+        """Fallback parallel prediction with caching"""
+
+        def predict_single(symbol):
+            try:
+                if symbol in market_data:
+                    return symbol, self.cached_predict(
+                        symbol, market_data[symbol], ml_system
+                    )
+                return symbol, None
+            except Exception as e:
+                return symbol, None
+
+        from joblib import Parallel, delayed
+
+        results = Parallel(n_jobs=self.max_workers, backend="threading")(
+            delayed(predict_single)(symbol) for symbol in symbols
+        )
+
+        return {symbol: pred for symbol, pred in results or [] if pred is not None}  # type: ignore
+
+    def optimized_parallel_train(self, symbols, ml_system, use_real_data=True):
+        """Optimized parallel training with resource management"""
+
+        def train_single(symbol):
+            try:
+                # Use cached features if available
+                success = ml_system.train_advanced_model(
+                    symbol, use_real_data=use_real_data
+                )
+                return symbol, success
+            except Exception as e:
+                return symbol, False
+
+        from joblib import Parallel, delayed
+
+        results = Parallel(
+            n_jobs=min(self.max_workers, len(symbols)), backend="threading"
+        )(delayed(train_single)(symbol) for symbol in symbols)
+
+        success_count = sum(1 for _, success in results or [] if success)  # type: ignore
+        return success_count
+
+    def preload_market_data(self, symbols):
+        """Preload market data for symbols to reduce latency"""
+
+        def load_single(symbol):
+            try:
+                return self.cached_market_data(symbol)
+            except:
+                return None
+
+        from joblib import Parallel, delayed
+
+        Parallel(n_jobs=min(8, len(symbols)), backend="threading")(
+            delayed(load_single)(symbol) for symbol in symbols
+        )
+
+    def get_cache_stats(self):
+        """Get cache performance statistics"""
+        return {
+            "prediction_cache": {
+                "size": len(self.prediction_cache),
+                "maxsize": self.prediction_cache.maxsize,
+                "ttl": self.prediction_cache.ttl,
+            },
+            "market_data_cache": {
+                "size": len(self.market_data_cache),
+                "maxsize": self.market_data_cache.maxsize,
+                "ttl": self.market_data_cache.ttl,
+            },
+            "feature_cache": {
+                "size": len(self.feature_cache),
+                "maxsize": self.feature_cache.maxsize,
+                "ttl": self.feature_cache.ttl,
+            },
+        }
+
+
+# Global performance optimizer instance
+performance_optimizer = PerformanceOptimizer()
+
+
+# ==================== PERFORMANCE MONITORING SYSTEM ====================
+class PerformanceMonitor:
+    """Real-time performance monitoring and metrics collection"""
+
+    def __init__(self):
+        self.metrics = {
+            "predictions_per_second": 0.0,
+            "training_time_avg": 0.0,
+            "cache_hit_rate": 0.0,
+            "memory_usage": 0.0,
+            "cpu_usage": 0.0,
+            "api_latency": 0.0,
+            "active_threads": 0,
+        }
+        self.prediction_count = 0
+        self.training_times = deque(maxlen=100)
+        self.api_latencies = deque(maxlen=100)
+        self.start_time = time.time()
+
+    def record_prediction(self, duration=None):
+        """Record prediction performance"""
+        self.prediction_count += 1
+        if duration:
+            self.api_latencies.append(duration)
+
+    def record_training(self, duration):
+        """Record training performance"""
+        self.training_times.append(duration)
+
+    def update_metrics(self):
+        """Update real-time metrics"""
+        elapsed = time.time() - self.start_time
+        self.metrics["predictions_per_second"] = self.prediction_count / max(elapsed, 1)
+
+        if self.training_times:
+            self.metrics["training_time_avg"] = sum(self.training_times) / len(
+                self.training_times
+            )
+
+        if self.api_latencies:
+            self.metrics["api_latency"] = sum(self.api_latencies) / len(
+                self.api_latencies
+            )
+
+        # System metrics
+        import psutil
+
+        self.metrics["memory_usage"] = psutil.virtual_memory().percent
+        self.metrics["cpu_usage"] = psutil.cpu_percent(interval=0.1)
+        self.metrics["active_threads"] = threading.active_count()
+
+        # Cache metrics
+        cache_stats = performance_optimizer.get_cache_stats()
+        total_cache_requests = sum(stats["size"] for stats in cache_stats.values())
+        if total_cache_requests > 0:
+            self.metrics["cache_hit_rate"] = (
+                total_cache_requests / (total_cache_requests + 1)
+            ) * 100
+
+    def get_metrics(self):
+        """Get current performance metrics"""
+        self.update_metrics()
+        return self.metrics.copy()
+
+
+# Global performance monitor
+performance_monitor = PerformanceMonitor()
+
+
+# ==================== ADAPTIVE RISK MANAGEMENT SYSTEM ====================
 class AdaptiveRiskManager:
     def __init__(self):
         self.risk_levels = {"conservative": 0.7, "moderate": 1.0, "aggressive": 1.3}
@@ -6686,7 +4689,7 @@ class UltimateEnsembleSystem:
 
             # Train meta-model with cross-validation
             meta_model = RandomForestClassifier(n_estimators=100, random_state=42)
-            scores = cross_val_score(meta_model, X, y, cv=5)
+            scores = cross_val_score(meta_model, np.array(X), y, cv=5)
             avg_score = np.mean(scores)
 
             meta_model.fit(X, y)
@@ -6954,15 +4957,21 @@ class UltimateEnsembleSystem:
 
                     # Trend analysis
                     x = np.arange(len(prices))
-                    slope, _, r_value, _, _ = stats.linregress(x, prices)
-                    trend_strength = abs(r_value)
+                    linreg_result = stats.linregress(x, prices)
+                    slope = linreg_result.slope  # type: ignore
+                    r_value = linreg_result.rvalue  # type: ignore
+                    trend_strength = abs(float(r_value))
 
                     if trend_strength > 0.7:
                         regime = (
-                            "STRONG_TREND_BULL" if slope > 0 else "STRONG_TREND_BEAR"
+                            "STRONG_TREND_BULL"
+                            if float(slope) > 0
+                            else "STRONG_TREND_BEAR"
                         )
                     elif trend_strength > 0.4:
-                        regime = "WEAK_TREND_BULL" if slope > 0 else "WEAK_TREND_BEAR"
+                        regime = (
+                            "WEAK_TREND_BULL" if float(slope) > 0 else "WEAK_TREND_BEAR"
+                        )
                     else:
                         regime = "SIDEWAYS"
 
@@ -7206,21 +5215,11 @@ class UltimateMLTrainingSystem:
             open_price = df["open"] if "open" in df.columns else close
             volume = df["volume"] if "volume" in df.columns else one_series.copy()
 
-            close = (
-                close.astype(float)
-                .fillna(method="ffill")
-                .fillna(method="bfill")
-                .fillna(0)
-            )
+            close = close.astype(float).ffill().bfill().fillna(0)
             high = high.astype(float).fillna(close)
             low = low.astype(float).fillna(close)
             open_price = open_price.astype(float).fillna(close)
-            volume = (
-                volume.astype(float)
-                .fillna(method="ffill")
-                .fillna(method="bfill")
-                .fillna(0)
-            )
+            volume = volume.astype(float).ffill().bfill().fillna(0)
 
             features = pd.DataFrame(index=index)
 
@@ -7230,9 +5229,7 @@ class UltimateMLTrainingSystem:
             )
             features["price_momentum"] = (close - close.shift(5)).fillna(0)
             features["log_return"] = (
-                np.log(close.divide(previous_close))
-                .replace([np.inf, -np.inf], 0)
-                .fillna(0)
+                np.log(close / previous_close).replace([np.inf, -np.inf], 0).fillna(0)
             )
             features["price_volatility"] = (
                 close.rolling(5, min_periods=1).std().fillna(0)
@@ -7422,9 +5419,7 @@ class UltimateMLTrainingSystem:
                     index=index,
                 )
 
-            atr_supertrend = (
-                atr_supertrend.fillna(method="ffill").fillna(method="bfill").fillna(0)
-            )
+            atr_supertrend = atr_supertrend.ffill().bfill().fillna(0)
             hl2 = (high + low) / 2.0
             multiplier = 3.0
             basic_upper_band = hl2 + multiplier * atr_supertrend
@@ -7477,9 +5472,7 @@ class UltimateMLTrainingSystem:
                         else:
                             supertrend.iloc[i] = final_upper_band.iloc[i]
 
-            supertrend = (
-                supertrend.fillna(method="ffill").fillna(method="bfill").fillna(close)
-            )
+            supertrend = supertrend.ffill().bfill().fillna(close)
             features["supertrend_value"] = supertrend
             close_safe = close.replace(0, np.nan)
             features["supertrend_distance"] = (
@@ -7801,7 +5794,9 @@ class UltimateMLTrainingSystem:
             except Exception as e:
                 self.log_training(symbol, f"❌ Ensemble creation failed: {e}", 0)
                 # Fallback to best individual model
-                best_model_name = max(model_performances, key=model_performances.get)
+                best_model_name = max(
+                    model_performances, key=lambda x: model_performances[x]
+                )
                 voting_clf = trained_models[best_model_name]
                 ensemble_score = model_performances[best_model_name]
 
@@ -7809,7 +5804,7 @@ class UltimateMLTrainingSystem:
             feature_importance = {}
             if hasattr(voting_clf, "feature_importances_"):
                 feature_importance = dict(
-                    zip(feature_cols, voting_clf.feature_importances_)
+                    zip(feature_cols, voting_clf.feature_importances_)  # type: ignore
                 )
             else:
                 # Equal importance if not available
@@ -8842,10 +6837,7 @@ class UltimateMLTrainingSystem:
             if "open_interest" in df.columns:
                 oi = df["open_interest"].replace(0, np.nan)
                 futures_features["open_interest"] = (
-                    df["open_interest"]
-                    .fillna(method="ffill")
-                    .fillna(method="bfill")
-                    .fillna(0)
+                    df["open_interest"].ffill().bfill().fillna(0)
                 )
                 futures_features["oi_change"] = (
                     df["open_interest"]
@@ -8874,7 +6866,7 @@ class UltimateMLTrainingSystem:
                 vol_delta = vol_delta.replace([np.inf, -np.inf], 0).fillna(0)
                 futures_features["volume_delta"] = vol_delta
                 futures_features["cumulative_volume_delta"] = (
-                    vol_delta.cumsum().fillna(method="ffill").fillna(0)
+                    vol_delta.cumsum().ffill().fillna(0)
                 )
 
             if {"long_liquidations", "short_liquidations"}.issubset(df.columns):
@@ -9294,6 +7286,7 @@ class UltimateMLTrainingSystem:
             equity = float(initial_balance)
             position_qty = 0.0
             entry_price = 0.0
+            open_trade = None
             equity_curve = []
             trades = []
             last_price = None
@@ -9324,9 +7317,9 @@ class UltimateMLTrainingSystem:
                     pnl = sale_value - (position_qty * entry_price)
                     equity = sale_value
                     trade_record = {
-                        "entry_time": open_trade["entry_time"].isoformat()
-                        if hasattr(open_trade["entry_time"], "isoformat")
-                        else str(open_trade["entry_time"]),
+                        "entry_time": open_trade["entry_time"].isoformat()  # type: ignore
+                        if hasattr(open_trade["entry_time"], "isoformat")  # type: ignore
+                        else str(open_trade["entry_time"]),  # type: ignore
                         "exit_time": idx.isoformat()
                         if hasattr(idx, "isoformat")
                         else str(idx),
@@ -9871,7 +7864,16 @@ class OptimizedMLTrainingSystem(UltimateMLTrainingSystem):
             symbols=symbols, use_real_data=use_real_data
         )
 
-    def comprehensive_backtest(self, symbol, **kwargs):
+    def comprehensive_backtest(
+        self,
+        symbol,
+        historical_data=None,
+        years=1,
+        interval="1d",
+        initial_balance=1000.0,
+        use_real_data=True,
+        **kwargs,
+    ):
         result = super().comprehensive_backtest(symbol, **kwargs)
         if isinstance(result, dict):
             result["model_type"] = "OPTIMIZED"
@@ -10467,8 +8469,8 @@ class UltimateAIAutoTrader:
 
         # Get performance data
         performance_data = []
-        for strategy_name in self.strategies:
-            perf = self.strategy_performance.get(strategy_name, {})
+        for strategy_name in self.strategies:  # type: ignore
+            perf = self.strategy_performance.get(strategy_name, {})  # type: ignore
             if perf.get("total_trades", 0) > 0:
                 performance_data.append(
                     {
@@ -10487,7 +8489,7 @@ class UltimateAIAutoTrader:
         # Analyze QFM correlations if QFM engine available
         if self.qfm_engine and hasattr(self.qfm_engine, "get_historical_features"):
             try:
-                qfm_history = self.qfm_engine.get_historical_features(
+                qfm_history = self.qfm_engine.get_historical_features(  # type: ignore
                     symbol, timeframe, analysis_window
                 )
 
@@ -10596,7 +8598,7 @@ class UltimateAIAutoTrader:
 
         # Get strategy performance history
         strategy_trades = []
-        for entry in self.ml_feedback.get("performance_history", []):
+        for entry in self.ml_feedback.get("performance_history", []):  # type: ignore
             if entry["strategy"] == strategy_name:
                 strategy_trades.append(entry)
 
@@ -10727,7 +8729,7 @@ class UltimateAIAutoTrader:
 
             # Get P&L history for volatility calculation
             pnl_history = []
-            for entry in self.ml_feedback.get("performance_history", []):
+            for entry in self.ml_feedback.get("performance_history", []):  # type: ignore
                 if entry["strategy"] == strategy_name:
                     pnl_history.append(entry["pnl"])
 
@@ -10803,11 +8805,11 @@ class UltimateAIAutoTrader:
         for regime_name, regime_condition in regime_categories.items():
             regime_performance = {}
 
-            for strategy_name in self.strategies:
+            for strategy_name in self.strategies:  # type: ignore
                 regime_trades = []
 
                 # Find trades in this regime
-                for entry in self.ml_feedback.get("performance_history", []):
+                for entry in self.ml_feedback.get("performance_history", []):  # type: ignore
                     if entry["strategy"] == strategy_name and entry.get("qfm_features"):
                         if regime_condition(entry["qfm_features"]):
                             regime_trades.append(entry)
@@ -10839,7 +8841,7 @@ class UltimateAIAutoTrader:
 
         # Strategy comparison recommendations
         comparison = analytics.get("strategy_comparison", {})
-        rankings = comparison.get("rankings", {})
+        rankings = comparison.get("rankings", {})  # type: ignore
 
         if rankings:
             # Find best overall strategy
@@ -10850,7 +8852,7 @@ class UltimateAIAutoTrader:
 
             # Find strategies that perform well in specific conditions
             regime_analysis = analytics.get("market_regime_analysis", {})
-            for regime, regime_perf in regime_analysis.items():
+            for regime, regime_perf in regime_analysis.items():  # type: ignore
                 if regime_perf:
                     best_in_regime = max(
                         regime_perf.items(), key=lambda x: x[1]["win_rate"]
@@ -10861,14 +8863,12 @@ class UltimateAIAutoTrader:
         risk_metrics = analytics.get("risk_adjusted_metrics", {})
         if risk_metrics:
             # Find strategy with best Sharpe ratio
-            best_sharpe = max(risk_metrics.items(), key=lambda x: x[1]["sharpe_ratio"])[
-                0
-            ]
+            best_sharpe = max(risk_metrics.items(), key=lambda x: x[1]["sharpe_ratio"])  # type: ignore
             recommendations["best_risk_adjusted"] = best_sharpe
 
             # Find strategy with lowest volatility
             lowest_volatility = min(
-                risk_metrics.items(), key=lambda x: x[1]["volatility"]
+                risk_metrics.items(), key=lambda x: x[1]["volatility"]  # type: ignore
             )[0]
             recommendations["lowest_volatility"] = lowest_volatility
 
@@ -10906,10 +8906,10 @@ class UltimateAIAutoTrader:
         }
 
         # Basic summary
-        total_strategies = len(self.strategies)
+        total_strategies = len(self.strategies)  # type: ignore
         active_strategies = sum(
             1
-            for s in self.strategy_performance.values()
+            for s in self.strategy_performance.values()  # type: ignore
             if s.get("total_trades", 0) > 0
         )
 
@@ -10917,18 +8917,18 @@ class UltimateAIAutoTrader:
             "total_strategies": total_strategies,
             "active_strategies": active_strategies,
             "total_trades": sum(
-                s.get("total_trades", 0) for s in self.strategy_performance.values()
+                s.get("total_trades", 0) for s in self.strategy_performance.values()  # type: ignore
             ),
             "total_pnl": sum(
-                s.get("total_pnl", 0) for s in self.strategy_performance.values()
+                s.get("total_pnl", 0) for s in self.strategy_performance.values()  # type: ignore
             ),
         }
 
         # Individual strategy performance
-        for strategy_name, perf in self.strategy_performance.items():
+        for strategy_name, perf in self.strategy_performance.items():  # type: ignore
             report["strategies"][strategy_name] = {
                 "performance": perf,
-                "parameters": self.strategies[strategy_name].parameters,
+                "parameters": self.strategies[strategy_name].parameters,  # type: ignore
                 "last_updated": perf.get("last_updated", 0),
             }
 
@@ -10942,7 +8942,7 @@ class UltimateAIAutoTrader:
 
         # ML insights
         if hasattr(self, "ml_feedback"):
-            report["ml_insights"] = self.get_ml_feedback_insights()
+            report["ml_insights"] = self.get_ml_feedback_insights()  # type: ignore
 
         return report
 
@@ -11932,7 +9932,7 @@ class UltimateAIAutoTrader:
             if not current_order_price:
                 current_order_price = desired_price
 
-            price_diff = abs(desired_price - current_order_price)
+            price_diff = abs(desired_price - current_order_price)  # type: ignore
             price_diff_pct = (
                 price_diff / current_order_price if current_order_price else 0
             )
@@ -12744,7 +10744,7 @@ class UltimateAIAutoTrader:
                 symbol,
                 market_data["price"],
                 avg_confidence,
-                volatility,
+                volatility,  # type: ignore
                 ensemble_signal,
                 portfolio_health,
             )
@@ -12787,7 +10787,7 @@ class UltimateAIAutoTrader:
                 position_value,
                 self.balance,
                 market_stress=market_stress,
-                volatility=volatility,
+                volatility=volatility,  # type: ignore
                 portfolio_health=portfolio_health,
             )
             if not approved:
@@ -14351,7 +12351,8 @@ def fetch_binance_24hr_ticker(symbol=None, timeout=10):
 
 def get_trending_pairs():
     helper = _ensure_binance_market_helper()
-    return helper.get_trending_pairs()
+    trending_data = helper.get_trending_pairs()
+    return [pair.get("symbol", "") for pair in trending_data if pair.get("symbol")]
 
 
 def get_real_market_data(symbol):
@@ -14509,7 +12510,7 @@ futures_manual_service = FuturesManualService(
     initial_selected_symbol=_default_futures_symbol,
     futures_symbols_provider=lambda: list(FUTURES_SYMBOLS),
     top_symbols_provider=lambda: list(TOP_SYMBOLS),
-    dashboard_data_provider=lambda: globals().get("dashboard_data"),
+    dashboard_data_provider=lambda: globals().get("dashboard_data") or {},
     safe_float=_safe_float,
 )
 futures_manual_lock = futures_manual_service.lock
@@ -14962,7 +12963,7 @@ def record_user_trade(
 
         # Update totals
         portfolio.total_balance = portfolio.available_balance + sum(
-            pos["quantity"] * pos["entry_price"] for pos in positions.values()
+            pos["quantity"] * pos["entry_price"] for pos in positions.values()  # type: ignore
         )
         portfolio.updated_at = datetime.utcnow()
 
@@ -15175,7 +13176,7 @@ background_task_manager = background_runtime.background_task_manager
 @socketio.on("connect")
 def handle_connect():
     """Handle client connection for real-time updates"""
-    print(f"Client connected: {request.sid}")
+    print(f"Client connected: {request.sid}")  # type: ignore
     emit(
         "connected",
         {"status": "success", "message": "Connected to real-time dashboard"},
@@ -15185,7 +13186,7 @@ def handle_connect():
 @socketio.on("disconnect")
 def handle_disconnect():
     """Handle client disconnection"""
-    print(f"Client disconnected: {request.sid}")
+    print(f"Client disconnected: {request.sid}")  # type: ignore
 
 
 @socketio.on("subscribe_portfolio")
@@ -15362,7 +13363,7 @@ def _build_ai_bot_context():
         live_portfolio_scheduler=live_portfolio_scheduler,
         historical_data=historical_data,
         top_symbols=TOP_SYMBOLS,
-        disabled_symbols=DISABLED_SYMBOLS,
+        disabled_symbols=DISABLED_SYMBOLS,  # type: ignore
         get_all_known_symbols=get_all_known_symbols,
         get_disabled_symbols=get_disabled_symbols,
         refresh_symbol_counters=refresh_symbol_counters,

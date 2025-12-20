@@ -127,6 +127,7 @@ class UserTrade(db.Model):
     status = db.Column(db.String(20), default="open")
     signal_source = db.Column(db.String(50))
     confidence_score = db.Column(db.Float)
+    leverage = db.Column(db.Integer, default=1)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     cost_basis = db.Column(db.Float, default=0.0)

@@ -859,6 +859,34 @@ class RealBinanceTrader:
             )
         return event
 
+    def execute_manual_trade(self, symbol, side, quantity, price=None):
+        """Execute a manual spot trade."""
+        try:
+            order = self.place_real_order(
+                symbol=symbol,
+                side=side.upper(),
+                quantity=quantity,
+                price=price,
+                order_type="MARKET" if price is None else "LIMIT",
+            )
+            if order:
+                return {
+                    "success": True,
+                    "order": order,
+                    "price": order.get("price") or price,
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": self.last_error or "Order failed",
+                }
+        except Exception as exc:
+            self.logger.error(f"Manual trade execution failed: {exc}")
+            return {
+                "success": False,
+                "error": str(exc),
+            }
+
 
 class BinanceFuturesTrader:
     """Lightweight perpetual futures trader for Binance USDT-margined contracts."""
@@ -1340,6 +1368,37 @@ class BinanceFuturesTrader:
             "account": self.get_account_overview(),
         }
 
+    def execute_manual_futures_trade(
+        self, symbol, side, quantity, leverage=1, price=None
+    ):
+        """Execute a manual futures trade."""
+        try:
+            # Set leverage first
+            self.set_leverage(symbol, leverage)
+
+            order = self.place_market_order(
+                symbol=symbol,
+                side=side.upper(),
+                quantity=quantity,
+            )
+            if order:
+                return {
+                    "success": True,
+                    "order": order,
+                    "price": order.get("price") or price,
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": self.last_error or "Futures order failed",
+                }
+        except Exception as exc:
+            self.logger.error(f"Manual futures trade execution failed: {exc}")
+            return {
+                "success": False,
+                "error": str(exc),
+            }
+
 
 @dataclass
 class TradingServiceBundle:
@@ -1436,3 +1495,38 @@ def create_user_trader_resolver(
         return ultimate
 
     return _resolver
+
+
+def record_user_trade(
+    user_id: int,
+    symbol: str,
+    side: str,
+    quantity: float,
+    price: float,
+    trade_type: str = "manual",
+    signal_source: str = "manual",
+    confidence_score: float = 1.0,
+    leverage: int = 1,
+) -> None:
+    """Record a user trade in the database."""
+    from app.extensions import db
+    from app.models import UserTrade
+
+    try:
+        trade = UserTrade(
+            user_id=user_id,
+            symbol=symbol,
+            trade_type=trade_type,
+            side=side,
+            quantity=quantity,
+            entry_price=price,
+            signal_source=signal_source,
+            confidence_score=confidence_score,
+            leverage=leverage,
+        )
+        db.session.add(trade)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to record user trade: {exc}")
+        raise

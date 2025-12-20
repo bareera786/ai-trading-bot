@@ -25,6 +25,7 @@ from .trading import (
     attach_trading_ml_dependencies,
     create_trading_services,
     create_user_trader_resolver,
+    record_user_trade,
 )
 from .trade_history import ComprehensiveTradeHistory
 
@@ -55,5 +56,6 @@ __all__ = [
     "create_trading_services",
     "attach_trading_ml_dependencies",
     "create_user_trader_resolver",
+    "record_user_trade",
     "ComprehensiveTradeHistory",
 ]

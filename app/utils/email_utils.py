@@ -4,13 +4,13 @@ from __future__ import annotations
 from flask import current_app, url_for
 
 try:
-    from flask_mail import Message
+    from flask_mail import Message  # type: ignore
 except (
     Exception
 ):  # pragma: no cover - optional dependency may be missing in some test envs
     # Provide a lightweight Message shim so unit tests that import this module
     # don't fail when Flask-Mail isn't installed.
-    class Message:
+    class Message:  # type: ignore
         def __init__(self, *args, **kwargs):
             self.subject = kwargs.get("subject")
             self.recipients = kwargs.get("recipients")

@@ -10,14 +10,15 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Build and install TA-Lib
+# Build and install TA-Lib (robust extraction and parallel build)
 RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz -O /tmp/ta-lib.tar.gz && \
     tar -xzf /tmp/ta-lib.tar.gz -C /tmp && \
-    cd /tmp/ta-lib-0.4.0 && \
+    DIR=$(tar -tzf /tmp/ta-lib.tar.gz | head -1 | cut -f1 -d"/") && \
+    cd /tmp/$DIR && \
     ./configure --prefix=/usr && \
-    make && \
+    make -j$(nproc) && \
     make install && \
-    rm -rf /tmp/ta-lib*
+    rm -rf /tmp/$DIR /tmp/ta-lib.tar.gz
 
 # Create a virtual environment
 RUN python -m venv /opt/venv

@@ -21,7 +21,8 @@ RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz -O /t
     DIR=$(tar -tzf /tmp/ta-lib.tar.gz | head -1 | cut -f1 -d"/") && \
     cd /tmp/$DIR && \
     ./configure --prefix=/usr && \
-    make -j$(nproc) && \
+    # Try a parallel build first; if it fails (race in gen_code), fall back to single-threaded make
+    make -j$(nproc) || make && \
     make install && \
     rm -rf /tmp/$DIR /tmp/ta-lib.tar.gz
 

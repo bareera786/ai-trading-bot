@@ -26,10 +26,10 @@ services:
     # Note: we don't publish the Postgres port to the host to avoid conflicts
     # with any existing Postgres service on the host. Containers can access
     # the DB via the service name 'db:5432' on the docker network.
-    redis:
-      image: redis:7
-      volumes:
-        - redis_data:/data
+  redis:
+    image: redis:7
+    volumes:
+      - redis_data:/data
 
 volumes:
   postgres_data:

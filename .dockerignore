@@ -1,0 +1,35 @@
+# Exclude virtualenv and git
+.venv/
+.git/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Logs & coverage
+logs/
+htmlcov/
+
+# Large persistence & artifacts
+bot_persistence/
+artifacts/
+optimized_models/
+optimized_trade_data/
+
+# Instance DB and credentials
+instance/
+credentials/
+
+# Tests and docs
+tests/
+docs/
+
+# Node / build artifacts
+node_modules/
+app/static/dist/
+
+# Temporary build outputs
+*.pkl
+*.joblib
+*.db
+*.tar.gz

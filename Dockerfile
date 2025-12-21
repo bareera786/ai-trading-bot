@@ -8,6 +8,11 @@ RUN useradd --create-home --shell /bin/bash trader
 RUN apt-get update && apt-get install -y \
     build-essential \
     wget \
+    autoconf \
+    automake \
+    libtool \
+    pkg-config \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Build and install TA-Lib (robust extraction and parallel build)

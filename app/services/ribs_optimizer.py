@@ -1,7 +1,7 @@
 import ribs
 import numpy as np
 import logging
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional, Any
 import json
 import pickle
 import yaml
@@ -16,13 +16,15 @@ class TradingRIBSOptimizer:
     """RIBS optimizer for trading strategies"""
 
     def __init__(self, config_path: str = "config/ribs_config.yaml"):
-        self.logger = logging.getLogger(__name__)
-        self.config = self.load_config(config_path)
+        self.logger: logging.Logger = logging.getLogger(__name__)
+        self.config: Dict = self.load_config(config_path)
 
         # Initialize RIBS components
-        self.archive = self.create_archive()
-        self.emitters = self.create_emitters()
-        self.scheduler = ribs.schedulers.Scheduler(self.archive, self.emitters)
+        self.archive: Any = self.create_archive()  # RIBS GridArchive
+        self.emitters: List[Any] = self.create_emitters()  # RIBS emitters
+        self.scheduler: Any = ribs.schedulers.Scheduler(
+            self.archive, self.emitters
+        )  # RIBS scheduler
 
         # Track optimization history
         self.history = []
@@ -533,6 +535,9 @@ class TradingRIBSOptimizer:
     def log_progress(self, iteration: int, total: int = 1):
         """Log optimization progress"""
         try:
+            if self.archive is None:
+                self.logger.warning("Archive is None, cannot log progress")
+                return
             stats = self.archive.stats
             self.logger.info(
                 f"RIBS Iteration {iteration}: "
@@ -801,6 +806,9 @@ class TradingRIBSOptimizer:
     def get_archive_stats(self) -> Dict:
         """Get current archive statistics"""
         try:
+            if self.archive is None:
+                self.logger.warning("Archive is None, cannot get stats")
+                return {}
             stats = self.archive.stats
             return {
                 "num_elites": stats.num_elites,
@@ -815,7 +823,13 @@ class TradingRIBSOptimizer:
     def get_elite_strategies(self, top_n: int = 5) -> List[Dict]:
         """Get top elite strategies from archive"""
         try:
+            if self.archive is None:
+                self.logger.warning("Archive is None, cannot get elite strategies")
+                return []
             elites = self.archive.sample_elites(top_n)
+            if elites is None:
+                self.logger.warning("sample_elites returned None")
+                return []
             elite_strategies = []
 
             # Some archive implementations return a mapping-of-arrays (e.g., keys -> numpy arrays)
@@ -830,8 +844,12 @@ class TradingRIBSOptimizer:
 
                 for i in range(min(count, top_n)):
                     try:
-                        solution = elites.get("solution")[i]
-                        objective = float(elites.get("objective")[i])
+                        solution_data = elites.get("solution")
+                        objective_data = elites.get("objective")
+                        if solution_data is None or objective_data is None:
+                            continue
+                        solution = solution_data[i]
+                        objective = float(objective_data[i])
                         measures = (
                             elites.get("measures")
                             if elites.get("measures") is not None
@@ -871,19 +889,23 @@ class TradingRIBSOptimizer:
                 behavior = None
 
                 # Mapping-like entry (dict or similar)
-                if hasattr(entry, "get") and not isinstance(entry, (list, tuple)):
+                if (
+                    hasattr(entry, "get")
+                    and callable(getattr(entry, "get", None))
+                    and not isinstance(entry, (list, tuple))
+                ):
                     try:
-                        solution = entry.get("solution") or entry.get("x")
+                        solution = entry.get("solution") or entry.get("x")  # type: ignore
                         objective = (
-                            entry.get("objective")
-                            or entry.get("fitness")
-                            or entry.get("score")
+                            entry.get("objective")  # type: ignore
+                            or entry.get("fitness")  # type: ignore
+                            or entry.get("score")  # type: ignore
                         )
                         # measures or behavior may be stored under various keys
                         measures = (
-                            entry.get("measures")
-                            or entry.get("behavior")
-                            or entry.get("measures")
+                            entry.get("measures")  # type: ignore
+                            or entry.get("behavior")  # type: ignore
+                            or entry.get("measures")  # type: ignore
                         )
                         if isinstance(measures, dict):
                             # take first three numeric values as behavior
@@ -906,8 +928,13 @@ class TradingRIBSOptimizer:
                         elif len(entry) == 2:
                             solution, objective = entry
                             behavior = None
-                        else:
+                        elif len(entry) >= 1:
                             solution = entry[0]
+                            objective = None
+                            behavior = None
+                        else:
+                            self.logger.warning("Empty entry encountered, skipping")
+                            continue
                     except Exception:
                         self.logger.error(
                             "Failed to parse sequence elite entry: %r", entry
@@ -919,20 +946,26 @@ class TradingRIBSOptimizer:
 
                 # Normalize solution and behavior to serializable forms
                 try:
-                    solution_list = (
-                        solution.tolist()
-                        if hasattr(solution, "tolist")
-                        else list(solution)
-                    )
+                    if solution is not None:
+                        solution_list = (
+                            solution.tolist()
+                            if hasattr(solution, "tolist")
+                            else list(solution)
+                        )
+                    else:
+                        solution_list = None
                 except Exception:
                     solution_list = solution
 
                 try:
-                    behavior_list = (
-                        behavior.tolist()
-                        if hasattr(behavior, "tolist")
-                        else list(behavior)
-                    )
+                    if behavior is not None:
+                        behavior_list = (
+                            behavior.tolist()  # type: ignore
+                            if hasattr(behavior, "tolist")
+                            else list(behavior)
+                        )
+                    else:
+                        behavior_list = []
                 except Exception:
                     behavior_list = []
 

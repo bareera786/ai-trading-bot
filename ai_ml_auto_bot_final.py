@@ -137,7 +137,10 @@ try:
     _TALIB_AVAILABLE = True
     _TALIB_IMPORT_ERROR = None
 except Exception as _err:  # pragma: no cover - optional C dependency
-    talib = None
+    # Create a lightweight stub object to host fallback implementations
+    from types import SimpleNamespace
+
+    talib = SimpleNamespace()
     _TALIB_AVAILABLE = False
     _TALIB_IMPORT_ERROR = str(_err)
 from scipy import stats

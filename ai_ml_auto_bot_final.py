@@ -130,11 +130,16 @@ from app.runtime.symbols import (
 )
 from app.runtime.symbols import normalize_symbol as _normalize_symbol
 
-import talib  # type: ignore
+try:
+    import talib  # type: ignore
 
-# TA-Lib is available, use real functions
-_TALIB_AVAILABLE = True
-_TALIB_IMPORT_ERROR = None
+    # TA-Lib is available, use real functions
+    _TALIB_AVAILABLE = True
+    _TALIB_IMPORT_ERROR = None
+except Exception as _err:  # pragma: no cover - optional C dependency
+    talib = None
+    _TALIB_AVAILABLE = False
+    _TALIB_IMPORT_ERROR = str(_err)
 from scipy import stats
 from sklearn.ensemble import (
     RandomForestClassifier,

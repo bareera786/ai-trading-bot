@@ -19,10 +19,11 @@ services:
       POSTGRES_DB: trading_bot
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Note: we don't publish the Postgres port to the host to avoid conflicts
+    # with any existing Postgres service on the host. Containers can access
+    # the DB via the service name 'db:5432' on the docker network.
 
 volumes:
   postgres_data:

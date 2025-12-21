@@ -40,6 +40,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code with proper ownership
 COPY --chown=trader:trader . .
 
+# Ensure directories used at runtime exist and are writable by the non-root user
+RUN mkdir -p /app/optimized_models /app/optimized_trade_data /app/ultimate_models && \
+    chown -R trader:trader /app/optimized_models /app/optimized_trade_data /app/ultimate_models
+
 # Expose port before CMD
 EXPOSE 5000
 

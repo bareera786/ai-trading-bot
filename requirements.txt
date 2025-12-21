@@ -27,6 +27,7 @@ eventlet==0.33.3
 Flask-SocketIO==5.3.2
 redis==5.0.1
 cachetools==5.4.0
+TA-Lib==0.4.24
 Flask-Limiter==3.5.0
 Flask-Mail==0.9.1
 itsdangerous==2.1.2

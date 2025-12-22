@@ -32,6 +32,7 @@ A comprehensive AI-powered cryptocurrency trading bot with advanced machine lear
 - **Configurable Profiles**: Multiple trading strategies with profile-scoped storage
 - **Logging & Monitoring**: Enterprise-grade logging with Prometheus metrics
 - **PostgreSQL Support**: Production-ready database with migrations
+   - **TimescaleDB (optional)**: Add `docker-compose.timeseries.yml` and `docker/timescaledb/init_timescale.sql` to run a TimescaleDB service optimized for storing candles and time-series data (see `docs/timescaledb.md`).
 - **Systemd Deployment**: Automated service management for VPS deployment
 - **Multi-User Support**: Tenant isolation with profile-based data separation
 - **Futures Trading**: Advanced leverage trading with risk controls

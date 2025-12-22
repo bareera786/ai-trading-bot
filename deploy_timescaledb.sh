@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# Find the project directory
+PROJECT_DIR=$(find /home -name ai-trading-bot -type d 2>/dev/null | head -1)
+if [ -z "$PROJECT_DIR" ]; then
+    PROJECT_DIR=$(find / -name ai-trading-bot -type d 2>/dev/null | head -1)
+fi
+
+if [ -z "$PROJECT_DIR" ]; then
+    echo "Project directory not found. Cloning repository..."
+    cd ~
+    git clone https://github.com/bareera786/ai-trading-bot.git
+    PROJECT_DIR=~/ai-trading-bot
+fi
+
+cd "$PROJECT_DIR"
+
 # Pull latest branch
 git fetch origin
 git checkout feature/timescaledb-integration

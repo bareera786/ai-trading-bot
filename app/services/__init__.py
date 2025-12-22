@@ -27,6 +27,7 @@ from .trading import (
     create_user_trader_resolver,
     record_user_trade,
 )
+from .timescaledb_service import TimescaleDBService
 from .trade_history import ComprehensiveTradeHistory
 
 __all__ = [
@@ -58,4 +59,5 @@ __all__ = [
     "create_user_trader_resolver",
     "record_user_trade",
     "ComprehensiveTradeHistory",
+    "TimescaleDBService",
 ]

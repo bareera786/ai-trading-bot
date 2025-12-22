@@ -84,6 +84,7 @@ from app.services import (
     ProfessionalPersistence,
     RealBinanceTrader,
     RealtimeUpdateService,
+    TimescaleDBService,
     evaluate_health_payload,
 )
 from app.services.binance import _coerce_bool
@@ -6139,99 +6140,182 @@ class UltimateMLTrainingSystem:
 
     # Keep existing methods but enhance with parallel processing
     def get_real_historical_data(self, symbol, years=1, interval="1d"):
-        """Get real historical data from Binance - ULTIMATE VERSION"""
+        """Get real historical data from Binance - ENHANCED WITH TIMESCALEDB"""
         try:
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=years * 365)
+
+            # First, try to get data from TimescaleDB
+            if (
+                hasattr(self, "timescaledb_service")
+                and self.timescaledb_service.is_available()
+            ):
+                cached_data = self.timescaledb_service.get_candles(
+                    symbol, interval, start_date, end_date
+                )
+                if cached_data is not None and not cached_data.empty:
+                    # Check if we have enough data
+                    expected_candles = self._estimate_candle_count(years, interval)
+                    if (
+                        len(cached_data) >= expected_candles * 0.8
+                    ):  # 80% of expected data
+                        self.log_training(
+                            symbol,
+                            f"📊 Retrieved {len(cached_data)} candles from TimescaleDB cache",
+                            80,
+                        )
+                        return cached_data
+
+                    # If we have some data but not enough, get the latest timestamp
+                    # and only fetch newer data from API
+                    latest_time = self.timescaledb_service.get_latest_candle_time(
+                        symbol, interval
+                    )
+                    if latest_time:
+                        start_date = latest_time
+                        self.log_training(
+                            symbol,
+                            f"📊 Found {len(cached_data)} cached candles, fetching from {latest_time}...",
+                            20,
+                        )
+
             self.log_training(
                 symbol,
                 f"📊 Fetching {years} years of {interval} data from Binance...",
                 10,
             )
 
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=years * 365)
-
-            start_ts = int(start_date.timestamp() * 1000)
-            end_ts = int(end_date.timestamp() * 1000)
-
-            url = "https://api.binance.com/api/v3/klines"
-            all_data = []
-            current_start = start_ts
-
-            while current_start < end_ts:
-                params = {
-                    "symbol": symbol,
-                    "interval": interval,
-                    "startTime": current_start,
-                    "endTime": end_ts,
-                    "limit": 1000,
-                }
-
-                try:
-                    response = requests.get(url, params=params, timeout=30)
-                    if response.status_code != 200:
-                        self.log_training(
-                            symbol, f"❌ API Error: {response.status_code}", 0
-                        )
-                        break
-
-                    data = response.json()
-                    if not data:
-                        break
-
-                    all_data.extend(data)
-
-                    current_start = data[-1][0] + 1
-
-                    progress = min(50, 10 + (len(all_data) / 1000) * 40)
-                    self.log_training(
-                        symbol, f"📥 Downloaded {len(all_data)} candles...", progress
-                    )
-
-                    if len(data) < 1000:
-                        break
-
-                    time.sleep(0.2)
-
-                except Exception as e:
-                    self.log_training(symbol, f"❌ Request error: {e}", 0)
-                    break
+            # Fetch from Binance API
+            all_data = self._fetch_binance_data(symbol, interval, start_date, end_date)
 
             if not all_data:
                 self.log_training(symbol, "❌ No data received from Binance", 0)
                 return self.generate_fallback_data(symbol, years)
 
             # Convert to DataFrame
-            df = pd.DataFrame(
-                all_data,
-                columns=[
-                    "open_time",
-                    "open",
-                    "high",
-                    "low",
-                    "close",
-                    "volume",
-                    "close_time",
-                    "quote_asset_volume",
-                    "number_of_trades",
-                    "taker_buy_base_asset_volume",
-                    "taker_buy_quote_asset_volume",
-                    "ignore",
-                ],
-            )
+            df = self._convert_binance_to_dataframe(all_data)
 
-            # Convert types
-            for col in ["open", "high", "low", "close", "volume"]:
-                df[col] = pd.to_numeric(df[col], errors="coerce")
+            # Store in TimescaleDB for future use
+            if (
+                hasattr(self, "timescaledb_service")
+                and self.timescaledb_service.is_available()
+            ):
+                stored_count = self.timescaledb_service.store_historical_data(
+                    symbol, interval, df
+                )
+                if stored_count > 0:
+                    self.log_training(
+                        symbol,
+                        f"💾 Stored {stored_count} candles in TimescaleDB",
+                        90,
+                    )
 
-            df["date"] = pd.to_datetime(df["open_time"], unit="ms")
-            df = df.dropna().reset_index(drop=True)
-
-            self.log_training(symbol, f"✅ Successfully loaded {len(df)} records", 60)
-            return df[["date", "open", "high", "low", "close", "volume"]]
+            self.log_training(symbol, f"✅ Successfully loaded {len(df)} records", 100)
+            return df
 
         except Exception as e:
             self.log_training(symbol, f"❌ Historical data error: {e}", 0)
             return self.generate_fallback_data(symbol, years)
+
+    def _estimate_candle_count(self, years, interval):
+        """Estimate the number of candles expected for given years and interval."""
+        intervals_minutes = {
+            "1m": 1,
+            "3m": 3,
+            "5m": 5,
+            "15m": 15,
+            "30m": 30,
+            "1h": 60,
+            "2h": 120,
+            "4h": 240,
+            "6h": 360,
+            "8h": 480,
+            "12h": 720,
+            "1d": 1440,
+            "3d": 4320,
+            "1w": 10080,
+            "1M": 43200,
+        }
+        minutes_per_year = 365 * 24 * 60
+        candles_per_year = minutes_per_year / intervals_minutes.get(interval, 1440)
+        return int(years * candles_per_year)
+
+    def _fetch_binance_data(self, symbol, interval, start_date, end_date):
+        """Fetch raw candle data from Binance API."""
+        start_ts = int(start_date.timestamp() * 1000)
+        end_ts = int(end_date.timestamp() * 1000)
+
+        url = "https://api.binance.com/api/v3/klines"
+        all_data = []
+        current_start = start_ts
+
+        while current_start < end_ts:
+            params = {
+                "symbol": symbol,
+                "interval": interval,
+                "startTime": current_start,
+                "endTime": end_ts,
+                "limit": 1000,
+            }
+
+            try:
+                response = requests.get(url, params=params, timeout=30)
+                if response.status_code != 200:
+                    self.log_training(symbol, f"❌ API Error: {response.status_code}", 0)
+                    break
+
+                data = response.json()
+                if not data:
+                    break
+
+                all_data.extend(data)
+
+                current_start = data[-1][0] + 1
+
+                progress = min(70, 20 + (len(all_data) / 1000) * 50)
+                self.log_training(
+                    symbol, f"📥 Downloaded {len(all_data)} candles...", progress
+                )
+
+                if len(data) < 1000:
+                    break
+
+                time.sleep(0.2)
+
+            except Exception as e:
+                self.log_training(symbol, f"❌ Request error: {e}", 0)
+                break
+
+        return all_data
+
+    def _convert_binance_to_dataframe(self, all_data):
+        """Convert raw Binance API data to DataFrame."""
+        df = pd.DataFrame(
+            all_data,
+            columns=[
+                "open_time",
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "close_time",
+                "quote_asset_volume",
+                "number_of_trades",
+                "taker_buy_base_asset_volume",
+                "taker_buy_quote_asset_volume",
+                "ignore",
+            ],
+        )
+
+        # Convert types
+        for col in ["open", "high", "low", "close", "volume"]:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+        df["date"] = pd.to_datetime(df["open_time"], unit="ms")
+        df = df.dropna().reset_index(drop=True)
+
+        return df[["date", "open", "high", "low", "close", "volume"]]
 
     def generate_fallback_data(self, symbol, years=1):
         """Generate realistic fallback data when API fails"""
@@ -8966,6 +9050,8 @@ class UltimateAIAutoTrader:
         self.positions = {}
         # NEW: Use ComprehensiveTradeHistory instead of EnhancedTradeHistory
         self.trade_history = ComprehensiveTradeHistory(log_callback=log_component_event)
+        # Initialize TimescaleDB service for efficient candle storage
+        self.timescaledb_service = TimescaleDBService(logger=bot_logger)
         self.trading_enabled = TRADING_CONFIG.get("auto_trade_enabled", False)
         self.paper_trading = False
         self.real_trader = RealBinanceTrader(

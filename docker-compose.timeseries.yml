@@ -10,7 +10,6 @@ services:
       - POSTGRES_DB=timescaledb
     volumes:
       - tsdata:/var/lib/postgresql/data
-      - ./docker/timescaledb:/docker-entrypoint-initdb.d
     ports:
       - "5434:5432"
     healthcheck:

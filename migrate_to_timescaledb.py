@@ -43,7 +43,7 @@ class TimescaleDBMigrator:
         db_port: int = 5434,
         db_name: str = "timescaledb",
         db_user: str = "timescale",
-        db_password: str = "",
+        db_password: str = "timescale_pass",
         binance_api_key: Optional[str] = None,
         binance_secret_key: Optional[str] = None,
     ):
@@ -55,7 +55,7 @@ class TimescaleDBMigrator:
             "password": db_password,
         }
 
-        # Initialize Binance client
+        # Initialize Binance client (historical klines work without API keys)
         self.binance_client = None
         if binance_api_key and binance_secret_key:
             self.binance_client = BinanceClient(binance_api_key, binance_secret_key)
@@ -66,9 +66,11 @@ class TimescaleDBMigrator:
             if api_key and secret_key:
                 self.binance_client = BinanceClient(api_key, secret_key)
             else:
-                logger.warning(
-                    "⚠️ No Binance API credentials provided. Using public endpoints only."
+                # Initialize client without credentials for public endpoints
+                logger.info(
+                    "🔓 Initializing Binance client for public endpoints (no API keys required for historical data)"
                 )
+                self.binance_client = BinanceClient(api_key="", api_secret="")
 
     def connect_db(self):
         """Establish database connection."""

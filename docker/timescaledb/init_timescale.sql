@@ -32,10 +32,10 @@ CREATE INDEX IF NOT EXISTS idx_candles_symbol_time ON candles (symbol, time DESC
 
 -- Enable compression for candles and add policy
 ALTER TABLE candles SET (timescaledb.compress = true, timescaledb.compress_segmentby = 'symbol');
-SELECT add_compression_policy('candles', compress_after => INTERVAL '1 day');
+SELECT add_compression_policy('candles', INTERVAL '1 day');
 
 -- Optional: retention policy to drop old ticks (keep 90 days)
-SELECT add_retention_policy('ticks', older_than => INTERVAL '90 days');
+SELECT add_retention_policy('ticks', INTERVAL '90 days');
 
 -- Continuous aggregate example (1m candles from ticks)
 CREATE MATERIALIZED VIEW IF NOT EXISTS one_min_candles

@@ -204,7 +204,9 @@ class ProfessionalPersistence:
         trader.positions = state.get("positions", {})
         trader.trading_enabled = state.get("trading_enabled", False)
         trader.paper_trading = state.get("paper_trading", True)
-        trader.futures_trading_enabled = state.get("futures_trading_enabled", False)
+        # Don't override futures_trading_enabled if it was already enabled (e.g., by auto-enabling logic)
+        if not getattr(trader, "futures_trading_enabled", False):
+            trader.futures_trading_enabled = state.get("futures_trading_enabled", False)
         trader.daily_pnl = state.get("daily_pnl", 0)
         trader.max_drawdown = state.get("max_drawdown", 0)
         trader.peak_balance = state.get("peak_balance", trader.initial_balance)

@@ -11,9 +11,13 @@ class HealthPage {
         this.refreshInterval = null;
         this.alerts = [];
         this.metrics = {};
+        this.initialized = false;
     }
 
     init() {
+        if (this.initialized) return;
+        this.initialized = true;
+        
         this.bindEvents();
         this.loadHealthData();
         this.startAutoRefresh();
@@ -274,7 +278,7 @@ export { healthPage };
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('health')) {
+    if (document.getElementById('health')?.classList.contains('active')) {
         healthPage.init();
     }
 });

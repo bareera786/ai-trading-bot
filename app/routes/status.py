@@ -709,6 +709,54 @@ def performance_metrics():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@status_bp.route("/api/system-metrics")
+def api_system_metrics():
+    """API endpoint for system metrics."""
+    try:
+        # Return dummy data for now
+        return jsonify({
+            "system": {
+                "cpu_percent": 45.2,
+                "memory_used_gb": 2.1,
+                "memory_percent": 52.3
+            },
+            "trading": {
+                "active_positions": 2,
+                "total_trades": 156,
+                "win_rate": 0.68
+            },
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        current_app.logger.error(f"Failed to get system metrics: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@status_bp.route("/api/alerts")
+def api_alerts():
+    """API endpoint for alerts."""
+    try:
+        return jsonify({
+            "alerts": [],
+            "summary": {"total": 0, "critical": 0, "warning": 0}
+        })
+    except Exception as e:
+        current_app.logger.error(f"Failed to get alerts: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@status_bp.route("/api/resource-recommendations")
+def api_resource_recommendations():
+    """API endpoint for resource recommendations."""
+    try:
+        return jsonify({
+            "recommendations": []
+        })
+    except Exception as e:
+        current_app.logger.error(f"Failed to get resource recommendations: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @status_bp.route("/metrics")
 def metrics():
     return Response(generate_latest(), mimetype="text/plain")

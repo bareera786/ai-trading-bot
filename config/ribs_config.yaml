@@ -1,0 +1,42 @@
+ribs:
+  # Archive settings
+  archive_type: "GridArchive"
+  archive_dimensions: [20, 20, 15]  # 3D behavior space
+  archive_ranges:
+    - [-1.0, 1.0]    # Sharpe ratio normalized
+    - [0.0, 50.0]    # Max drawdown (%)
+    - [0.0, 1.0]     # Win rate
+
+  # Emitter settings
+  emitter_type: "ImprovementEmitter"
+  num_emitters: 6
+  batch_size: 8
+  sigma0: 0.15       # Initial mutation strength
+
+  # Optimization settings
+  total_iterations: 2000
+  iterations_per_batch: 100
+  checkpoint_frequency: 100
+  # Minimum objective threshold for inserting into archive
+  # Lower (more negative) values make it easier to insert low-performing candidates
+  threshold_min: -30.0
+  # Progress reporting interval (iterations). Set to 1 for per-iteration updates.
+  progress_interval: 1
+
+  # Behavior descriptors (what we're optimizing for)
+  behavior_descriptors:
+    - name: "risk_adjusted_return"
+      weight: 0.4
+    - name: "drawdown_stability"
+      weight: 0.3
+    - name: "win_consistency"
+      weight: 0.3
+
+  # Solution parameters (trading bot settings)
+  solution_space:
+    indicators: ["RSI", "MACD", "BBANDS", "ATR"]
+    timeframes: ["1h", "4h", "1d"]
+    risk_multipliers: [0.5, 1.0, 1.5, 2.0]
+
+  # Solution dimension (number of parameters to optimize)
+  solution_dim: 10

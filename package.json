@@ -1,0 +1,11 @@
+{
+  "name": "ai-trading-bot-assets",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:assets": "node ./scripts/build-assets.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5"
+  }
+}

@@ -1,0 +1,79 @@
+version: '3.8'
+# Fixed: removed duplicate keys earlier — touch to refresh editor diagnostics
+
+services:
+  # Main AI Bot Application
+  ai-bot:
+    image: ai-bot-app:latest
+    container_name: ai-bot-container
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - config/deploy.env
+    depends_on:
+      - timescaledb
+      - redis
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; exit(0) if requests.get('http://localhost:5000/health').status_code == 200 else exit(1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # TimescaleDB for time-series data
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    container_name: ai-bot-timescaledb
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=timescale
+      - POSTGRES_PASSWORD=timescale_pass
+      - POSTGRES_DB=timescaledb
+    volumes:
+      - tsdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timescale -d timescaledb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching
+  redis:
+    image: redis:7
+    container_name: ai-bot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  # PostgreSQL for general data
+  postgres:
+    image: postgres:15
+    container_name: ai-bot-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=ai_bot
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Portainer for container management
+  portainer:
+    image: portainer/portainer-ce
+    container_name: portainer
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+
+volumes:
+  tsdata:
+  pgdata:
+  portainer_data:

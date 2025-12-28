@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trading-bot
+  labels:
+    app: trading-bot
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: trading-bot
+  template:
+    metadata:
+      labels:
+        app: trading-bot
+    spec:
+      containers:
+      - name: trading-bot
+        image: trading-bot:optimized
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+          name: http
+        resources:
+          requests:
+            memory: "512Mi"   # Optimized: Was 2Gi
+            cpu: "250m"       # Optimized: Was 1
+          limits:
+            memory: "1Gi"     # Optimized: Was 4Gi
+            cpu: "500m"       # Optimized: Was 2
+        # Health probes
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        # Environment variables
+        envFrom:
+        - configMapRef:
+            name: trading-bot-config
+        - secretRef:
+            name: trading-bot-secrets
+        # Volume mounts for persistence
+        volumeMounts:
+        - name: bot-persistence
+          mountPath: /app/bot_persistence
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: bot-persistence
+        persistentVolumeClaim:
+          claimName: trading-bot-persistence
+      - name: logs
+        persistentVolumeClaim:
+          claimName: trading-bot-logs
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        readOnlyRootFilesystem: false
+      # Node affinity for better performance
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - trading-bot-node

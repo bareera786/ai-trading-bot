@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin • Leads</title>
+    <link rel="stylesheet" href="{{ asset_url('auth.css') }}">
+    <style>
+        body {
+            background: #05070f;
+            color: #f6f7fb;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .page-header h1 {
+            font-size: 1.75rem;
+            margin: 0;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        th {
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .status-pill {
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            background: rgba(0, 212, 170, 0.12);
+            color: #00d4aa;
+        }
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+        }
+        .btn-link {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 999px;
+            padding: 0.4rem 1rem;
+            color: #f6f7fb;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+        .note {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body data-leads-api="{{ url_for('leads.list_leads') }}" data-export-url="{{ url_for('leads.list_leads', export='csv') }}">
+    <div class="page-header">
+        <h1>Lead Inbox</h1>
+        <div class="controls">
+            <a class="btn-link" href="{{ url_for('leads.list_leads', export='csv') }}">Download CSV</a>
+            <a class="btn-link" href="{{ url_for('dashboard_bp.dashboard') }}">Back to Dashboard</a>
+        </div>
+    </div>
+    <div class="card">
+        <div class="note">Showing latest {{ leads|length }} submissions. Page auto-refreshes every minute.</div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Company</th>
+                        <th>Status</th>
+                        <th>Source</th>
+                        <th>Submitted</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody data-leads-table>
+                    {% for lead in leads %}
+                    <tr>
+                        <td>{{ lead.name }}</td>
+                        <td>{{ lead.email }}</td>
+                        <td>{{ lead.company or '—' }}</td>
+                        <td><span class="status-pill">{{ lead.status }}</span></td>
+                        <td>{{ lead.source or 'marketing_form' }}</td>
+                        <td>{{ lead.created_at.strftime('%Y-%m-%d %H:%M') if lead.created_at else '—' }}</td>
+                        <td>{{ (lead.message or '')[:64] }}{% if lead.message and lead.message|length > 64 %}…{% endif %}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7">No leads captured yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script type="module" src="{{ asset_url('admin-leads.js') }}" defer></script>
+</body>
+</html>

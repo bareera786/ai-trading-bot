@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Trading Bot - Register</title>
+    <link rel="stylesheet" href="{{ asset_url('auth.css') }}">
+</head>
+<body class="auth-body auth-register">
+    <div class="register-container">
+        <div class="register-header">
+            <h1>🚀 AI Trading Bot</h1>
+            <p>Create your account to unlock the pro dashboard</p>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-success">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <div class="form-group">
+                <label class="form-label" for="username">Username</label>
+                <input type="text" id="username" name="username" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="email">Email Address</label>
+                <input type="email" id="email" name="email" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" id="password" name="password" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="confirm_password">Confirm Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="captcha">What is 3 + 4?</label>
+                <input type="text" id="captcha" name="captcha" class="form-input" required>
+            </div>
+            <button type="submit" class="btn">Create Account</button>
+        </form>
+
+        <div class="register-link">
+            Already have an account? <a href="{{ url_for('auth.login') }}">Sign in here</a>
+        </div>
+    </div>
+    {% if analytics and analytics.enabled and analytics.script_src %}
+        <script defer src="{{ analytics.script_src }}"{% if analytics.domain %} data-domain="{{ analytics.domain }}"{% endif %}{% if analytics.api_host %} data-api="{{ analytics.api_host }}"{% endif %}></script>
+    {% endif %}
+</body>
+</html>

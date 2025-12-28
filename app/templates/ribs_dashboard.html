@@ -1,0 +1,1850 @@
+<!-- jsHint ignore: start -->
+<!-- eslint-disable -->
+<!-- jshint ignore: start -->
+{% if is_full_page %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RIBS Dashboard - {{ version_label }}</title>
+    <!-- Plotly.js CDN for 3D visualization -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+{% endif %}
+{% if is_full_page %}
+<style>
+    /* Enhanced RIBS Dashboard Styles with Performance Optimizations */
+    .ribs-dashboard {
+        --primary: #2563eb;
+        --primary-light: #3b82f6;
+        --primary-dark: #1d4ed8;
+        --primary-gradient: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #1d4ed8 100%);
+        --bg-primary: #ffffff;
+        --bg-secondary: #f8fafc;
+        --bg-tertiary: #f1f5f9;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --border-color: #e2e8f0;
+        --success: #10b981;
+        --danger: #ef4444;
+        --info: #06b6d4;
+        --warning: #f59e0b;
+        --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        --font-size-sm: 14px;
+        --font-size-md: 16px;
+        --font-size-lg: 18px;
+        --font-size-xl: 24px;
+        --font-size-2xl: 32px;
+        --font-size-3xl: 48px;
+        --spacing-sm: 8px;
+        --spacing-md: 16px;
+        --spacing-lg: 24px;
+        --spacing-xl: 32px;
+        --spacing-2xl: 48px;
+        --radius-sm: 6px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-xl: 16px;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+        --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+        --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+        --shadow-xl: 0 20px 25px rgba(0,0,0,0.15);
+        --transition-fast: 0.15s ease;
+        --transition-normal: 0.2s ease;
+        --transition-slow: 0.3s ease;
+    }
+
+    /* Performance optimized animations */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    @keyframes slideIn {
+        from { transform: translateX(-100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Loading states */
+    .loading {
+        animation: pulse 1.5s ease-in-out infinite;
+        pointer-events: none;
+    }
+
+    .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--border-color);
+        border-radius: 50%;
+        border-top-color: var(--primary);
+        animation: spin 1s linear infinite;
+    }
+
+    .fade-in {
+        animation: fadeIn var(--transition-normal);
+    }
+
+    .slide-in {
+        animation: slideIn var(--transition-slow);
+    }
+
+    /* Only apply body styles when in full page mode - moved outside style block */
+
+    /* Enhanced responsive design */
+    @media (max-width: 768px) {
+        .ribs-dashboard {
+            --spacing-lg: 16px;
+            --spacing-xl: 20px;
+            --font-size-xl: 20px;
+            --font-size-2xl: 28px;
+        }
+
+        .ribs-dashboard .ribs-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: var(--spacing-md);
+        }
+
+        .ribs-dashboard .ribs-toolbar-actions {
+            justify-content: center;
+        }
+
+        .ribs-dashboard .ribs-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .ribs-dashboard .ribs-parameters .params-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .ribs-dashboard {
+            --spacing-md: 12px;
+            --spacing-lg: 16px;
+        }
+
+        .ribs-dashboard .stat-card {
+            padding: var(--spacing-md);
+        }
+
+        .ribs-dashboard .btn {
+            padding: 8px 12px;
+            font-size: var(--font-size-sm);
+        }
+    }
+
+    /* Real-time update indicators */
+    .realtime-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: var(--font-size-sm);
+        color: var(--text-secondary);
+    }
+
+    .realtime-indicator.active {
+        color: var(--success);
+    }
+
+    .realtime-indicator .pulse-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--success);
+        animation: pulse 2s infinite;
+    }
+
+    .realtime-indicator.inactive .pulse-dot {
+        background: var(--text-secondary);
+        animation: none;
+    }
+
+    .ribs-dashboard {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .ribs-dashboard h2 {
+        font-size: var(--font-size-3xl);
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-2xl);
+        text-align: center;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .ribs-dashboard .ribs-toolbar {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-xl);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: var(--shadow-md);
+    }
+
+    .ribs-dashboard .ribs-toolbar-title {
+        font-size: var(--font-size-xl);
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .ribs-dashboard .ribs-toolbar-actions {
+        display: flex;
+        gap: var(--spacing-md);
+    }
+
+    .ribs-dashboard .btn {
+        padding: 10px 16px;
+        border: none;
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+        cursor: pointer;
+        transition: all var(--transition-normal);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .ribs-dashboard .btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: width var(--transition-normal), height var(--transition-normal);
+    }
+
+    .ribs-dashboard .btn:active::before {
+        width: 300px;
+        height: 300px;
+    }
+
+    .ribs-dashboard .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .ribs-dashboard .btn:active {
+        transform: translateY(0);
+    }
+
+    .ribs-dashboard .btn.loading {
+        pointer-events: none;
+        position: relative;
+    }
+
+    .ribs-dashboard .btn.loading .btn-text {
+        opacity: 0.7;
+    }
+
+    .ribs-dashboard .btn.loading::after {
+        content: '';
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        width: 16px;
+        height: 16px;
+        border: 2px solid transparent;
+        border-top: 2px solid currentColor;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        transform: translateY(-50%);
+    }
+    .ribs-dashboard .btn-primary {
+        background: var(--primary);
+        color: white;
+    }
+    .ribs-dashboard .btn-secondary {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+    }
+    .ribs-dashboard .btn-info {
+        background: var(--info);
+        color: white;
+    }
+    .ribs-dashboard .btn-success {
+        background: var(--success);
+        color: white;
+    }
+    .ribs-dashboard .btn-danger {
+        background: var(--danger);
+        color: white;
+    }
+    .ribs-dashboard .btn-warning {
+        background: var(--warning);
+        color: white;
+    }
+    .ribs-dashboard .ribs-progress-overview {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        box-shadow: var(--shadow-md);
+    }
+
+    .ribs-dashboard .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .ribs-dashboard .progress-header h3 {
+        font-size: var(--font-size-xl);
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .ribs-dashboard .progress-indicators {
+        display: flex;
+        gap: var(--spacing-lg);
+    }
+
+    .ribs-dashboard .indicator {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm) var(--spacing-md);
+        background: var(--bg-tertiary);
+        border-radius: var(--radius-md);
+        min-width: 120px;
+    }
+
+    .ribs-dashboard .indicator-icon {
+        font-size: var(--font-size-lg);
+    }
+
+    .ribs-dashboard .indicator-text {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .ribs-dashboard .indicator-label {
+        font-size: var(--font-size-sm);
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .ribs-dashboard .indicator-value {
+        font-size: var(--font-size-md);
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .ribs-dashboard .main-progress-bar {
+        margin-top: var(--spacing-lg);
+    }
+
+    .ribs-dashboard .progress-container {
+        width: 100%;
+        height: 12px;
+        background: var(--bg-tertiary);
+        border-radius: 6px;
+        overflow: hidden;
+        margin-bottom: var(--spacing-sm);
+        position: relative;
+    }
+
+    .ribs-dashboard .progress-fill {
+        height: 100%;
+        background: var(--primary-gradient);
+        border-radius: 6px;
+        transition: width var(--transition-slow) ease;
+        position: relative;
+    }
+
+    .ribs-dashboard .progress-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        animation: shimmer 2s infinite;
+    }
+
+    /* Enhanced stat cards with hover effects */
+    .ribs-dashboard .stat-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-xl);
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+        transition: all var(--transition-normal);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .ribs-dashboard .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        transition: left var(--transition-slow);
+    }
+
+    .ribs-dashboard .stat-card:hover::before {
+        left: 100%;
+    }
+
+    .ribs-dashboard .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    /* Performance metrics display */
+    .performance-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: var(--spacing-md);
+        margin-top: var(--spacing-lg);
+    }
+
+    .metric-item {
+        background: var(--bg-primary);
+        padding: var(--spacing-md);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-color);
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+        transition: box-shadow var(--transition-normal);
+    }
+
+    .metric-item:hover {
+        box-shadow: var(--shadow-md);
+    }
+
+    .metric-value {
+        font-size: var(--font-size-xl);
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .metric-label {
+        font-size: var(--font-size-sm);
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .ribs-dashboard .progress-text {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: var(--font-size-sm);
+        color: var(--text-secondary);
+    }
+
+    .ribs-dashboard .ribs-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-2xl);
+    }
+
+    .ribs-dashboard .stat-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-xl);
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+        transition: box-shadow var(--transition-normal);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .ribs-dashboard .stat-card:hover {
+        box-shadow: var(--shadow-md);
+    }
+
+    .ribs-dashboard .stat-card h4 {
+        font-size: var(--font-size-md);
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: var(--spacing-md);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .ribs-dashboard .stat-card .big-number {
+        font-size: var(--font-size-3xl);
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .ribs-dashboard .stat-card .big-number.positive {
+        color: var(--success);
+    }
+
+    .ribs-dashboard .stat-card .big-number.negative {
+        color: var(--danger);
+    }
+
+    .ribs-dashboard .stat-card .subtitle {
+        font-size: var(--font-size-sm);
+        color: var(--text-secondary);
+        margin-top: var(--spacing-sm);
+    }
+
+    .ribs-dashboard .progress {
+        width: 100%;
+        height: 8px;
+        background: var(--bg-tertiary);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .ribs-dashboard .progress-bar {
+        height: 100%;
+        background: var(--primary-gradient);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    .ribs-visualization, .elite-strategies, .ribs-controls, .ribs-parameters, .ribs-logs {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        box-shadow: var(--shadow-sm);
+    }
+    .ribs-visualization h4, .elite-strategies h4, .ribs-controls h4, .ribs-parameters h4, .ribs-logs h4 {
+        font-size: var(--font-size-xl);
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-lg);
+        border-bottom: 2px solid var(--primary);
+        padding-bottom: var(--spacing-sm);
+    }
+
+    .ribs-dashboard .visualization-status {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-lg);
+        padding: var(--spacing-xl);
+        background: var(--bg-tertiary);
+        border-radius: var(--radius-lg);
+        border: 2px dashed var(--border-color);
+        text-align: center;
+        justify-content: center;
+    }
+
+    .ribs-dashboard .status-icon {
+        font-size: var(--font-size-3xl);
+        opacity: 0.6;
+    }
+
+    .ribs-dashboard .status-text {
+        text-align: left;
+    }
+
+    .ribs-dashboard .status-title {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .ribs-dashboard .status-description {
+        font-size: var(--font-size-md);
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+
+    #ribs-3d-plot {
+        width: 100%;
+        height: 500px;
+        border-radius: var(--radius-md);
+        overflow: hidden;
+    }
+    .ribs-dashboard .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 0;
+    }
+
+    .ribs-dashboard .table th,
+    .ribs-dashboard .table td {
+        padding: var(--spacing-md) var(--spacing-lg);
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .ribs-dashboard .table th {
+        background: var(--bg-tertiary);
+        font-weight: 600;
+        color: var(--text-primary);
+        text-transform: uppercase;
+        font-size: var(--font-size-sm);
+        letter-spacing: 0.5px;
+    }
+
+    .ribs-dashboard .table tbody tr:hover {
+        background: var(--bg-secondary);
+    }
+
+    .ribs-dashboard .table .btn-sm {
+        padding: 6px 12px;
+        font-size: var(--font-size-sm);
+        border-radius: var(--radius-sm);
+    }
+    .ribs-dashboard .control-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-md);
+        align-items: center;
+    }
+    .ribs-dashboard .ribs-parameters .params-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-md);
+    }
+    .ribs-dashboard .param-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--spacing-sm) var(--spacing-md);
+        background: var(--bg-tertiary);
+        border-radius: var(--radius-md);
+    }
+
+    .ribs-dashboard .param-item label {
+        font-weight: 500;
+        color: var(--text-secondary);
+    }
+
+    .ribs-dashboard .param-value {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    .ribs-dashboard .no-data {
+        text-align: center;
+        color: var(--text-secondary);
+        font-style: italic;
+        padding: var(--spacing-xl);
+    }
+
+    .ribs-dashboard .text-center {
+        text-align: center;
+    }
+
+    .ribs-dashboard .text-muted {
+        color: var(--text-secondary);
+    }
+
+    .ribs-dashboard .text-success {
+        color: var(--success);
+    }
+
+    .ribs-dashboard .text-danger {
+        color: var(--danger);
+    }
+
+    .ribs-dashboard .positive {
+        color: var(--success);
+    }
+
+    .ribs-dashboard .negative {
+        color: var(--danger);
+    }
+    #ribs-logs-container {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-lg);
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-size: var(--font-size-sm);
+        line-height: 1.4;
+    }
+    .ribs-dashboard .log-entry {
+        margin-bottom: var(--spacing-sm);
+        padding: var(--spacing-sm);
+        border-radius: var(--radius-sm);
+        background: var(--bg-primary);
+        border-left: 3px solid var(--info);
+    }
+    .ribs-dashboard .log-entry.error {
+        border-left-color: var(--danger);
+        background: rgba(239, 68, 68, 0.05);
+    }
+    .ribs-dashboard .log-entry.info {
+        border-left-color: var(--info);
+    }
+    .ribs-dashboard .log-entry.warning {
+        border-left-color: var(--warning);
+    }
+</style>
+{% endif %}
+{% if is_full_page %}
+<style>
+    body {
+        margin: 0;
+        padding: 24px;
+        background: var(--bg-secondary);
+        font-family: var(--font-family);
+        color: var(--text-primary);
+        line-height: 1.6;
+    }
+</style>
+{% endif %}
+<div class="ribs-dashboard" style="padding: 20px; background: #f8f9fa; border-radius: 10px; margin: 20px 0;">
+    <h2>RIBS Strategy Evolution</h2>
+
+    <!-- Progress Overview Section -->
+    <div class="ribs-progress-overview">
+        <div class="progress-header">
+            <h3>Optimization Progress</h3>
+            <div class="progress-indicators">
+                <div class="indicator">
+                    <div class="indicator-icon">🔄</div>
+                    <div class="indicator-text">
+                        <span class="indicator-label">Status</span>
+                        <span class="indicator-value" id="status-indicator">Checking...</span>
+                    </div>
+                </div>
+                <div class="indicator">
+                    <div class="indicator-icon">⏱️</div>
+                    <div class="indicator-text">
+                        <span class="indicator-label">Runtime</span>
+                        <span class="indicator-value" id="runtime-indicator">--:--:--</span>
+                    </div>
+                </div>
+                <div class="indicator">
+                    <div class="indicator-icon">📊</div>
+                    <div class="indicator-text">
+                        <span class="indicator-label">Iterations</span>
+                        <span class="indicator-value" id="iterations-indicator">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="main-progress-bar">
+            <div class="progress-container">
+                <div class="progress-fill" id="main-progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="progress-text">
+                <span id="progress-percentage">0%</span>
+                <span id="progress-description">Initializing RIBS optimization...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ribs-toolbar">
+        <div class="ribs-toolbar-title">RIBS Controls</div>
+        <div class="ribs-toolbar-actions">
+            <button class="btn btn-success" id="start-btn" onclick="startRIBSOptimization()">
+                <span class="btn-icon">▶️</span>
+                <span class="btn-text">Start Optimization</span>
+            </button>
+            <button class="btn btn-warning" id="pause-btn" onclick="pauseRIBSOptimization()" disabled>
+                <span class="btn-icon">⏸️</span>
+                <span class="btn-text">Pause</span>
+            </button>
+            <button class="btn btn-info" id="refresh-btn" onclick="refreshRIBSLogs(); scrollToRibsLogs();">
+                <span class="btn-icon">🔄</span>
+                <span class="btn-text">Refresh Logs</span>
+            </button>
+            <button class="btn btn-secondary" onclick="scrollToRibsLogs();">
+                <span class="btn-icon">📜</span>
+                <span class="btn-text">View Logs</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="ribs-stats">
+        <div class="stat-card">
+            <h4>Archive Coverage</h4>
+            <div class="progress">
+                <div class="progress-bar" id="coverage-progress"></div>
+            </div>
+            <span class="big-number">{{ ribs_optimization.coverage|default(0)|round(1) }}%</span>
+            <div class="subtitle">Quality Diversity Score</div>
+        </div>
+
+        <div class="stat-card">
+            <h4>Elite Strategies</h4>
+            <span class="big-number">{{ ribs_optimization.num_elites|default(0) }}</span>
+            <div class="subtitle">Optimized Trading Strategies</div>
+        </div>
+
+        <div class="stat-card">
+            <h4>Best Performance</h4>
+            <span class="big-number {{ 'positive' if ribs_optimization.best_objective|default(0) > 0 else 'negative' }}">
+                {{ ribs_optimization.best_objective|default(0)|round(2) }}%
+            </span>
+            <div class="subtitle">Total Return (Best Elite)</div>
+        </div>
+
+        <div class="stat-card">
+            <h4>QD Score</h4>
+            <span class="big-number">{{ ribs_optimization.qd_score|default(0)|round(2) }}</span>
+            <div class="subtitle">Quality Diversity Metric</div>
+        </div>
+    </div>
+
+    <!-- Performance Metrics Section -->
+    <div class="performance-metrics-section">
+        <h3>System Performance <span class="realtime-indicator active" id="performance-indicator">
+            <span class="pulse-dot"></span> Live
+        </span></h3>
+        <div class="performance-metrics" id="performance-metrics">
+            <div class="metric-item">
+                <div class="metric-value" id="predictions-per-sec">0.0</div>
+                <div class="metric-label">Predictions/sec</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value" id="cache-hit-rate">0%</div>
+                <div class="metric-label">Cache Hit Rate</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value" id="memory-usage">0%</div>
+                <div class="metric-label">Memory Usage</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value" id="cpu-usage">0%</div>
+                <div class="metric-label">CPU Usage</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value" id="active-threads">0</div>
+                <div class="metric-label">Active Threads</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value" id="api-latency">0ms</div>
+                <div class="metric-label">API Latency</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ribs-visualization">
+        <h4>Strategy Space Visualization</h4>
+        <div id="visualization-status" class="visualization-status">
+            <div class="status-icon">📊</div>
+            <div class="status-text">
+                <div class="status-title">Building Strategy Archive</div>
+                <div class="status-description">Visualization will appear once RIBS generates elite strategies. Start optimization to begin collecting data.</div>
+            </div>
+        </div>
+        <div id="ribs-3d-plot" style="display: none;"></div>
+        <script id="ribs-data" type="text/plain">{{ ribs_optimization|tojson }}</script>
+
+        <script>
+        (function(){
+        // RIBS Dashboard JavaScript functions (isolated scope)
+        const ribsData = JSON.parse(document.getElementById('ribs-data').textContent || '{}');
+
+        // Debug: Show what data we received
+        console.log('RIBS Data received:', ribsData);
+        console.log('behaviors_x length:', ribsData.behaviors_x ? ribsData.behaviors_x.length : 'undefined');
+        console.log('objectives length:', ribsData.objectives ? ribsData.objectives.length : 'undefined');
+
+        // Show debug info on page
+        const debugEl = document.getElementById('debug-info');
+        if (debugEl) {
+            debugEl.innerHTML = `
+                <strong>Debug Info:</strong><br>
+                behaviors_x: ${ribsData.behaviors_x ? ribsData.behaviors_x.length : 'undefined'} items<br>
+                objectives: ${ribsData.objectives ? ribsData.objectives.length : 'undefined'} items<br>
+                archive_stats: ${JSON.stringify(ribsData.archive_stats)}
+            `;
+        }
+
+        // Set dynamic styles
+        const progressBar = document.querySelector('.progress-bar');
+        if (progressBar) {
+            progressBar.style.width = (ribsData.coverage || 0) + '%';
+        }
+
+        // Plotly 3D visualization of RIBS archive
+        function showPlotlyError(message) {
+            document.getElementById('ribs-3d-plot').innerHTML = `<div class="no-data">${message}</div>`;
+        }
+
+        function ensurePlotlyLoaded(cb) {
+            if (window.Plotly) return cb();
+            const existing = document.getElementById('plotly-cdn');
+            if (existing) {
+                existing.addEventListener('load', cb);
+                existing.addEventListener('error', () => showPlotlyError('Plotly failed to load. Check network or install Plotly.'));
+                return;
+            }
+            const s = document.createElement('script');
+            s.id = 'plotly-cdn';
+            s.src = 'https://cdn.plot.ly/plotly-latest.min.js';
+            s.async = true;
+            s.onload = cb;
+            s.onerror = () => showPlotlyError('Plotly failed to load. Check network or install Plotly.');
+            document.head.appendChild(s);
+        }
+
+        // Detect Content Security Policy violations (e.g. blocking eval)
+        if (!window.__ribs_csp_listeners_added) {
+            window.__ribs_csp_listeners_added = true;
+            window.__ribs_plotly_blocked = false;
+            document.addEventListener('securitypolicyviolation', function (ev) {
+                try {
+                    const dir = (ev && ev.violatedDirective) ? String(ev.violatedDirective).toLowerCase() : '';
+                    if (dir.includes('unsafe-eval') || dir.includes('eval') || dir.includes('script-src')) {
+                        window.__ribs_plotly_blocked = true;
+                        console.warn('RIBS: CSP violation detected, falling back to safe canvas renderer.', ev);
+                    }
+                } catch (e) { /* ignore */ }
+            });
+        }
+
+        // Safe, CSP-friendly fallback: simple 2D canvas scatter plot (x vs y)
+        function safeCanvasPlot(ribsData) {
+            const container = document.getElementById('ribs-3d-plot');
+            if (!container) return;
+            container.innerHTML = '';
+            const canvas = document.createElement('canvas');
+            canvas.width = container.clientWidth || 800;
+            canvas.height = 400;
+            canvas.style.width = '100%';
+            canvas.style.height = '400px';
+            container.appendChild(canvas);
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+
+            const x = ribsData.behaviors_x || [];
+            const y = ribsData.behaviors_y || [];
+            const z = ribsData.behaviors_z || [];
+            const obj = ribsData.objectives || [];
+            const n = Math.min(x.length, y.length, obj.length);
+            if (n === 0) {
+                ctx.fillStyle = '#6c757d';
+                ctx.font = '14px sans-serif';
+                ctx.fillText('No RIBS data available yet. Optimization in progress...', 12, 24);
+                return;
+            }
+
+            // compute bounds
+            const xmin = Math.min.apply(null, x.slice(0,n));
+            const xmax = Math.max.apply(null, x.slice(0,n));
+            const ymin = Math.min.apply(null, y.slice(0,n));
+            const ymax = Math.max.apply(null, y.slice(0,n));
+
+            const pad = 20;
+            const w = canvas.width - pad*2;
+            const h = canvas.height - pad*2;
+
+            function sx(v) { return pad + ((v - xmin) / (xmax - xmin || 1)) * w; }
+            function sy(v) { return pad + h - ((v - ymin) / (ymax - ymin || 1)) * h; }
+
+            for (let i=0;i<n;i++) {
+                const xi = Number(x[i]) || 0;
+                const yi = Number(y[i]) || 0;
+                const oi = Number(obj[i]) || 0;
+                const cx = sx(xi);
+                const cy = sy(yi);
+                // color map: low->blue high->orange
+                const t = Math.max(0, Math.min(1, (oi - Math.min.apply(null,obj.slice(0,n))) / (Math.max.apply(null,obj.slice(0,n)) - Math.min.apply(null,obj.slice(0,n)) || 1)));
+                const r = Math.floor(255 * t);
+                const g = Math.floor(120 * (1 - t));
+                const b = Math.floor(200 * (1 - t));
+                ctx.beginPath();
+                ctx.fillStyle = `rgb(${r},${g},${b})`;
+                ctx.arc(cx, cy, 5, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            // axis labels
+            ctx.fillStyle = '#333';
+            ctx.font = '12px sans-serif';
+            ctx.fillText('Sharpe Ratio (x)', pad, canvas.height - 6);
+            ctx.fillText('Max Drawdown % (y)', canvas.width - 140, canvas.height - 6);
+        }
+
+        // Chart.js loader and renderer (CSP-friendly, richer than plain canvas)
+        function ensureChartJsLoaded(cb) {
+            if (window.Chart) return cb();
+            const existing = document.getElementById('chartjs-cdn');
+            if (existing) {
+                existing.addEventListener('load', cb);
+                existing.addEventListener('error', () => { console.warn('Chart.js failed to load'); cb(); });
+                return;
+            }
+            const s = document.createElement('script');
+            s.id = 'chartjs-cdn';
+            s.src = 'https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js';
+            s.async = true;
+            s.onload = cb;
+            s.onerror = () => { console.warn('Chart.js failed to load'); cb(); };
+            document.head.appendChild(s);
+        }
+
+        function renderChartJS(ribsData) {
+            try {
+                const container = document.getElementById('ribs-3d-plot');
+                if (!container) return;
+                // remove any existing children
+                container.innerHTML = '';
+                const canvas = document.createElement('canvas');
+                canvas.id = 'ribs-chart-canvas';
+                canvas.style.width = '100%';
+                canvas.style.height = '400px';
+                container.appendChild(canvas);
+
+                const x = ribsData.behaviors_x || [];
+                const y = ribsData.behaviors_y || [];
+                const obj = ribsData.objectives || [];
+                const n = Math.min(x.length, y.length, obj.length);
+                if (n === 0) {
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#6c757d';
+                    ctx.font = '14px sans-serif';
+                    ctx.fillText('No RIBS data available yet. Optimization in progress...', 12, 24);
+                    return;
+                }
+
+                const points = [];
+                const backgroundColors = [];
+                const minObj = Math.min.apply(null, obj.slice(0,n));
+                const maxObj = Math.max.apply(null, obj.slice(0,n));
+                for (let i=0;i<n;i++) {
+                    const xi = Number(x[i]) || 0;
+                    const yi = Number(y[i]) || 0;
+                    const oi = Number(obj[i]) || 0;
+                    const t = (oi - minObj) / (maxObj - minObj || 1);
+                    const r = Math.floor(220 * t + 35 * (1 - t));
+                    const g = Math.floor(80 * (1 - t) + 120 * t);
+                    const b = Math.floor(200 * (1 - t));
+                    backgroundColors.push(`rgba(${r},${g},${b},0.9)`);
+                    points.push({ x: xi, y: yi, r: 4 + Math.min(12, Math.abs(oi) / 50) });
+                }
+
+                // destroy previous chart if present
+                try { if (window.__ribs_chart_instance) { window.__ribs_chart_instance.destroy(); window.__ribs_chart_instance = null; } } catch (e) { }
+
+                const ctx = canvas.getContext('2d');
+                // Chart.js expects dataset configuration
+                const cfg = {
+                    type: 'bubble',
+                    data: {
+                        datasets: [{
+                            label: 'RIBS Archive (x:Sharpe, y:Drawdown)',
+                            data: points,
+                            backgroundColor: backgroundColors,
+                            borderColor: 'rgba(0,0,0,0.06)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, tooltip: { mode: 'nearest' } },
+                        scales: {
+                            x: { type: 'linear', title: { display: true, text: 'Sharpe Ratio' } },
+                            y: { type: 'linear', title: { display: true, text: 'Max Drawdown %' } }
+                        }
+                    }
+                };
+
+                // create chart
+                window.__ribs_chart_instance = new Chart(ctx, cfg);
+            } catch (e) {
+                console.warn('Chart.js render failed, falling back to canvas', e);
+                safeCanvasPlot(ribsData);
+            }
+        }
+
+        function renderRIBS3D(ribsData) {
+            const plotContainer = document.getElementById('ribs-3d-plot');
+            const statusContainer = document.getElementById('visualization-status');
+
+            const behaviorsX = ribsData.behaviors_x || [];
+            if (!(behaviorsX.length > 0 && behaviorsX.some(x => x !== null))) {
+                // Show status, hide plot
+                if (statusContainer) statusContainer.style.display = 'flex';
+                if (plotContainer) plotContainer.style.display = 'none';
+                return;
+            }
+
+            // Hide status, show plot
+            if (statusContainer) statusContainer.style.display = 'none';
+            if (plotContainer) plotContainer.style.display = 'block';
+
+            const behaviorsY = ribsData.behaviors_y || [];
+            const behaviorsZ = ribsData.behaviors_z || [];
+            const objectives = ribsData.objectives || [];
+
+            const plotData = [{
+                x: behaviorsX,
+                y: behaviorsY,
+                z: behaviorsZ,
+                mode: 'markers',
+                marker: {
+                    size: 8,
+                    color: objectives,
+                    colorscale: 'Viridis',
+                    showscale: true,
+                    colorbar: { title: 'Total Return %' }
+                },
+                type: 'scatter3d'
+            }];
+            const layout = {
+                title: 'RIBS Archive: Return vs Drawdown vs Win Rate',
+                scene: { xaxis: {title: 'Sharpe Ratio'}, yaxis: {title: 'Max Drawdown %'}, zaxis: {title: 'Win Rate'} },
+                margin: {l: 0, r: 0, t: 40, b: 0},
+                height: 500
+            };
+
+            ensurePlotlyLoaded(() => {
+                try {
+                    if (window.__ribs_plotly_blocked) {
+                        // Prefer Chart.js (richer) when Plotly is blocked
+                        ensureChartJsLoaded(() => renderChartJS(ribsData));
+                        return;
+                    }
+                    if (window.Plotly && typeof Plotly.react === 'function') {
+                        Plotly.react('ribs-3d-plot', plotData, layout);
+                    } else if (window.Plotly) {
+                        Plotly.newPlot('ribs-3d-plot', plotData, layout);
+                    } else {
+                        // No Plotly available after loading — try Chart.js then canvas
+                        ensureChartJsLoaded(() => {
+                            if (window.Chart) renderChartJS(ribsData); else safeCanvasPlot(ribsData);
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Plotly error:', e);
+                    try { if (e && String(e).toLowerCase().includes('csp')) window.__ribs_plotly_blocked = true; } catch(_){}
+                    ensureChartJsLoaded(() => { if (window.Chart) renderChartJS(ribsData); else safeCanvasPlot(ribsData); });
+                }
+            });
+        }
+
+        // Try to render immediately using server-provided data
+        renderRIBS3D(ribsData);
+
+        // Performance Metrics Real-time Updates
+        let performanceUpdateInterval;
+
+        function updatePerformanceMetrics() {
+            fetch('/api/performance/metrics')
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.metrics) {
+                        const metrics = data.metrics;
+                        document.getElementById('predictions-per-sec').textContent = metrics.predictions_per_second?.toFixed(1) || '0.0';
+                        document.getElementById('cache-hit-rate').textContent = Math.round(metrics.cache_hit_rate || 0) + '%';
+                        document.getElementById('memory-usage').textContent = Math.round(metrics.memory_usage || 0) + '%';
+                        document.getElementById('cpu-usage').textContent = Math.round(metrics.cpu_usage || 0) + '%';
+                        document.getElementById('active-threads').textContent = metrics.active_threads || 0;
+                        document.getElementById('api-latency').textContent = Math.round(metrics.api_latency || 0) + 'ms';
+
+                        // Update real-time indicator
+                        const indicator = document.getElementById('performance-indicator');
+                        if (indicator) {
+                            indicator.className = 'realtime-indicator active';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.warn('Failed to fetch performance metrics:', error);
+                    // Update indicator to show inactive state
+                    const indicator = document.getElementById('performance-indicator');
+                    if (indicator) {
+                        indicator.className = 'realtime-indicator inactive';
+                    }
+                });
+        }
+
+        function startPerformanceUpdates() {
+            // Initial update
+            updatePerformanceMetrics();
+
+            // Update every 5 seconds
+            performanceUpdateInterval = setInterval(updatePerformanceMetrics, 5000);
+        }
+
+        function stopPerformanceUpdates() {
+            if (performanceUpdateInterval) {
+                clearInterval(performanceUpdateInterval);
+                performanceUpdateInterval = null;
+            }
+        }
+
+        // Start performance monitoring when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startPerformanceUpdates);
+        } else {
+            startPerformanceUpdates();
+        }
+
+        // Stop updates when page unloads
+        window.addEventListener('beforeunload', stopPerformanceUpdates);
+
+        })();
+        </script>
+    </div>
+
+    <!-- Toast container for non-blocking notifications -->
+    <script>
+    // Helper to avoid redeclaring block-scoped variables in inline onclick handlers
+    if (typeof window.scrollToRibsLogs !== 'function') {
+        window.scrollToRibsLogs = function() {
+            const el = document.getElementById('ribs-logs-section');
+            if (el) el.scrollIntoView({behavior: 'smooth'});
+        };
+    }
+    </script>
+    <div id="ribs-toast-container" style="position:fixed;top:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:10px;"></div>
+
+    <div class="elite-strategies">
+        <h4>Top 5 Elite Strategies</h4>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Total Return</th>
+                    <th>Sharpe Ratio</th>
+                    <th>Max Drawdown</th>
+                    <th>Win Rate</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for strategy in ribs_optimization.elite_strategies|default([]) %}
+                <tr>
+                    <td>#{{ loop.index }}</td>
+                    <td class="{{ 'positive' if strategy.objective > 0 else 'negative' }}">
+                        {{ strategy.objective|round(2) }}%
+                    </td>
+                    <td>{{ strategy.behavior[0]|round(2) }}</td>
+                    <td>{{ strategy.behavior[1]|round(2) }}%</td>
+                    <td>{{ (strategy.behavior[2] * 100)|round(1) }}%</td>
+                    <td>
+                        <button class="btn btn-sm btn-success deploy-ribs-btn"
+                                data-strategy-id="{{ strategy.id|tojson }}">
+                            Deploy
+                        </button>
+                        <button class="btn btn-sm btn-info analyze-ribs-btn"
+                                data-strategy-id="{{ strategy.id|tojson }}">
+                            Analyze
+                        </button>
+                        <button class="btn btn-sm btn-warning export-ribs-btn"
+                                data-strategy-id="{{ strategy.id|tojson }}">
+                            Export
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not ribs_optimization.elite_strategies|default([]) %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted">
+                        No elite strategies found yet. RIBS optimization is running...
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="ribs-controls">
+        <h4>Optimization Controls</h4>
+        <div class="control-buttons">
+            <button class="btn btn-danger" onclick="resetRIBSArchive()">
+                <span>🔄</span> Reset Archive
+            </button>
+            <button class="btn btn-info" onclick="exportRIBSData()">
+                <span>💾</span> Export Archive
+            </button>
+            <button class="btn btn-secondary" onclick="refreshAllData()">
+                <span>🔄</span> Refresh All Data
+            </button>
+        </div>
+    </div>
+
+    <div class="ribs-parameters">
+        <h4>Strategy Parameters (Latest Elite)</h4>
+<script>
+// Poll ribs status and update the status widget
+// Updated to fix display issue and add progress indicators
+function updateRIBSStatusWidget() {
+    // Fetch both archive status and progress
+    fetch('/api/ribs/progress')
+    .then(r => r.json())
+    .then(data => {
+        // Update status indicator
+        const statusEl = document.getElementById('status-indicator');
+        if (statusEl) {
+            const running = data.running ? 'Running' : 'Idle';
+            statusEl.textContent = running;
+            statusEl.className = `indicator-value ${data.running ? 'text-success' : 'text-muted'}`;
+        }
+
+        // Update runtime indicator
+        const runtimeEl = document.getElementById('runtime-indicator');
+        if (runtimeEl && data.runtime_seconds) {
+            const hours = Math.floor(data.runtime_seconds / 3600);
+            const minutes = Math.floor((data.runtime_seconds % 3600) / 60);
+            const seconds = Math.floor(data.runtime_seconds % 60);
+            runtimeEl.textContent = `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+        }
+
+        // Update iterations indicator
+        const iterationsEl = document.getElementById('iterations-indicator');
+        if (iterationsEl) {
+            iterationsEl.textContent = data.current_iteration || 0;
+        }
+
+        // Update main progress bar
+        const progressFill = document.getElementById('main-progress-fill');
+        const progressPercent = document.getElementById('progress-percentage');
+        const progressDesc = document.getElementById('progress-description');
+
+        if (data.progress_percent != null) {
+            const percent = Math.max(0, Math.min(100, data.progress_percent));
+            if (progressFill) progressFill.style.width = percent + '%';
+            if (progressPercent) progressPercent.textContent = percent.toFixed(1) + '%';
+
+            // Update description based on progress
+            if (progressDesc) {
+                if (percent < 10) {
+                    progressDesc.textContent = 'Initializing RIBS optimization...';
+                } else if (percent < 30) {
+                    progressDesc.textContent = 'Exploring strategy space...';
+                } else if (percent < 60) {
+                    progressDesc.textContent = 'Building elite archive...';
+                } else if (percent < 90) {
+                    progressDesc.textContent = 'Refining best strategies...';
+                } else {
+                    progressDesc.textContent = 'Optimization complete!';
+                }
+            }
+        }
+
+        // Update button states
+        const startBtn = document.getElementById('start-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+
+        if (startBtn && pauseBtn) {
+            if (data.running) {
+                startBtn.disabled = true;
+                startBtn.innerHTML = '<span>▶️</span> Running';
+                pauseBtn.disabled = false;
+            } else {
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<span>▶️</span> Start Optimization';
+                pauseBtn.disabled = true;
+            }
+        }
+
+        // Update coverage progress bar
+        const coverageProgress = document.getElementById('coverage-progress');
+        if (coverageProgress && data.archive_stats) {
+            coverageProgress.style.width = (data.archive_stats.coverage || 0) + '%';
+        }
+    })
+    .catch(() => {
+        const statusEl = document.getElementById('status-indicator');
+        if (statusEl) {
+            statusEl.textContent = 'Error';
+            statusEl.className = 'indicator-value text-danger';
+        }
+    });
+}
+
+// Start polling every 2 seconds for live progress updates
+setInterval(updateRIBSStatusWidget, 2000);
+// Initial update
+updateRIBSStatusWidget();
+
+function showRibsToast(msg, kind = 'info') {
+    const container = document.getElementById('ribs-toast-container');
+    if (!container) return;
+    const el = document.createElement('div');
+    el.className = `toast toast-${kind}`;
+    el.textContent = msg;
+    container.appendChild(el);
+    setTimeout(() => { el.remove(); }, 5000);
+}
+
+        // Button loading state management
+        function setButtonLoading(buttonId, loading, text = null) {
+            const button = document.getElementById(buttonId);
+            if (!button) return;
+
+            if (loading) {
+                button.classList.add('loading');
+                if (text) {
+                    const textSpan = button.querySelector('.btn-text');
+                    if (textSpan) textSpan.textContent = text;
+                }
+                button.disabled = true;
+            } else {
+                button.classList.remove('loading');
+                button.disabled = false;
+            }
+        }
+
+function startRIBSOptimization() {
+    const startBtn = document.getElementById('start-btn');
+    setButtonLoading('start-btn', true, 'Starting...');
+
+    fetch('/api/ribs/start', {method: 'POST'})
+        .then(r => r.json())
+        .then(j => {
+            if (j && j.success) {
+                showRibsToast('RIBS optimization started', 'info');
+                setButtonLoading('start-btn', false, 'Running...');
+                document.getElementById('pause-btn').disabled = false;
+            } else {
+                showRibsToast('Failed to start RIBS: ' + (j.error || 'unknown'), 'danger');
+                setButtonLoading('start-btn', false);
+            }
+            setTimeout(updateRIBSStatusWidget, 800);
+        })
+        .catch(() => {
+            showRibsToast('Failed to start RIBS', 'danger');
+            setButtonLoading('start-btn', false);
+        });
+}
+
+function pauseRIBSOptimization() {
+    setButtonLoading('pause-btn', true, 'Pausing...');
+
+    fetch('/api/ribs/pause', {method: 'POST'})
+        .then(r => r.json())
+        .then(j => {
+            if (j && j.success) {
+                showRibsToast('RIBS optimization paused', 'info');
+                setButtonLoading('pause-btn', false);
+                document.getElementById('start-btn').disabled = false;
+            } else {
+                showRibsToast('Failed to pause RIBS: ' + (j.error || 'unknown'), 'danger');
+                setButtonLoading('pause-btn', false);
+            }
+            setTimeout(updateRIBSStatusWidget, 800);
+        })
+        .catch(() => {
+            showRibsToast('Failed to pause RIBS', 'danger');
+            setButtonLoading('pause-btn', false);
+        });
+}
+</script>
+
+        <!-- Params will be populated client-side via AJAX -->
+        <div id="ribs-params-content">
+            <div class="no-data">No parameter data available</div>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+// RIBS Dashboard JavaScript functions
+function deployRIBSStrategy(strategyId) {
+    if (!confirm(`Deploy RIBS strategy ${strategyId} to live trading?`)) return;
+
+    // Show a temporary 'starting' toast
+    const startToastId = showRibsToast('Starting deployment...', 'info', 5000);
+
+    fetch(`/api/ribs/deploy/${strategyId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (response.ok && data.success) {
+            showRibsToast('Strategy deployed successfully!', 'success', 4000);
+            // update UI after a short delay so the toast can be seen
+            setTimeout(() => location.reload(), 800);
+        } else {
+            const message = (data && (data.error || data.message)) || `Deployment failed (HTTP ${response.status})`;
+            showRibsToast(message, 'error', 8000);
+        }
+    })
+    .catch(error => {
+        showRibsToast('Error deploying strategy: ' + (error.message||error), 'error', 8000);
+    });
+}
+
+// Simple toast helper for the RIBS dashboard
+function showRibsToast(text, type='info', timeout=5000) {
+    const container = document.getElementById('ribs-toast-container');
+    if (!container) return null;
+    const toast = document.createElement('div');
+    toast.className = `ribs-toast ribs-toast-${type}`;
+    toast.textContent = text;
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+    toast.style.transform = 'translateY(-6px)';
+    container.appendChild(toast);
+    // animate in
+    requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; });
+    if (timeout > 0) setTimeout(() => {
+        toast.style.opacity = '0'; toast.style.transform = 'translateY(-6px)';
+        setTimeout(() => toast.remove(), 260);
+    }, timeout);
+    return toast;
+}
+
+function analyzeRIBSStrategy(strategyId) {
+    window.open(`/ribs/analyze/${strategyId}`, '_blank');
+}
+
+function exportRIBSParams(strategyId) {
+    fetch(`/api/ribs/export/${strategyId}`)
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ribs_strategy_${strategyId}_params.json`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    });
+}
+
+function startRIBSOptimization() {
+    const btn = document.getElementById('start-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Starting...';
+    }
+
+    fetch('/api/ribs/start', {method: 'POST'})
+        .then(r => r.json())
+        .then(j => {
+            if (j && j.success) {
+                showRibsToast('RIBS optimization started successfully!', 'success');
+                setTimeout(updateRIBSStatusWidget, 1000);
+            } else {
+                showRibsToast('Failed to start RIBS: ' + (j.error || 'unknown error'), 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>▶️</span> Start Optimization';
+                }
+            }
+        })
+        .catch((error) => {
+            showRibsToast('Network error starting RIBS: ' + error.message, 'error');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<span>▶️</span> Start Optimization';
+            }
+        });
+}
+
+function pauseRIBSOptimization() {
+    const btn = document.getElementById('pause-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Pausing...';
+    }
+
+    fetch('/api/ribs/pause', {method: 'POST'})
+        .then(r => r.json())
+        .then(j => {
+            if (j && j.success) {
+                showRibsToast('RIBS optimization paused successfully!', 'info');
+                setTimeout(updateRIBSStatusWidget, 1000);
+            } else {
+                showRibsToast('Failed to pause RIBS: ' + (j.error || 'unknown error'), 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>⏸️</span> Pause';
+                }
+            }
+        })
+        .catch((error) => {
+            showRibsToast('Network error pausing RIBS: ' + error.message, 'error');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<span>⏸️</span> Pause';
+            }
+        });
+}
+
+function resetRIBSArchive() {
+    if (!confirm('⚠️ Reset RIBS Archive?\n\nThis will permanently delete all optimization progress and elite strategies. This action cannot be undone.')) return;
+
+    const btn = event.target;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Resetting...';
+    }
+
+    fetch('/api/ribs/reset', {method: 'POST'})
+        .then(r => r.json())
+        .then(j => {
+            if (j && j.success) {
+                showRibsToast('RIBS archive reset successfully!', 'warning');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showRibsToast('Failed to reset archive: ' + (j.error || 'unknown error'), 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🔄</span> Reset Archive';
+                }
+            }
+        })
+        .catch((error) => {
+            showRibsToast('Network error resetting archive: ' + error.message, 'error');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🔄</span> Reset Archive';
+            }
+        });
+}
+
+function exportRIBSData() {
+    showRibsToast('Preparing archive export...', 'info');
+    fetch('/api/ribs/export')
+    .then(response => {
+        if (!response.ok) throw new Error('Export failed');
+        return response.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ribs_archive_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        showRibsToast('Archive exported successfully!', 'success');
+    })
+    .catch(error => {
+        showRibsToast('Export failed: ' + error.message, 'error');
+    });
+}
+
+function refreshAllData() {
+    showRibsToast('Refreshing all data...', 'info');
+    updateRIBSStatusWidget();
+    fetchAndRenderArchive();
+    fetchAndUpdateProgress();
+    refreshRIBSLogs();
+    setTimeout(() => showRibsToast('Data refreshed!', 'success'), 1000);
+}
+
+// Event listeners for RIBS strategy buttons
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.deploy-ribs-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            deployRIBSStrategy(this.dataset.strategyId);
+        });
+    });
+
+    document.querySelectorAll('.analyze-ribs-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            analyzeRIBSStrategy(this.dataset.strategyId);
+        });
+    });
+
+    document.querySelectorAll('.export-ribs-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            exportRIBSParams(this.dataset.strategyId);
+        });
+    });
+});
+</script>
+
+<div class="ribs-logs" id="ribs-logs-section">
+    <h4>RIBS Logs</h4>
+    <div id="ribs-logs-container">
+        <div id="ribs-logs-content">Loading logs...</div>
+    </div>
+    <button class="btn btn-info" onclick="refreshRIBSLogs()">Refresh Logs</button>
+</div>
+
+<script>
+// Function to refresh RIBS logs
+function refreshRIBSLogs() {
+    setButtonLoading('refresh-btn', true, 'Loading...');
+
+    const container = document.getElementById('ribs-logs-content');
+    container.textContent = 'Loading logs...';
+
+    fetch('/api/ribs/logs')
+    .then(r => r.json())
+    .then(data => {
+        if (data.logs && data.logs.length > 0) {
+            container.innerHTML = data.logs.map(log => `<div style="margin-bottom: 4px;">${log}</div>`).join('');
+        } else {
+            container.textContent = 'No RIBS logs found.';
+        }
+        setButtonLoading('refresh-btn', false);
+    })
+    .catch(error => {
+        container.textContent = 'Error loading logs: ' + error.message;
+        setButtonLoading('refresh-btn', false);
+    });
+}
+
+// Load logs on page load
+document.addEventListener('DOMContentLoaded', function() {
+    refreshRIBSLogs();
+});
+</script>
+
+<script>
+// Client-side updater: fetch archive (elite strategies) and progress and update UI
+async function fetchAndRenderArchive() {
+    try {
+        const res = await fetch('/api/ribs/export');
+        if (!res.ok) throw new Error('No archive');
+        const data = await res.json();
+        const elites = data.elite_strategies || [];
+        renderEliteTable(elites);
+        if (elites.length > 0) renderParams(elites[0]);
+    } catch (e) {
+        // archive export may not be available in some deployments; ignore silently
+        console.warn('Failed to fetch RIBS archive:', e);
+    }
+}
+
+function renderEliteTable(elites) {
+    const tbody = document.querySelector('.elite-strategies tbody');
+    if (!tbody) return;
+    if (!elites || elites.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No elite strategies found yet. RIBS optimization is running...</td></tr>`;
+        return;
+    }
+    const rows = elites.slice(0, 5).map((s, idx) => {
+        const id = s.id || `elite_${idx+1}`;
+        const objective = (typeof s.objective === 'number') ? `${s.objective.toFixed(2)}%` : (s.objective || '-');
+        const sharpe = (s.behavior && s.behavior[0] != null) ? Number(s.behavior[0]).toFixed(2) : '-';
+        const draw = (s.behavior && s.behavior[1] != null) ? `${Number(s.behavior[1]).toFixed(2)}%` : '-';
+        const win = (s.behavior && s.behavior[2] != null) ? `${(s.behavior[2]*100).toFixed(1)}%` : '-';
+        return `
+            <tr>
+                <td>#${idx+1}</td>
+                <td class="${s.objective>0 ? 'positive' : 'negative'}">${objective}</td>
+                <td>${sharpe}</td>
+                <td>${draw}</td>
+                <td>${win}</td>
+                <td>
+                    <button class="btn btn-sm btn-success deploy-ribs-btn" data-strategy-id="${id}">🚀 Deploy</button>
+                    <button class="btn btn-sm btn-info analyze-ribs-btn" data-strategy-id="${id}">📊 Analyze</button>
+                    <button class="btn btn-sm btn-warning export-ribs-btn" data-strategy-id="${id}">💾 Export</button>
+                </td>
+            </tr>`;
+    }).join('');
+    tbody.innerHTML = rows;
+    attachRIBSButtons();
+}
+
+function renderParams(latest) {
+    const container = document.getElementById('ribs-params-content');
+    if (!container) return;
+    if (!latest || !latest.params) {
+        container.innerHTML = `<div class="no-data">No parameter data available</div>`;
+        return;
+    }
+    const params = latest.params;
+    const items = Object.keys(params).map(k => {
+        const v = params[k];
+        const val = (typeof v === 'number') ? v.toFixed(3) : String(v);
+        const label = k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+        return `<div class="param-item"><label>${label}</label><span class="param-value">${val}</span></div>`;
+    }).join('');
+    container.innerHTML = `<div class="params-grid">${items}</div>`;
+}
+
+function attachRIBSButtons() {
+    document.querySelectorAll('.deploy-ribs-btn').forEach(btn => {
+        btn.onclick = function() { deployRIBSStrategy(this.dataset.strategyId); };
+    });
+    document.querySelectorAll('.analyze-ribs-btn').forEach(btn => {
+        btn.onclick = function() { analyzeRIBSStrategy(this.dataset.strategyId); };
+    });
+    document.querySelectorAll('.export-ribs-btn').forEach(btn => {
+        btn.onclick = function() { window.location = `/api/ribs/export/${this.dataset.strategyId}`; };
+    });
+}
+
+async function fetchAndUpdateProgress() {
+    try {
+        const r = await fetch('/api/ribs/progress');
+        if (!r.ok) return;
+        const data = await r.json();
+        // Update debug info panel
+        const debugEl = document.getElementById('debug-info');
+        if (debugEl) {
+            debugEl.innerHTML = `<strong>Debug Info:</strong><br>behaviors_x: ${data.behaviors_x ? data.behaviors_x.length : 0} items<br>objectives: ${data.objectives ? data.objectives.length : 0} items<br>archive_stats: ${JSON.stringify(data.archive_stats)}`;
+        }
+
+        // Update 3D plot if behaviors available
+        const px = data.behaviors_x || [];
+        if (px.length > 0) {
+            const py = data.behaviors_y || [];
+            const pz = data.behaviors_z || [];
+            const objectives = data.objectives || [];
+            const plotData = [{ x: px, y: py, z: pz, mode: 'markers', marker: {size: 8, color: objectives, colorscale: 'Viridis', showscale: true, colorbar: {title: 'Total Return %'} }, type: 'scatter3d' }];
+            const layout = { title: 'RIBS Archive: Return vs Drawdown vs Win Rate', scene: { xaxis: {title: 'Sharpe Ratio'}, yaxis: {title: 'Max Drawdown %'}, zaxis: {title: 'Win Rate'} }, margin: {l:0,r:0,t:40,b:0}, height: 500 };
+            if (window.__ribs_plotly_blocked) {
+                ensureChartJsLoaded(() => { if (window.Chart) renderChartJS(data); else safeCanvasPlot(data); });
+            } else if (window.Plotly) {
+                try { Plotly.react('ribs-3d-plot', plotData, layout); } catch (e) { Plotly.newPlot('ribs-3d-plot', plotData, layout); }
+            } else {
+                // No Plotly loaded yet — try Chart.js then canvas
+                ensureChartJsLoaded(() => { if (window.Chart) renderChartJS(data); else safeCanvasPlot(data); });
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to update progress:', e);
+    }
+}
+
+// Initial load and polling
+document.addEventListener('DOMContentLoaded', function() {
+    fetchAndRenderArchive();
+    fetchAndUpdateProgress();
+    setInterval(fetchAndRenderArchive, 10000); // every 10s
+    setInterval(fetchAndUpdateProgress, 5000); // every 5s
+});
+</script>
+{% if is_full_page %}
+</body>
+</html>
+{% endif %}
+<!-- jshint ignore: end -->
+<!-- eslint-enable -->

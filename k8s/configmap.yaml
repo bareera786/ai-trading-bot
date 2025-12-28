@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trading-bot-config
+  labels:
+    app: trading-bot
+data:
+  # Flask configuration
+  FLASK_ENV: "production"
+  FLASK_DEBUG: "false"
+
+  # Database configuration
+  DATABASE_URL: "postgresql://trading_user:trading_password@postgres-service:5432/trading_bot"
+
+  # Redis configuration
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+
+  # Application settings
+  SECRET_KEY: "your-secret-key-here"
+  JWT_SECRET_KEY: "your-jwt-secret-key-here"
+
+  # Trading configuration
+  BINANCE_API_URL: "https://api.binance.com"
+  BINANCE_TESTNET_API_URL: "https://testnet.binance.vision"
+
+  # ML configuration
+  ML_MODEL_PATH: "/app/models"
+  FEATURE_STORE_PATH: "/app/features"
+
+  # Logging
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+
+  # Performance settings
+  MAX_WORKERS: "4"
+  BATCH_SIZE: "1000"
+  CACHE_TTL: "300"
+
+  # Health check settings
+  HEALTH_CHECK_INTERVAL: "30"
+  METRICS_ENABLED: "true"

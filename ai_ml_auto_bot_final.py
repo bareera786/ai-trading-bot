@@ -2217,7 +2217,7 @@ OPTIMIZED_TRADING_CONFIG = {
     "periodic_rebuilding": True,
     "adaptive_risk_management": True,
     "continuous_training": True,
-    "futures_enabled": False,
+    "futures_enabled": True,
     "futures_initial_balance": 1000,
     "futures_max_leverage": 10,
     "futures_default_leverage": 3,

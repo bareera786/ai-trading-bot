@@ -51,7 +51,7 @@ export async function toggleSpotTrading() {
 }
 
 function updateSpotTradingButton(enabled) {
-  const button = document.getElementById('spot-toggle-btn');
+  const button = document.getElementById('toggle-spot-trading-btn');
   if (button) {
     button.textContent = enabled ? 'Disable Spot Trading' : 'Enable Spot Trading';
     button.className = enabled ? 'btn btn-danger' : 'btn btn-secondary';

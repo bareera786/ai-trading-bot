@@ -35,6 +35,7 @@ command -v ssh >/dev/null 2>&1 || { echo "❌ ssh is required but not installed.
 echo "📦 Step 1: Syncing files to VPS..."
 RSYNC_OPTS=(
     -rlt
+    --inplace
     --no-perms
     --no-owner
     --no-group

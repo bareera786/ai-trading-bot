@@ -7,6 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile.optimized
     container_name: ai-trading-bot-prod
+    user: "1000:1000"  # Match host user UID/GID
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -20,11 +21,13 @@ services:
       - BOT_PERSISTENCE_DIR=/app/bot_persistence
       - CONTAINER_UID=999
       - CONTAINER_GID=999
+      - PUID=1000
+      - PGID=1000
     env_file:
       - config/deploy.env
     volumes:
       # Persistent storage for bot state and logs
-      - ./bot_persistence:/app/bot_persistence
+      - ./bot_persistence:/app/bot_persistence:cached,rw
       # Model directories
       - ./ultimate_models:/app/ultimate_models
       - ./futures_models:/app/futures_models

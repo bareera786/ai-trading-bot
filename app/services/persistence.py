@@ -29,7 +29,9 @@ def ensure_persistence_dirs():
         base_path / profile / profile,
         base_path / profile / profile / "backups",
         base_path / profile / profile / "logs",
-        base_path / profile / profile / "models"
+        base_path / profile / profile / "models",
+        Path("/app/logs"),  # Application logs directory
+        Path("/app/bot_persistence"),  # Base persistence directory
     ]
     
     for directory in dirs_to_create:

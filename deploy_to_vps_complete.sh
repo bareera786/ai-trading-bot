@@ -113,6 +113,8 @@ echo "✅ Production config created on VPS"
 # Ensure persistence directory ownership is correct (run inside a short-lived container)
 echo "🔧 Adjusting ownership of persistence dir on VPS (if needed)"
 echo "🔧 Adjusting ownership of persistence and writable data dirs on VPS (if needed)"
+# First, chown the entire project directory
+$SSH_CMD "set -a && . $VPS_PATH/config/deploy.env.production && sudo chown -R \${CONTAINER_UID}: $VPS_PATH" || true
 # chown common data directories so the image user (appuser, UID/GID ${CONTAINER_UID}) can write
 $SSH_CMD "set -a && . $VPS_PATH/config/deploy.env.production && for p in bot_persistence futures_models optimized_models ultimate_models trade_data app/static app/templates api_routes; do if [ -d $VPS_PATH/\$p ]; then sudo chown -R \${CONTAINER_UID}: $VPS_PATH/\$p && sudo chmod -R u+rwX,g+rwX $VPS_PATH/\$p; fi; done" || true"
 

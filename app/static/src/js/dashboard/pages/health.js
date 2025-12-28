@@ -278,3 +278,8 @@ document.addEventListener('DOMContentLoaded', () => {
         healthPage.init();
     }
 });
+
+// Listen for page visibility
+window.addEventListener('dashboard:health-visible', () => {
+    healthPage.init();
+});

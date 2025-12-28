@@ -72,6 +72,9 @@ export function initNavigation() {
         if (pageId === 'trade-history') {
           window.dispatchEvent(new CustomEvent('dashboard:trade-history-visible'));
         }
+        if (pageId === 'health') {
+          window.dispatchEvent(new CustomEvent('dashboard:health-visible'));
+        }
       }
     });
   });

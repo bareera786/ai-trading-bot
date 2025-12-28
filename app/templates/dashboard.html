@@ -1987,7 +1987,13 @@
     <!-- SocketIO Client Library -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <!-- Dashboard Logic -->
     <script type="module" src="{{ asset_url('dashboard.js') }}?t={{ (current_time or 0) * 1000 }}" defer></script>
+
+    <!-- Page Scripts -->
+    <script type="module" src="{{ asset_url('health.js') }}?t={{ (current_time or 0) * 1000 }}" defer></script>
 </body>
 </html>

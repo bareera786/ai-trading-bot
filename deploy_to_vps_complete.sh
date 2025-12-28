@@ -114,7 +114,7 @@ echo "✅ Production config created on VPS"
 echo "🔧 Adjusting ownership of persistence dir on VPS (if needed)"
 echo "🔧 Adjusting ownership of persistence and writable data dirs on VPS (if needed)"
 # chown common data directories so the image user (appuser, UID/GID ${CONTAINER_UID}) can write
-$SSH_CMD "set -a && . $VPS_PATH/config/deploy.env.production && docker run --rm -v $VPS_PATH:/host busybox sh -c \"for p in bot_persistence futures_models optimized_models ultimate_models trade_data; do if [ -e /host/$p ]; then mkdir -p /host/$p || true; chown -R ${CONTAINER_UID}: /host/$p || true; chmod -R u+rwX,g+rwX /host/$p || true; fi; done\" || true"
+$SSH_CMD "set -a && . $VPS_PATH/config/deploy.env.production && docker run --rm -v $VPS_PATH:/host busybox sh -c \"for p in bot_persistence futures_models optimized_models ultimate_models trade_data app/static app/templates api_routes; do if [ -e /host/$p ]; then mkdir -p /host/$p || true; chown -R ${CONTAINER_UID}: /host/$p || true; chmod -R u+rwX,g+rwX /host/$p || true; fi; done\" || true"
 
 # Ensure reports directory and default health report exist so admin can load system health data
 echo "🔧 Ensuring default health report exists on VPS"

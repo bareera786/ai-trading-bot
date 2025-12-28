@@ -99,9 +99,23 @@ VPS_HOST=$VPS_HOST
 VPS_USER=$VPS_USER
 VPS_PATH=$VPS_PATH
 VPS_SSH_PORT=$VPS_SSH_PORT
+# Container user mapping for host mounts (match image 'appuser')
+CONTAINER_UID=999
+CONTAINER_GID=999
 EOF"
 
 echo "✅ Production config created on VPS"
+
+# Ensure persistence directory ownership is correct (run inside a short-lived container)
+echo "🔧 Adjusting ownership of persistence dir on VPS (if needed)"
+echo "🔧 Adjusting ownership of persistence and writable data dirs on VPS (if needed)"
+# chown common data directories so the image user (appuser, UID/GID ${CONTAINER_UID}) can write
+$SSH_CMD "set -a && . $VPS_PATH/config/deploy.env.production && docker run --rm -v $VPS_PATH:/host busybox sh -c \"for p in bot_persistence futures_models optimized_models ultimate_models trade_data; do if [ -e /host/$p ]; then mkdir -p /host/$p || true; chown -R ${CONTAINER_UID}: /host/$p || true; chmod -R u+rwX,g+rwX /host/$p || true; fi; done\" || true"
+
+# Ensure reports directory and default health report exist so admin can load system health data
+echo "🔧 Ensuring default health report exists on VPS"
+# Create reports dir and default report file and ensure correct ownership for the container user
+$SSH_CMD "mkdir -p $VPS_PATH/reports && if [ ! -f $VPS_PATH/reports/backtest_top10.json ]; then echo '{\"generated_at\": null, \"aggregate_summary\": {}, \"symbol_summaries\": {}}' > $VPS_PATH/reports/backtest_top10.json; fi && docker run --rm -v $VPS_PATH/reports:/host_reports busybox sh -c \"chown -R ${CONTAINER_UID}: /host_reports || true && chmod -R u+rwX,g+rwX /host_reports || true\" || true
 echo ""
 
 # Step 3: Deploy Docker service on VPS

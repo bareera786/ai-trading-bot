@@ -34,7 +34,14 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 WORKDIR /app
 
 # Copy installed Python packages from builder stage
-COPY --from=builder /root/.local /home/appuser/.local
+COPY --from=builder /root/.local /usr/local
+
+# Add idempotent entrypoint to ensure filesystem permissions for persistence
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Use the entrypoint to prepare volumes and then run the default command
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Copy only production code (exclude tests, docs, development files)
 COPY app/ ./app/

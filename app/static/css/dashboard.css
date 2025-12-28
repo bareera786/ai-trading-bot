@@ -1181,3 +1181,18 @@
 .ribs-dashboard .text-muted {
     color: var(--text-secondary);
 }
+
+/* Performance Chart Styles */
+.chart-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    margin: var(--spacing-lg) 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.chart-container canvas {
+    max-width: 100%;
+    height: auto !important;
+}

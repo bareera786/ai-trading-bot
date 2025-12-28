@@ -1,5 +1,7 @@
 import { fetchJson } from '../utils/network.js';
 
+let performanceChart = null;
+
 export async function refreshDashboardCards() {
   const data = await fetchJson('/api/status');
   if (!data || data.error) return;
@@ -30,6 +32,59 @@ export async function refreshDashboardCards() {
   }
 
   await loadUserDashboardData();
+  await updatePerformanceChart();
+}
+
+async function updatePerformanceChart() {
+  if (typeof Chart === 'undefined') return;
+
+  const ctx = document.getElementById('performance-chart');
+  if (!ctx) return;
+
+  // Fetch performance data
+  const data = await fetchJson('/api/performance_chart');
+  const chartData = data ? data.chart_data : {};
+  const labels = chartData.labels || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  const values = chartData.values || [10000, 10500, 10200, 10800, 10600, 11000];
+
+  if (!performanceChart) {
+    performanceChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Portfolio Value',
+          data: values,
+          borderColor: 'var(--primary)',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          tension: 0.4,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: false,
+            ticks: {
+              callback: function(value) {
+                return '$' + value.toLocaleString();
+              }
+            }
+          }
+        }
+      }
+    });
+  } else {
+    performanceChart.data.labels = labels;
+    performanceChart.data.datasets[0].data = values;
+    performanceChart.update();
+  }
 }
 
 export async function refreshRecentActivity() {

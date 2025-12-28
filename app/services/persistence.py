@@ -8,6 +8,7 @@ import shutil
 import threading
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable, Dict
 
 LoggerLike = logging.Logger
@@ -17,6 +18,37 @@ logger = logging.getLogger(__name__)
 
 def _default_noop(*_: Any, **__: Any) -> None:
     """Fallback noop for optional callbacks."""
+
+
+def ensure_persistence_dirs():
+    """Create persistence directories with proper permissions"""
+    base_path = Path("/app/bot_persistence")
+    profile = os.getenv("BOT_PROFILE", "default")
+    
+    dirs_to_create = [
+        base_path / profile / profile,
+        base_path / profile / profile / "backups",
+        base_path / profile / profile / "logs",
+        base_path / profile / profile / "models"
+    ]
+    
+    for directory in dirs_to_create:
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+            # Set permissions: owner RWX, group RX, others RX
+            directory.chmod(0o755)
+            logging.info(f"Created/verified directory: {directory}")
+        except PermissionError as e:
+            logging.warning(f"Permission error creating {directory}: {e}")
+            # Try with more permissive settings
+            try:
+                directory.chmod(0o777)
+            except:
+                pass
+        except Exception as e:
+            logging.error(f"Error creating {directory}: {e}")
+    
+    return base_path / profile / profile
 
 
 class ProfessionalPersistence:
@@ -50,6 +82,13 @@ class ProfessionalPersistence:
         historical_data,
     ) -> bool:
         """Persist the full bot state to disk."""
+        # Ensure directories exist first
+        persist_dir = ensure_persistence_dirs()
+        
+        # Update file paths to use the ensured directory
+        state_file = persist_dir / "bot_state.json"
+        backup_dir = persist_dir / "backups"
+        
         # Lightweight debug logging to help diagnose state mismatches
         try:
             # Print to stdout so container logs always show this regardless
@@ -98,8 +137,18 @@ class ProfessionalPersistence:
                 },
             }
 
-            self._create_backup()
-            with open(self.state_file, "w") as handle:
+            # Create backup directory if it doesn't exist
+            backup_dir.mkdir(exist_ok=True)
+            
+            # Create backup of current state if it exists
+            if state_file.exists():
+                backup_file = backup_dir / f"state_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                try:
+                    shutil.copy2(state_file, backup_file)
+                except Exception as e:
+                    logger.warning(f"Failed to create backup: {e}")
+            
+            with open(state_file, "w") as handle:
                 json.dump(state, handle, indent=2, default=str)
 
             self._save_critical_components(trader, ml_system)
@@ -110,11 +159,15 @@ class ProfessionalPersistence:
             return False
 
     def load_complete_state(self, trader, ml_system) -> bool:
-        if not os.path.exists(self.state_file):
+        # Ensure directories exist first
+        persist_dir = ensure_persistence_dirs()
+        state_file = persist_dir / "bot_state.json"
+        
+        if not state_file.exists():
             print("💾 No previous state found - starting fresh")
             return False
         try:
-            with open(self.state_file, "r") as handle:
+            with open(state_file, "r") as handle:
                 state = json.load(handle)
 
             if not self._check_version_compatibility(state.get("version", "1.0")):
@@ -193,7 +246,8 @@ class ProfessionalPersistence:
                 "models_loaded": list(ml_system.models.keys()),
                 "futures_manual_settings": self._futures_settings_getter() or {},
             }
-            critical_file = os.path.join(self.persistence_dir, "critical_state.json")
+            persist_dir = ensure_persistence_dirs()
+            critical_file = persist_dir / "critical_state.json"
             with open(critical_file, "w") as handle:
                 json.dump(critical_state, handle, indent=2, default=str)
         except Exception as exc:  # pragma: no cover
@@ -247,8 +301,9 @@ class ProfessionalPersistence:
 
     def _emergency_recovery(self, trader, ml_system) -> bool:
         try:
-            critical_file = os.path.join(self.persistence_dir, "critical_state.json")
-            if os.path.exists(critical_file):
+            persist_dir = ensure_persistence_dirs()
+            critical_file = persist_dir / "critical_state.json"
+            if critical_file.exists():
                 with open(critical_file, "r") as handle:
                     critical_state = json.load(handle)
 

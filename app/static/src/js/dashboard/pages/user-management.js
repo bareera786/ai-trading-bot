@@ -73,6 +73,8 @@ export async function refreshUsers() {
         <td>${user.created_at || 'Unknown'}</td>
         <td>
           <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="editUser('${user.username}')">Edit</button>
+          <button class="btn btn-info" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="viewUserActivity('${user.username}')">Activity</button>
+          <button class="btn btn-warning" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="updateUserPermissions('${user.username}')">Permissions</button>
           <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="assignSubscriptionToUser('${user.username}')">Subscription</button>
           <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteUser('${user.username}')">Delete</button>
         </td>
@@ -325,6 +327,121 @@ export async function assignSubscription() {
   }
 }
 
+export async function viewUserActivity(username) {
+  try {
+    const data = await fetchJson(`/api/users/${username}/activity`);
+    if (data.success) {
+      let activityHtml = `<h3>Activity for ${username}</h3><div style="max-height: 400px; overflow-y: auto;">`;
+      
+      if (data.activity && data.activity.length > 0) {
+        data.activity.forEach(activity => {
+          const timestamp = activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'Unknown';
+          activityHtml += `
+            <div style="border: 1px solid #ddd; margin: 5px 0; padding: 10px; border-radius: 5px;">
+              <strong>${activity.type.toUpperCase()}</strong> - ${timestamp}<br>
+              ${activity.description}
+              ${activity.details && Object.keys(activity.details).length > 0 ? 
+                '<br><small>Details: ' + JSON.stringify(activity.details, null, 2) + '</small>' : ''}
+            </div>
+          `;
+        });
+      } else {
+        activityHtml += '<p>No recent activity found.</p>';
+      }
+      
+      activityHtml += '</div>';
+      
+      // Show in a modal or alert for now
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); z-index: 1000; display: flex;
+        align-items: center; justify-content: center;
+      `;
+      modal.innerHTML = `
+        <div style="background: white; padding: 20px; border-radius: 10px; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+          ${activityHtml}
+          <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px;">Close</button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    } else {
+      alert('Failed to load user activity: ' + (data.error || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error('Failed to load user activity:', error);
+    alert('Failed to load user activity');
+  }
+}
+
+export async function updateUserPermissions(username) {
+  try {
+    // Get current user data first
+    const userData = await fetchJson(`/api/users/${username}`);
+    
+    // Create permission update modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 1000; display: flex;
+      align-items: center; justify-content: center;
+    `;
+    
+    modal.innerHTML = `
+      <div style="background: white; padding: 20px; border-radius: 10px; max-width: 400px;">
+        <h3>Update Permissions for ${username}</h3>
+        <form id="permissions-form">
+          <label><input type="checkbox" id="perm-admin" ${userData.is_admin ? 'checked' : ''}> Admin Access</label><br>
+          <label><input type="checkbox" id="perm-active" ${userData.is_active ? 'checked' : ''}> Account Active</label><br>
+          <label><input type="checkbox" id="perm-trade" checked> Can Trade</label><br>
+          <label><input type="checkbox" id="perm-backtest" checked> Can Backtest</label><br><br>
+          <button type="button" onclick="this.form.dispatchEvent(new Event('submit'))">Update</button>
+          <button type="button" onclick="this.parentElement.parentElement.remove()">Cancel</button>
+        </form>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Handle form submission
+    document.getElementById('permissions-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const permissions = {
+        is_admin: document.getElementById('perm-admin').checked,
+        is_active: document.getElementById('perm-active').checked,
+        can_trade: document.getElementById('perm-trade').checked,
+        can_backtest: document.getElementById('perm-backtest').checked
+      };
+      
+      try {
+        const response = await fetch(`/api/users/${username}/permissions`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(permissions)
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          alert('Permissions updated successfully');
+          modal.remove();
+          refreshUsers();
+        } else {
+          alert('Error: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Failed to update permissions:', error);
+        alert('Failed to update permissions');
+      }
+    });
+    
+  } catch (error) {
+    console.error('Failed to load user data for permissions:', error);
+    alert('Failed to load user permissions');
+  }
+}
+
 if (typeof window !== 'undefined') {
   window.addEventListener('dashboard:user-management-visible', () => refreshUsers());
   document.addEventListener('DOMContentLoaded', () => {
@@ -344,5 +461,7 @@ if (typeof window !== 'undefined') {
     assignSubscriptionToUser,
     closeAssignSubscriptionModal,
     assignSubscription,
+    viewUserActivity,
+    updateUserPermissions,
   });
 }

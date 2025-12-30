@@ -271,6 +271,45 @@ class MarketDataService:
                     opt_message,
                     optimized_crt_signal,
                 )
+
+                # Execute futures trades if futures trading is enabled
+                if (self.trading_config.get("futures_enabled") and
+                    getattr(self.ultimate_trader, "futures_trading_enabled", False) and
+                    self.ultimate_trader.futures_trader):
+
+                    # Use the same signals as spot trading for futures
+                    futures_success = False
+                    futures_message = "Futures trading not executed"
+
+                    # Simple futures trading logic: mirror spot trading decisions
+                    if success and message and "BUY" in message.upper():
+                        # Execute futures long position
+                        futures_response = self.ultimate_trader._submit_futures_order(
+                            symbol, "BUY", 0.001, leverage=3  # Small test position
+                        )
+                        if futures_response:
+                            futures_success = True
+                            futures_message = f"Futures LONG {symbol} executed"
+                            print(f"🤖 {futures_message}")
+                            self.dashboard_data["system_status"]["last_futures_trade"] = {
+                                "symbol": symbol,
+                                "message": futures_message,
+                                "timestamp": datetime.now(),
+                            }
+                    elif success and message and "SELL" in message.upper():
+                        # Execute futures short position
+                        futures_response = self.ultimate_trader._submit_futures_order(
+                            symbol, "SELL", 0.001, leverage=3  # Small test position
+                        )
+                        if futures_response:
+                            futures_success = True
+                            futures_message = f"Futures SHORT {symbol} executed"
+                            print(f"🤖 {futures_message}")
+                            self.dashboard_data["system_status"]["last_futures_trade"] = {
+                                "symbol": symbol,
+                                "message": futures_message,
+                                "timestamp": datetime.now(),
+                            }
             else:
                 ai_signals[symbol] = self._build_default_signal()
                 optimized_ai_signals[symbol] = self._build_default_signal()

@@ -54,6 +54,7 @@ COPY ai_ml_auto_bot_final.py .
 # Create necessary directories with proper permissions
 RUN mkdir -p bot_persistence/logs && \
     mkdir -p bot_persistence/default && \
+    mkdir -p logs && \
     mkdir -p config && \
     chown -R appuser:appuser /app
 

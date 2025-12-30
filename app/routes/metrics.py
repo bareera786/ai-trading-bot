@@ -347,10 +347,8 @@ def api_trades():
     except Exception:
         current_app.logger.exception("[MERGED_VIEW_ENTER] failed to log request intro")
     mode = request.args.get("mode", "ultimate").lower()
-    trader = _pick_trader(ctx, mode)
-    if not trader:
-        return jsonify({"error": f"Trader for mode '{mode}' is unavailable"}), 503
-
+    
+    # Define common parameters
     page = request.args.get("page", 1, type=int)
     symbol = request.args.get("symbol")
     days = request.args.get("days", type=int)
@@ -361,17 +359,50 @@ def api_trades():
         filters["symbol"] = symbol
     if days:
         filters["days"] = days
-    default_real_only = bool(getattr(trader, "real_trading_enabled", False))
-    if execution_mode:
-        filters["execution_mode"] = execution_mode
-    elif default_real_only:
-        filters["execution_mode"] = "real"
+    
+    # Handle "all" mode by combining trades from both traders
+    if mode == "all":
+        ultimate, optimized = _get_traders(ctx)
+        traders_to_query = []
+        if ultimate:
+            traders_to_query.append(("ultimate", ultimate))
+        if optimized:
+            traders_to_query.append(("optimized", optimized))
+        
+        if not traders_to_query:
+            return jsonify({"error": "No traders available"}), 503
+            
+        all_trades = []
+        for profile_name, trader in traders_to_query:
+            try:
+                trader_filters = filters.copy()
+                trader_trades = trader.trade_history.get_trade_history(trader_filters)
+                # Add profile info to each trade
+                for trade in trader_trades:
+                    trade["profile"] = profile_name.upper()
+                all_trades.extend(trader_trades)
+            except Exception as exc:
+                print(f"❌ Error fetching {profile_name} trade history: {exc}")
+                continue
+        
+        trades = all_trades
+        default_real_only = False  # Mixed modes, show all execution types
+    else:
+        trader = _pick_trader(ctx, mode)
+        if not trader:
+            return jsonify({"error": f"Trader for mode '{mode}' is unavailable"}), 503
 
-    try:
-        trades = trader.trade_history.get_trade_history(filters)
-    except Exception as exc:  # pragma: no cover - runtime defensive log
-        print(f"❌ Error fetching trade history: {exc}")
-        return jsonify({"error": str(exc)}), 500
+        default_real_only = bool(getattr(trader, "real_trading_enabled", False))
+        if execution_mode:
+            filters["execution_mode"] = execution_mode
+        elif default_real_only:
+            filters["execution_mode"] = "real"
+
+        try:
+            trades = trader.trade_history.get_trade_history(filters)
+        except Exception as exc:  # pragma: no cover - runtime defensive log
+            print(f"❌ Error fetching trade history: {exc}")
+            return jsonify({"error": str(exc)}), 500
 
     trades.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
 
@@ -480,9 +511,9 @@ def api_trades():
     return jsonify(
         {
             "trades": paginated,
-            "total_trades": len(trades),
+            "total_trades": len(combined) if merge_db else len(trades),
             "current_page": page,
-            "total_pages": max(1, (len(trades) + per_page - 1) // per_page),
+            "total_pages": max(1, (len(combined) if merge_db else len(trades)) // per_page + (1 if (len(combined) if merge_db else len(trades)) % per_page > 0 else 0)),
             "per_page": per_page,
             "mode": mode,
             "execution_mode": filters.get(

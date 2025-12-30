@@ -184,30 +184,61 @@ class ComprehensiveTradeHistory:
     ) -> list[Dict[str, Any]]:
         try:
             trades = self.load_trades()
+
+            # Also include futures trades from journal
+            futures_trades = []
+            journal_events = self.get_journal_events(event_type="FUTURES_ORDER")
+            for event in journal_events:
+                payload = event.get("payload", {})
+                if payload:
+                    # Convert journal event to trade format
+                    trade_record = {
+                        "trade_id": f"futures_{event.get('id', len(futures_trades) + 1)}",
+                        "timestamp": payload.get("timestamp", event.get("timestamp")),
+                        "symbol": payload.get("symbol"),
+                        "side": payload.get("side"),
+                        "action_type": "FUTURES_ORDER",
+                        "quantity": float(payload.get("quantity", 0)),
+                        "entry_price": 0.0,  # Futures orders don't have entry price in journal
+                        "total_value": 0.0,
+                        "exit_price": 0.0,
+                        "pnl": 0.0,  # P&L not tracked in journal for futures
+                        "status": payload.get("status", "UNKNOWN"),
+                        "execution_mode": "futures",
+                        "leverage": payload.get("leverage", 1),
+                        "reduce_only": payload.get("reduce_only", False),
+                        "testnet": payload.get("testnet", True),
+                    }
+                    futures_trades.append(trade_record)
+
+            # Combine regular trades with futures trades
+            all_trades = trades + futures_trades
+
             if filters:
                 if "symbol" in filters:
-                    trades = [t for t in trades if t.get("symbol") == filters["symbol"]]
+                    all_trades = [t for t in all_trades if t.get("symbol") == filters["symbol"]]
                 if "side" in filters:
-                    trades = [t for t in trades if t.get("side") == filters["side"]]
+                    all_trades = [t for t in all_trades if t.get("side") == filters["side"]]
                 if "status" in filters:
-                    trades = [t for t in trades if t.get("status") == filters["status"]]
+                    all_trades = [t for t in all_trades if t.get("status") == filters["status"]]
                 if "days" in filters:
                     cutoff_date = datetime.now() - timedelta(days=filters["days"])
-                    trades = [
+                    all_trades = [
                         t
-                        for t in trades
+                        for t in all_trades
                         if safe_parse_datetime(t.get("timestamp"))
                         and safe_parse_datetime(t.get("timestamp")) >= cutoff_date
                     ]
                 if "execution_mode" in filters:
                     desired_mode = filters["execution_mode"]
-                    trades = [
-                        t
-                        for t in trades
-                        if t.get("execution_mode", "paper") == desired_mode
-                    ]
-            trades.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
-            return trades
+                    if desired_mode == "futures":
+                        all_trades = [t for t in all_trades if t.get("execution_mode") == "futures"]
+                    elif desired_mode in ["real", "paper"]:
+                        all_trades = [t for t in all_trades if t.get("execution_mode") == desired_mode]
+                    # For "all", include all trades
+
+            all_trades.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+            return all_trades
         except Exception as exc:
             logging.getLogger(__name__).error("Error getting trade history: %s", exc)
             return []

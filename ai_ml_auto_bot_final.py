@@ -1982,12 +1982,56 @@ def setup_application_logging(log_dir):
     """Configure rotating file logging with optional console output and stdout capture."""
     if not log_dir:
         log_dir = os.path.join(os.getcwd(), "logs")
-    os.makedirs(log_dir, exist_ok=True)
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+    except PermissionError:
+        # In containerized environments, we may not have permission to create log directories
+        # Continue with logging setup but warn that file logging may not work
+        import logging
+        logging.getLogger("ai_trading_bot").warning(f"Could not create log directory {log_dir}, file logging disabled")
+        log_dir = None
+
+    if log_dir is None:
+        # File logging disabled due to permission issues
+        root_logger = logging.getLogger()
+        resolved_level = getattr(logging, LOGGING_LEVEL, logging.INFO)
+        root_logger.setLevel(min(resolved_level, logging.DEBUG))
+        
+        if LOGGING_ENABLE_CONSOLE:
+            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.setLevel(resolved_level)
+            console_formatter = logging.Formatter(
+                "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+            )
+            console_handler.setFormatter(console_formatter)
+            root_logger.addHandler(console_handler)
+
+        logging.getLogger("werkzeug").setLevel(logging.WARNING)
+
+        logger_instance = logging.getLogger("ai_trading_bot")
+
+        if isinstance(sys.stdout, _StdoutTee):
+            sys.stdout.configure(logger_instance, resolved_level)
+        else:
+            sys.stdout = _StdoutTee(sys.stdout, logger_instance, level=resolved_level)
+
+        if isinstance(sys.stderr, _StdoutTee):
+            sys.stderr.configure(logger_instance, logging.ERROR)
+        else:
+            sys.stderr = _StdoutTee(sys.stderr, logger_instance, level=logging.ERROR)
+
+        logger_instance.info(
+            "Logging initialized with console-only output (file logging disabled)",
+            extra={
+                "level": LOGGING_LEVEL,
+                "console_enabled": LOGGING_ENABLE_CONSOLE,
+                "file_logging_disabled": True,
+            },
+        )
+        return logger_instance
 
     log_path = os.path.join(log_dir, "bot.log")
     debug_path = os.path.join(log_dir, "bot.debug.log")
-
-    root_logger = logging.getLogger()
     # Prevent duplicate handlers when reinitialising
     for handler in list(root_logger.handlers):
         root_logger.removeHandler(handler)

@@ -241,3 +241,101 @@ def api_get_user_details(username):
     except Exception as exc:
         print(f"Error in /api/users/{username} GET: {exc}")
         return jsonify({"error": str(exc)}), 500
+
+
+@admin_users_bp.route("/users/<username>/activity", methods=["GET"])
+@admin_required
+def api_get_user_activity(username):
+    """Get user activity log."""
+    try:
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Get recent trades as activity
+        recent_trades = UserTrade.query.filter_by(user_id=user.id).order_by(
+            UserTrade.timestamp.desc()
+        ).limit(10).all()
+
+        activity = []
+        for trade in recent_trades:
+            activity.append({
+                "type": "trade",
+                "timestamp": trade.timestamp.isoformat() if trade.timestamp else None,
+                "description": f"Trade: {trade.symbol} {trade.side} {trade.quantity} @ {trade.price}",
+                "details": {
+                    "symbol": trade.symbol,
+                    "side": trade.side,
+                    "quantity": trade.quantity,
+                    "price": trade.price,
+                    "pnl": trade.pnl
+                }
+            })
+
+        # Add login activity if available
+        if user.last_login:
+            activity.append({
+                "type": "login",
+                "timestamp": user.last_login.isoformat(),
+                "description": "User logged in",
+                "details": {}
+            })
+
+        # Sort by timestamp descending
+        activity.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+
+        return jsonify({
+            "success": True,
+            "username": username,
+            "activity": activity[:20]  # Limit to 20 most recent
+        })
+
+    except Exception as exc:
+        print(f"Error in /api/users/{username}/activity GET: {exc}")
+        return jsonify({"error": str(exc)}), 500
+
+
+@admin_users_bp.route("/users/<username>/permissions", methods=["PUT"])
+@admin_required
+def api_update_user_permissions(username):
+    """Update user permissions and roles."""
+    try:
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        # Prevent self-demotion for security
+        if username == current_user.username and not coerce_bool(data.get("is_admin"), user.is_admin):
+            return jsonify({"error": "Cannot remove admin privileges from yourself"}), 400
+
+        user.is_admin = coerce_bool(data.get("is_admin"), user.is_admin)
+        user.is_active = coerce_bool(data.get("is_active"), user.is_active)
+
+        # Add additional permission fields if they exist in the model
+        if hasattr(user, 'can_trade'):
+            user.can_trade = coerce_bool(data.get("can_trade"), getattr(user, 'can_trade', True))
+        if hasattr(user, 'can_backtest'):
+            user.can_backtest = coerce_bool(data.get("can_backtest"), getattr(user, 'can_backtest', True))
+
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": f"Permissions updated for user {username}",
+            "user": {
+                "username": user.username,
+                "is_admin": user.is_admin,
+                "is_active": user.is_active,
+                "can_trade": getattr(user, 'can_trade', True),
+                "can_backtest": getattr(user, 'can_backtest', True)
+            }
+        })
+
+    except Exception as exc:
+        db.session.rollback()
+        print(f"Error in /api/users/{username}/permissions PUT: {exc}")
+        return jsonify({"error": str(exc)}), 500

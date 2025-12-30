@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile.optimized
     container_name: ai-trading-bot-prod
-    user: "1000:1000"  # Match host user UID/GID
+    user: "1001:1001"  # Match host user UID/GID
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -19,10 +19,10 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - BOT_PERSISTENCE_DIR=/app/bot_persistence
-      - CONTAINER_UID=999
-      - CONTAINER_GID=999
-      - PUID=1000
-      - PGID=1000
+      - CONTAINER_UID=1001
+      - CONTAINER_GID=1001
+      - PUID=1001
+      - PGID=1001
     env_file:
       - config/deploy.env
     volumes:
@@ -32,6 +32,9 @@ services:
       - ./ultimate_models:/app/ultimate_models
       - ./futures_models:/app/futures_models
       - ./optimized_models:/app/optimized_models
+      # Trade data directories
+      - ./trade_data:/app/trade_data
+      - ./optimized_trade_data:/app/optimized_trade_data
       # Persist health reports (visible to container and admin UI)
       - ./reports:/app/reports:rw
       # Read-only config (secrets should be in env vars)
@@ -52,10 +55,10 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          memory: 1G
+          memory: 2G
         reservations:
           cpus: '0.5'
-          memory: 512M
+          memory: 1G
 
   postgres:
     image: postgres:15-alpine

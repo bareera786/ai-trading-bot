@@ -75,6 +75,10 @@ def build_persistence_runtime(
     save_interval_minutes: int = 5,
 ) -> PersistenceRuntime:
     """Construct persistence/logging services for the AI runtime."""
+    
+    # Ensure all required directories exist before setting up logging
+    from app.services.persistence import ensure_persistence_dirs
+    ensure_persistence_dirs()
 
     profile_name = bot_profile or DEFAULT_BOT_PROFILE
 

@@ -14,9 +14,9 @@ ribs:
   sigma0: 0.15       # Initial mutation strength
 
   # Optimization settings
-  total_iterations: 2000
-  iterations_per_batch: 100
-  checkpoint_frequency: 100
+  total_iterations: 500
+  iterations_per_batch: 50
+  checkpoint_frequency: 50
   # Minimum objective threshold for inserting into archive
   # Lower (more negative) values make it easier to insert low-performing candidates
   threshold_min: -30.0

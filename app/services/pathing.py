@@ -84,7 +84,10 @@ def resolve_profile_path(
     profiled = base / BOT_PROFILE
 
     if migrate_legacy:
-        _migrate_legacy_directory(base, profiled)
+        try:
+            _migrate_legacy_directory(base, profiled)
+        except Exception as exc:
+            _LOGGER.warning(f"Legacy migration failed: {exc}")
 
     use_legacy = (
         BOT_PROFILE == "default"
@@ -96,7 +99,14 @@ def resolve_profile_path(
     target = base if use_legacy else profiled
 
     if ensure_exists:
-        target.mkdir(parents=True, exist_ok=True)
+        try:
+            target.mkdir(parents=True, exist_ok=True)
+        except PermissionError:
+            # In containerized environments, we may not have permission to create directories
+            # The application should handle directory creation as needed
+            _LOGGER.warning(f"Could not create directory {target}, application will create as needed")
+        except Exception as exc:
+            _LOGGER.warning(f"Failed to create directory {target}: {exc}")
     return str(target)
 
 

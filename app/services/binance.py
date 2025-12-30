@@ -86,7 +86,12 @@ class BinanceCredentialStore:
         encryption_key: Optional[Union[str, bytes]] = None,
     ) -> None:
         self.storage_dir = storage_dir
-        os.makedirs(self.storage_dir, exist_ok=True)
+        try:
+            os.makedirs(self.storage_dir, exist_ok=True)
+        except PermissionError:
+            # In containerized environments, we may not have permission to create directories
+            # Continue with credential storage but warn that persistence may not work
+            print(f"⚠️ Could not create credential storage directory {self.storage_dir}, credential persistence disabled")
         self.credential_file = credential_file or os.path.join(
             self.storage_dir, "binance_credentials.json"
         )

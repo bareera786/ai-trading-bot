@@ -1196,3 +1196,52 @@
     max-width: 100%;
     height: auto !important;
 }
+
+/* Trade History Enhancements */
+.trade-type-futures {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.trade-type-spot {
+    background: linear-gradient(135deg, #00d4aa, #00b894);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.trade-type-paper {
+    background: linear-gradient(135deg, #fdcb6e, #e17055);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Pagination Controls */
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+}
+
+.pagination-controls button {
+    min-width: 100px;
+}
+
+.pagination-controls #page-info {
+    color: var(--text-secondary);
+    font-weight: 500;
+}

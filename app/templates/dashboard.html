@@ -1111,12 +1111,30 @@
                             <span class="section-icon">📋</span>
                             Trade History
                         </h2>
-                        <div style="display: flex; gap: var(--spacing-md);">
-                            <select class="form-input" style="width: 150px;">
-                                <option>All Trades</option>
-                                <option>Profitable</option>
-                                <option>Losing</option>
+                        <div style="display: flex; gap: var(--spacing-md); align-items: center;">
+                            <select id="trade-mode-filter" class="form-input" style="width: 120px;">
+                                <option value="all">All Modes</option>
+                                <option value="ultimate" selected>Ultimate</option>
+                                <option value="optimized">Optimized</option>
                             </select>
+                            <select id="trade-filter-select" class="form-input" style="width: 150px;">
+                                <option value="all">All Trades</option>
+                                <option value="profitable">Profitable</option>
+                                <option value="losing">Losing</option>
+                                <option value="futures">Futures Only</option>
+                                <option value="spot">Spot Only</option>
+                            </select>
+                            <select id="trade-symbol-filter" class="form-input" style="width: 120px;">
+                                <option value="">All Symbols</option>
+                            </select>
+                            <select id="trade-days-filter" class="form-input" style="width: 100px;">
+                                <option value="">All Time</option>
+                                <option value="1">Last Day</option>
+                                <option value="7">Last Week</option>
+                                <option value="30">Last Month</option>
+                                <option value="90">Last 3 Months</option>
+                            </select>
+                            <button id="refresh-trades-btn" class="btn btn-secondary">Refresh</button>
                             <button class="btn btn-secondary">Export CSV</button>
                         </div>
                     </div>
@@ -1127,17 +1145,32 @@
                                 <tr>
                                     <th>Date</th>
                                     <th>Symbol</th>
+                                    <th>Type</th>
                                     <th>Side</th>
                                     <th>Quantity</th>
-                                    <th>Price</th>
-                                    <th>P&L</th>
+                                    <th>Entry Price</th>
+                                    <th>Exit Price</th>
+                                    <th>Leverage</th>
+                                    <th>P&L ($)</th>
+                                    <th>P&L (%)</th>
                                     <th>Status</th>
+                                    <th>Strategy</th>
+                                    <th>Confidence</th>
+                                    <th>Details</th>
                                 </tr>
                             </thead>
                             <tbody id="trade-history-table">
                                 <!-- Trade history will be populated here -->
                             </tbody>
                         </table>
+
+                        <!-- Pagination Controls -->
+                        <div id="trade-pagination" class="pagination-controls" style="display: none; margin-top: var(--spacing-lg); text-align: center;">
+                            <button id="prev-page-btn" class="btn btn-secondary" disabled>Previous</button>
+                            <span id="page-info" style="margin: 0 var(--spacing-md);">Page 1 of 1</span>
+                            <button id="next-page-btn" class="btn btn-secondary" disabled>Next</button>
+                            <span id="trade-count" style="margin-left: var(--spacing-md); font-size: var(--font-size-sm); color: var(--text-secondary);">Showing 0 trades</span>
+                        </div>
                     </div>
                 </section>
 
@@ -1819,6 +1852,12 @@
                                     <td>
                                         <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="editUser('admin')">
                                             Edit
+                                        </button>
+                                        <button class="btn btn-info" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="viewUserActivity('admin')">
+                                            Activity
+                                        </button>
+                                        <button class="btn btn-warning" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="updateUserPermissions('admin')">
+                                            Permissions
                                         </button>
                                         <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="assignSubscriptionToUser('admin')">
                                             Subscription

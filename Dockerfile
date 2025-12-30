@@ -1,8 +1,8 @@
 # Use a base image with Python 3.11
 FROM python:3.11-slim
 
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash trader
+# Create non-root user with UID 1000 to match host user
+RUN useradd --create-home --shell /bin/bash --uid 1000 --gid 1000 trader
 
 # Install system dependencies for building TA-Lib
 RUN apt-get update && apt-get install -y \
@@ -47,7 +47,7 @@ RUN npm install --silent --no-audit --no-fund || true
 
 
 # Copy application code with proper ownership
-COPY --chown=trader:trader . .
+COPY --chown=1000:1000 . .
 
 # Build frontend assets if build script exists
 RUN if [ -f package.json ] && npm run | grep -q "build:assets" ; then \
@@ -55,9 +55,9 @@ RUN if [ -f package.json ] && npm run | grep -q "build:assets" ; then \
         fi
 
 # Ensure directories used at runtime exist and are writable by the non-root user
-RUN mkdir -p /app/optimized_models /app/optimized_trade_data /app/ultimate_models /app/instance && \
-    chown -R trader:trader /app/optimized_models /app/optimized_trade_data /app/ultimate_models /app/instance && \
-    chown trader:trader /app
+RUN mkdir -p /app/optimized_models /app/optimized_trade_data /app/ultimate_models /app/instance /app/bot_persistence /app/bot_persistence/default /app/bot_persistence/default/default /app/bot_persistence/default/default/backups /app/bot_persistence/default/default/logs /app/bot_persistence/default/default/models /app/logs /app/artifacts /app/reports && \
+    chown -R 1000:1000 /app/optimized_models /app/optimized_trade_data /app/ultimate_models /app/instance /app/bot_persistence /app/logs /app/artifacts /app/reports && \
+    chown 1000:1000 /app
 
 # Expose port before CMD
 EXPOSE 5000

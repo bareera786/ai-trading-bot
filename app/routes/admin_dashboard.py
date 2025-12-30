@@ -37,25 +37,41 @@ def get_self_improvement_status():
         return jsonify({"error": str(e)}), 500
 
 
-@admin_dashboard_bp.route("/api/self-improvement/trigger-cycle", methods=["POST"])
+@admin_dashboard_bp.route("/api/admin/reset-statistics", methods=["POST"])
 @login_required
 @limiter.exempt
-def trigger_self_improvement_cycle():
-    """Manually trigger a self-improvement cycle."""
+def reset_statistics():
+    """Reset trading statistics and performance data."""
     if not getattr(current_user, "is_admin", False):
         return jsonify({"error": "Forbidden"}), 403
 
     try:
-        worker = get_self_improvement_worker()
-        if not worker:
-            return jsonify({"error": "Self-improvement worker not available"}), 503
-
-        # Trigger immediate cycle
-        worker.request_cycle("manual")
-
-        return jsonify({"message": "Self-improvement cycle triggered successfully"})
+        # Get the AI bot context
+        from app.routes.dashboard import _get_ai_bot_context
+        ctx = _get_ai_bot_context()
+        
+        # Reset statistics for both traders
+        ultimate_trader = ctx.get("ultimate_trader")
+        optimized_trader = ctx.get("optimized_trader")
+        
+        if ultimate_trader and hasattr(ultimate_trader, 'trade_history'):
+            ultimate_trader.trade_history.reset_statistics()
+            
+        if optimized_trader and hasattr(optimized_trader, 'trade_history'):
+            optimized_trader.trade_history.reset_statistics()
+        
+        # Reset dashboard data
+        dashboard_data = ctx.get("dashboard_data", {})
+        dashboard_data["performance"] = {}
+        dashboard_data["portfolio"] = {}
+        
+        return jsonify({
+            "success": True,
+            "message": "Trading statistics have been reset successfully"
+        })
+        
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Failed to reset statistics: {str(e)}"}), 500
 
 
 @admin_dashboard_bp.route("/api/self-improvement/auto-fix", methods=["POST"])

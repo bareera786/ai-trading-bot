@@ -28,7 +28,7 @@ FROM python:3.10-slim
         # SSL certificates for HTTPS requests
         ca-certificates \
         && rm -rf /var/lib/apt/lists/*# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN groupadd -r -g 1000 appuser && useradd -r -g appuser -u 1000 appuser
 
 # Set working directory
 WORKDIR /app
@@ -52,10 +52,9 @@ COPY pyproject.toml .
 COPY ai_ml_auto_bot_final.py .
 
 # Create necessary directories with proper permissions
-RUN mkdir -p bot_persistence/logs && \
-    mkdir -p bot_persistence/default && \
-    mkdir -p logs && \
-    mkdir -p config && \
+RUN mkdir -p bot_persistence/default/default/backups bot_persistence/default/default/logs bot_persistence/default/default/models && \
+    mkdir -p logs artifacts reports optimized_models optimized_trade_data ultimate_models futures_models && \
+    mkdir -p trade_data instance && \
     chown -R appuser:appuser /app
 
 # Switch to non-root user

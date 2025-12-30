@@ -71,7 +71,7 @@ function populateTradeHistoryTable(trades) {
 
   if (trades.length === 0) {
     const row = document.createElement('tr');
-    row.innerHTML = '<td colspan="14" style="text-align: center; padding: 2rem;">No trades found</td>';
+    row.innerHTML = '<td colspan="8" style="text-align: center; padding: 2rem;">No trades found</td>';
     tbody.appendChild(row);
     return;
   }
@@ -125,14 +125,8 @@ function populateTradeHistoryTable(trades) {
       <td><span class="trade-type-${tradeType.toLowerCase()}">${tradeType}</span></td>
       <td>${trade.side || 'N/A'}</td>
       <td>${(Number(trade.quantity || trade.qty) || 0).toFixed(4)}</td>
-      <td>$${entryPrice.toFixed(4)}</td>
-      <td>${exitPrice > 0 ? '$' + exitPrice.toFixed(4) : '-'}</td>
-      <td>${leverage}</td>
       <td class="${pnlClass}"><strong>${pnlText}</strong></td>
-      <td class="${pnlPercentClass}"><strong>${pnlPercentText}</strong></td>
       <td><span class="status-indicator status-${statusClass}">${status.toUpperCase()}</span></td>
-      <td style="font-size: 11px;">${strategy}</td>
-      <td>${confidence}</td>
       <td>${detailsBtn}</td>
     `;
 

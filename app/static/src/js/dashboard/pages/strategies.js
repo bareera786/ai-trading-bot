@@ -290,6 +290,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Page visibility event listener
+window.addEventListener('dashboard:strategies-visible', () => {
+  refreshStrategies();
+});
+
 if (typeof window !== 'undefined') {
   Object.assign(window, {
     refreshStrategies,

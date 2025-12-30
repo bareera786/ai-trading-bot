@@ -11,6 +11,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict
 
+from app.config import Config
+
 LoggerLike = logging.Logger
 
 logger = logging.getLogger(__name__)
@@ -22,7 +24,7 @@ def _default_noop(*_: Any, **__: Any) -> None:
 
 def ensure_persistence_dirs():
     """Create persistence directories with proper permissions"""
-    base_path = Path("/app/bot_persistence")
+    base_path = Config.DATA_DIR
     profile = os.getenv("BOT_PROFILE", "default")
     
     dirs_to_create = [
@@ -30,7 +32,7 @@ def ensure_persistence_dirs():
         base_path / profile / profile / "backups",
         base_path / profile / profile / "logs",
         base_path / profile / profile / "models",
-        Path("/app/bot_persistence"),  # Base persistence directory
+        base_path,  # Base persistence directory
     ]
     
     for directory in dirs_to_create:

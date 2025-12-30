@@ -130,8 +130,8 @@ echo "⚙️  Step 3: Deploying Docker Compose on VPS..."
 
 SSH_CMD="ssh -p $VPS_SSH_PORT $VPS_USER@$VPS_HOST"
 
-$SSH_CMD "cd $VPS_PATH && docker compose -f docker-compose.prod.yml build --pull ai-trading-bot"
-$SSH_CMD "cd $VPS_PATH && docker compose -f docker-compose.prod.yml up -d ai-trading-bot"
+# Use the fixed deployment script
+$SSH_CMD "cd $VPS_PATH && chmod +x deploy_with_fix.sh && ./deploy_with_fix.sh"
 
 echo "✅ Docker deployment completed"
 echo ""

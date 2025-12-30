@@ -179,9 +179,9 @@ function init() {
 }
 
 if (typeof window !== 'undefined') {
-  window.addEventListener('dashboard:symbols-visible', init, { once: true });
+  window.addEventListener('dashboard:symbol-management-visible', init, { once: true });
   document.addEventListener('DOMContentLoaded', () => {
-    const section = document.getElementById('symbols');
+    const section = document.getElementById('symbol-management');
     if (section && section.classList.contains('active')) {
       init();
     }

@@ -1980,6 +1980,9 @@ class _StdoutTee(io.TextIOBase):
 
 def setup_application_logging(log_dir):
     """Configure rotating file logging with optional console output and stdout capture."""
+    import logging
+    import sys
+    
     if not log_dir:
         log_dir = os.path.join(os.getcwd(), "logs")
     try:
@@ -1987,13 +1990,14 @@ def setup_application_logging(log_dir):
     except PermissionError:
         # In containerized environments, we may not have permission to create log directories
         # Continue with logging setup but warn that file logging may not work
-        import logging
         logging.getLogger("ai_trading_bot").warning(f"Could not create log directory {log_dir}, file logging disabled")
         log_dir = None
 
+    # Always get the root logger first
+    root_logger = logging.getLogger()
+
     if log_dir is None:
         # File logging disabled due to permission issues
-        root_logger = logging.getLogger()
         resolved_level = getattr(logging, LOGGING_LEVEL, logging.INFO)
         root_logger.setLevel(min(resolved_level, logging.DEBUG))
         

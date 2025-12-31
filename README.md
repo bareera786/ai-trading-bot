@@ -297,6 +297,23 @@ source .venv/bin/activate
 pytest tests/test_profile_pathing.py
 ```
 
+## 🧪 Integration tests (opt-in)
+
+Integration tests are more extensive and may interact with an in-memory DB or other test-only resources. We run them as an **opt-in** workflow to avoid long CI runs for every PR.
+
+- Run locally:
+
+```bash
+# Use test mode so the app uses an in-memory DB
+export AI_BOT_TEST_MODE=1
+export SKIP_RUNTIME_BOOTSTRAP=1
+pytest -q -m integration tests/integration/test_user_trade_recording.py
+```
+
+- Run in CI: add the `run-integration` label to your pull request (via the GitHub UI). The `Integration Tests` workflow will trigger automatically when that label is added.
+
+Note: The integration workflow also supports manual runs via the Actions UI (workflow_dispatch), and it intentionally disables the coverage fail-under check so integration runs won't fail the main coverage gate.
+
 The suite provisions temporary `BOT_PROFILE` values (e.g., `alpha`, `bravo`) and verifies that:
 
 - `resolve_profile_path()` routes persistence assets to distinct folders per profile and leaves prior data untouched.

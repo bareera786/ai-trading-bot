@@ -370,6 +370,8 @@ export function initTradeHistory() {
 
   // Setup filters and pagination
   setupFilters();
+  // Additional filter wiring (kept modular to avoid duplicate declaration issues)
+  setupAdditionalFilters();
 
   // Handle export button
   const exportBtn = document.querySelector('#trade-history .btn-secondary');
@@ -385,7 +387,7 @@ export function initTradeHistory() {
   }
 }
 
-function setupFilters() {
+function setupAdditionalFilters() {
   // Mode filter
   const modeFilter = document.getElementById('trade-mode-filter');
   if (modeFilter) {

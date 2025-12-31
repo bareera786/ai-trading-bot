@@ -1,0 +1,66 @@
+{
+  "base": "http://127.0.0.1:5001",
+  "requests": [
+    {
+      "url": "http://127.0.0.1:5001/_whoami",
+      "method": "GET",
+      "status_code": 404
+    },
+    {
+      "url": "http://127.0.0.1:5001/_ensure_testadmin",
+      "method": "POST",
+      "status_code": 404
+    },
+    {
+      "url": "http://127.0.0.1:5001/login",
+      "method": "GET",
+      "status_code": 200
+    },
+    {
+      "url": "http://127.0.0.1:5001/login",
+      "method": "POST",
+      "status_code": 302
+    },
+    {
+      "url": "http://127.0.0.1:5001/dashboard",
+      "method": "GET",
+      "status_code": 200
+    }
+  ],
+  "cookies": [
+    {
+      "name": "session",
+      "value": ".eJw9zjEOwjAMQNG7ZGaw48R2ehlkx45gbemEuDsdEONbvv673Neex6Nsr_3MW7k_o2yl0pAIUIsQMc5KyMtFGUYA8dBB4rRAF3gqcdfGCNCpLgC2bAMhEEjDKw4azBIu5skTJkjYah1b4zoduxj61bYK08iaKkq5Rs4j99_Nxb_q5wtq-zFz.aVUFnQ.tqYjWSuGVOkI3qipO6pvIJQOd5c",
+      "domain": "127.0.0.1",
+      "path": "/"
+    }
+  ],
+  "whoami": {
+    "status": 404,
+    "text": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>\n"
+  },
+  "ensure_testadmin": {
+    "status": 404,
+    "text": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>\n"
+  },
+  "login_csrf": false,
+  "post_login_response": {
+    "status": 302,
+    "headers": {
+      "Server": "Werkzeug/3.1.4 Python/3.9.6",
+      "Date": "Wed, 31 Dec 2025 11:14:37 GMT",
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Length": "207",
+      "Location": "/dashboard",
+      "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0, private, no-transform",
+      "Pragma": "no-cache",
+      "Expires": "0",
+      "Vary": "Cookie",
+      "Set-Cookie": "session=.eJw9zjEOwjAMQNG7ZGaw48R2ehlkx45gbemEuDsdEONbvv673Neex6Nsr_3MW7k_o2yl0pAIUIsQMc5KyMtFGUYA8dBB4rRAF3gqcdfGCNCpLgC2bAMhEEjDKw4azBIu5skTJkjYah1b4zoduxj61bYK08iaKkq5Rs4j99_Nxb_q5wtq-zFz.aVUFnQ.tqYjWSuGVOkI3qipO6pvIJQOd5c; HttpOnly; Path=/",
+      "Connection": "close"
+    },
+    "location": "/dashboard"
+  },
+  "final_url": "http://127.0.0.1:5001/dashboard",
+  "final_status": 200
+}

@@ -122,3 +122,6 @@ addopts = [
     "--cov-report=html:htmlcov",
     "--cov-fail-under=30",
 ]
+markers = [
+    "integration: mark tests as integration tests that may be slower or require DB",
+]

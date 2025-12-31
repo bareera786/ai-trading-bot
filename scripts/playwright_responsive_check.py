@@ -109,10 +109,33 @@ def main():
             context = browser.new_context(viewport={"width": 375, "height": 812}, user_agent="responsive-check/1.0")
             page = context.new_page()
 
+            # Check /login before login
+            path = "/login"
+            url = f"{BASE.rstrip('/')}{path}"
+            try:
+                resp = page.goto(url, wait_until="networkidle", timeout=8000)
+            except Exception:
+                resp = None
+            info = {"skipped": False}
+            if resp is None:
+                info["skipped"] = True
+                info["note"] = "navigation_failed"
+            else:
+                status = resp.status
+                info["status_code"] = status
+                if status >= 400:
+                    info["skipped"] = True
+                    info["note"] = f"http_{status}"
+                else:
+                    info.update(inspect_page(page))
+            info["url"] = url
+            info["final_url"] = page.url
+            report["pages"][path] = info
+
             # Attempt login so we can inspect authenticated pages
             logged_in = try_ensure_testadmin_and_login(page)
 
-            for path in PAGES:
+            for path in PAGES[1:]:  # skip /login since already checked
                 url = f"{BASE.rstrip('/')}{path}"
                 try:
                     resp = page.goto(url, wait_until="networkidle", timeout=8000)

@@ -61,6 +61,7 @@
             <div id="auth-forms">
                 <!-- Login Form -->
                 <form id="login-form" method="POST" action="{{ url_for('auth.login') }}" class="auth-form" autocomplete="on">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     {% with messages = get_flashed_messages() %}
                         {% if messages %}
                             {% for message in messages %}
@@ -100,6 +101,7 @@
                 </form>
                 <!-- Register Form -->
                 <form id="register-form" method="POST" action="{{ url_for('auth.register') }}" class="auth-form" style="display:none;" autocomplete="on">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <div class="form-group username-group">
                         <label class="form-label" for="register-username">Username</label>
                         <div class="username-wrapper">

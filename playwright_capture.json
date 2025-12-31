@@ -1,0 +1,16 @@
+{
+  "base": "http://127.0.0.1:5001",
+  "final_url": "http://127.0.0.1:5001/dashboard",
+  "cookies": [
+    {
+      "name": "session",
+      "value": ".eJw9zj0OwjAMQOG7ZGbwX-ykl0GO4wjWlk6Iu1MJifEbnvTe5b72PB5le-1n3sr9OctWsoGgIsbg1X0AUFUG6pWC2shlxuHVsi8Tj6mThxjPjGTgJhWwVg214RxMCBOjLcf02hWHX61YXwEai1hmR8phytFaCM2Ico2cR-6_G7r4F32-6RozFw.aVU8Pw.DVV1-h5IMJocThmehtgcfNA-qvc",
+      "domain": "127.0.0.1"
+    }
+  ],
+  "ensure_testadmin": {
+    "status": 404,
+    "info": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>\n"
+  },
+  "error": null
+}

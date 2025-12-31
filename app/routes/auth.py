@@ -13,6 +13,7 @@ from flask import (
     request,
     url_for,
 )
+import os
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app.extensions import db, limiter
@@ -310,3 +311,84 @@ def verify_email(token):
     flash("Email verified successfully! You can now log in.")
     logger.info(f"Email verified for user: {user.username}")
     return redirect(url_for("auth.login"))
+
+
+# --- Dev-only helpers (hardened) -------------------------------------------
+def _dev_helpers_enabled():
+    from flask import current_app
+
+    return bool(
+        current_app.debug
+        or current_app.testing
+        or os.getenv("ENABLE_DEV_ENDPOINTS") == "1"
+    )
+
+
+def _dev_authorized():
+    # Require the dev flag and either a token or a caller IP in allowlist
+    if not _dev_helpers_enabled():
+        return False, ("not available", 404)
+
+    token = request.headers.get("X-DEV-TOKEN") or request.args.get("dev_token")
+    env_token = os.getenv("DEV_HELPER_TOKEN")
+    allowlist = [ip.strip() for ip in os.getenv("DEV_HELPER_ALLOWLIST_IPS", "127.0.0.1,::1").split(",") if ip.strip()]
+
+    if request.remote_addr in allowlist:
+        return True, None
+
+    if env_token and token and token == env_token:
+        return True, None
+
+    return False, ("unauthorized", 403)
+
+
+@auth_bp.route("/_whoami", endpoint="whoami")
+def whoami():
+    """Dev-only diagnostic to confirm which app instance we're hitting.
+
+    Returns DB URI and simple environment indicators. This endpoint is
+    intentionally only enabled when debug/testing or ENABLE_DEV_ENDPOINTS=1.
+    """
+    from flask import current_app
+
+    ok, err = _dev_authorized()
+    if not ok:
+        msg, code = err
+        return jsonify({"error": msg}), code
+
+    # Masked DB info is acceptable in dev helpers; do not return secrets.
+    db_uri = current_app.config.get("SQLALCHEMY_DATABASE_URI")
+    return jsonify({"db_uri": db_uri, "debug": current_app.debug, "pid": os.getpid()})
+
+
+@auth_bp.route("/_ensure_testadmin", methods=["POST"], endpoint="ensure_testadmin")
+def ensure_testadmin():
+    """Dev-only helper to create or reset the `testadmin` account.
+
+    This is useful for automated headless runs so the test user exists with a
+    known password. Only available when dev helpers are enabled and caller
+    is authorized via token or localhost IP.
+    """
+    ok, err = _dev_authorized()
+    if not ok:
+        msg, code = err
+        return jsonify({"error": msg}), code
+
+    username = "testadmin"
+    password = "testpass123"
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        user = User(username=username, email="testadmin@example.com", is_admin=True, is_active=True)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        logger.info("Dev helper created testadmin (pid=%s ip=%s)", os.getpid(), request.remote_addr)
+        return jsonify({"created": True})
+
+    # Reset password and unlock
+    user.set_password(password)
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.session.commit()
+    logger.info("Dev helper reset testadmin (pid=%s ip=%s)", os.getpid(), request.remote_addr)
+    return jsonify({"updated": True})

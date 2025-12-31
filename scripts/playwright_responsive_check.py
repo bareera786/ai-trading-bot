@@ -25,6 +25,41 @@ OUT = Path(os.getenv("RESPONSIVE_CHECK_OUT", "artifacts/responsive_check.json"))
 PAGES = ["/login", "/dashboard", "/trading"]
 
 
+def try_ensure_testadmin_and_login(page):
+    # Try to create/reset a deterministic testadmin via dev helper if available
+    token = os.getenv("DEV_HELPER_TOKEN")
+    headers = {}
+    if token:
+        headers["X-DEV-TOKEN"] = token
+    try:
+        r = page.request.post(f"{BASE.rstrip('/')}/_ensure_testadmin", headers=headers)
+    except Exception:
+        r = None
+
+    # Attempt form login using known capture credentials
+    try:
+        page.goto(f"{BASE.rstrip('/')}/login", wait_until="networkidle")
+        try:
+            page.fill("#login-username", os.getenv("CAPTURE_USERNAME", "testadmin"))
+            page.fill("#login-password", os.getenv("CAPTURE_PASSWORD", "testpass123"))
+            page.click("#login-btn")
+        except Exception:
+            try:
+                page.locator("form").first.evaluate("f => f.submit()")
+            except Exception:
+                return False
+        try:
+            page.wait_for_url("**/dashboard", timeout=8000)
+        except Exception:
+            # continue; login might still have succeeded via cookie
+            pass
+        # check for session cookie
+        cookies = page.context.cookies()
+        return any(c.get("name") == "session" for c in cookies)
+    except Exception:
+        return False
+
+
 def inspect_page(page):
     js = """
     (function(){
@@ -73,6 +108,9 @@ def main():
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(viewport={"width": 375, "height": 812}, user_agent="responsive-check/1.0")
             page = context.new_page()
+
+            # Attempt login so we can inspect authenticated pages
+            logged_in = try_ensure_testadmin_and_login(page)
 
             for path in PAGES:
                 url = f"{BASE.rstrip('/')}{path}"

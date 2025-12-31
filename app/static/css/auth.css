@@ -1972,6 +1972,10 @@
     .login-container { padding: 1.2rem 0.5rem; }
 }
 
+@media (max-width: 420px) {
+    .nav-cta { padding: 0.5rem 0.8rem !important; font-size: 0.95rem !important; }
+}
+
 .login-header,
 .register-header {
     text-align: center;

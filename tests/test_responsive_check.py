@@ -63,3 +63,9 @@ def test_login_template_inline_styles():
     # Regression assertion: ensure inline large padding removed and box-sizing set
     assert 'padding:3rem 2.2rem' not in tpl
     assert 'box-sizing' in tpl
+
+
+def test_auth_css_has_box_sizing_and_small_media():
+    css = open('app/static/css/auth.css').read()
+    assert 'box-sizing: border-box' in css
+    assert '@media (max-width: 420px)' in css

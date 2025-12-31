@@ -1965,6 +1965,13 @@
     max-width: 420px;
 }
 
+/* Ensure padding does not cause overflow on very small screens */
+.login-container { box-sizing: border-box; }
+
+@media (max-width: 420px) {
+    .login-container { padding: 1.2rem 0.5rem; }
+}
+
 .login-header,
 .register-header {
     text-align: center;

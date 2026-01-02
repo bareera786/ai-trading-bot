@@ -30,21 +30,39 @@ async function loadApiKeys() {
     const status = await fetchJson('/api/binance/credentials');
     const accounts = status.accounts || {};
 
-    table.innerHTML = '';
+    // Merge spot + futures into a single row per exchange (Binance)
+    const merged = {
+      exchange: 'Binance',
+      masked_key: null,
+      connected: false,
+      updated_at: null,
+      types: new Set(),
+      raw: {}
+    };
+
     Object.entries(accounts).forEach(([key, acc]) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>Binance</td>
-        <td>${acc.masked_key || 'Not set'}</td>
-        <td><span class="status-indicator ${acc.connected ? 'status-success' : 'status-warning'}">${acc.connected ? 'Active' : 'Inactive'}</span></td>
-        <td>${formatUpdatedAt(acc.updated_at)}</td>
-        <td>
-          <button class="btn btn-secondary btn-sm" data-account="${key}" onclick="openEditApiKeyModal('${key}')">Edit</button>
-          <button class="btn btn-danger btn-sm" data-account="${key}" onclick="removeApiKey('${key}')">Remove</button>
-        </td>
-      `;
-      table.appendChild(tr);
+      // 'key' might be 'spot', 'futures', 'usdt_futures', etc.
+      if (acc && acc.api_key) merged.masked_key = merged.masked_key || acc.masked_key || acc.api_key.slice(0,6) + '...';
+      if (acc && acc.connected) merged.connected = merged.connected || acc.connected;
+      if (acc && acc.updated_at) merged.updated_at = (!merged.updated_at || new Date(acc.updated_at) > new Date(merged.updated_at)) ? acc.updated_at : merged.updated_at;
+      merged.types.add(key);
+      merged.raw[key] = acc;
     });
+
+    table.innerHTML = '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${merged.exchange}</td>
+      <td>${merged.masked_key || 'Not set'}</td>
+      <td><span class="status-indicator ${merged.connected ? 'status-success' : 'status-warning'}">${merged.connected ? 'Active' : 'Inactive'}</span></td>
+      <td>${Array.from(merged.types).join(', ')}</td>
+      <td>${formatUpdatedAt(merged.updated_at)}</td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="openEditApiKeyModal('spot')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="removeApiKey('spot')">Remove</button>
+      </td>
+    `;
+    table.appendChild(tr);
   } catch (error) {
     console.error('Failed to load API keys', error);
     table.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Unable to load API keys (are you logged in?)</td></tr>';
@@ -90,7 +108,11 @@ async function saveApiKey() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apiKey, apiSecret, testnet, accountType, note }),
     });
-    alert(resp.message || 'Credentials saved');
+    let msg = resp.message || 'Credentials saved';
+    if (testnet) {
+      msg += ' (testnet keys saved — enable real trading in System Ops to activate testnet mode)';
+    }
+    alert(msg);
     closeApiKeyModal();
     await loadApiKeys();
   } catch (err) {

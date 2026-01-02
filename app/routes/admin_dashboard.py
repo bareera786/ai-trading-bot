@@ -37,41 +37,25 @@ def get_self_improvement_status():
         return jsonify({"error": str(e)}), 500
 
 
-@admin_dashboard_bp.route("/api/admin/reset-statistics", methods=["POST"])
+@admin_dashboard_bp.route("/api/self-improvement/trigger-cycle", methods=["POST"])
 @login_required
 @limiter.exempt
-def reset_statistics():
-    """Reset trading statistics and performance data."""
+def trigger_self_improvement_cycle():
+    """Manually trigger a self-improvement cycle."""
     if not getattr(current_user, "is_admin", False):
         return jsonify({"error": "Forbidden"}), 403
 
     try:
-        # Get the AI bot context
-        from app.routes.dashboard import _get_ai_bot_context
-        ctx = _get_ai_bot_context()
-        
-        # Reset statistics for both traders
-        ultimate_trader = ctx.get("ultimate_trader")
-        optimized_trader = ctx.get("optimized_trader")
-        
-        if ultimate_trader and hasattr(ultimate_trader, 'trade_history'):
-            ultimate_trader.trade_history.reset_statistics()
-            
-        if optimized_trader and hasattr(optimized_trader, 'trade_history'):
-            optimized_trader.trade_history.reset_statistics()
-        
-        # Reset dashboard data
-        dashboard_data = ctx.get("dashboard_data", {})
-        dashboard_data["performance"] = {}
-        dashboard_data["portfolio"] = {}
-        
-        return jsonify({
-            "success": True,
-            "message": "Trading statistics have been reset successfully"
-        })
-        
+        worker = get_self_improvement_worker()
+        if not worker:
+            return jsonify({"error": "Self-improvement worker not available"}), 503
+
+        # Trigger immediate cycle
+        worker.request_cycle("manual")
+
+        return jsonify({"message": "Self-improvement cycle triggered successfully"})
     except Exception as e:
-        return jsonify({"error": f"Failed to reset statistics: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 @admin_dashboard_bp.route("/api/self-improvement/auto-fix", methods=["POST"])
@@ -197,5 +181,195 @@ def admin_ribs_config():
             pass
 
         return jsonify({"success": True, "overrides": new_overrides})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# Model Management Routes
+@admin_dashboard_bp.route("/models", methods=["GET"], endpoint="model_management")
+@login_required
+@limiter.exempt
+def model_management():
+    """Model management dashboard."""
+    if not getattr(current_user, "is_admin", False):
+        return "Forbidden", 403
+    return render_template("admin/model_management.html")
+
+
+@admin_dashboard_bp.route("/api/models/status", methods=["GET"])
+@login_required
+@limiter.exempt
+def get_model_status():
+    """Get comprehensive model status across all profiles."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": "Forbidden"}), 403
+
+    try:
+        from app.ml import ModelRegistry
+
+        # Initialize registry with default path
+        registry = ModelRegistry("./models/registry")
+
+        # Get all profiles and their status
+        profiles = {}
+        registry_data = registry._load_registry()
+
+        for profile_name, profile_data in registry_data.items():
+            active_info = registry.get_model_info(profile_name)
+            versions = registry.list_versions(profile_name)
+
+            profiles[profile_name] = {
+                "active_version": active_info.get("active") if active_info else None,
+                "performance": active_info.get("performance") if active_info else None,
+                "timestamp": active_info.get("timestamp") if active_info else None,
+                "total_versions": len(versions),
+                "versions": versions[-5:]  # Last 5 versions
+            }
+
+        # Get filesystem model status (existing models not in registry)
+        import os
+        filesystem_models = {}
+
+        model_dirs = ["./ultimate_models", "./optimized_models", "./futures_models"]
+        for model_dir in model_dirs:
+            if os.path.exists(model_dir):
+                profile_name = os.path.basename(model_dir)
+                filesystem_models[profile_name] = []
+
+                for root, dirs, files in os.walk(model_dir):
+                    for file in files:
+                        if file.endswith('.pkl'):
+                            filesystem_models[profile_name].append({
+                                "filename": file,
+                                "path": os.path.join(root, file),
+                                "size": os.path.getsize(os.path.join(root, file))
+                            })
+
+        return jsonify({
+            "registry_models": profiles,
+            "filesystem_models": filesystem_models,
+            "registry_path": "./models/registry"
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_dashboard_bp.route("/api/models/rollback", methods=["POST"])
+@login_required
+@limiter.exempt
+def rollback_model():
+    """Rollback a model to previous or specific version."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": "Forbidden"}), 403
+
+    try:
+        data = request.get_json()
+        profile = data.get("profile")
+        target_version = data.get("target_version")
+
+        if not profile:
+            return jsonify({"error": "Profile is required"}), 400
+
+        from app.ml import ModelRegistry
+        registry = ModelRegistry("./models/registry")
+
+        success = registry.rollback_model(profile, target_version)
+
+        if success:
+            # Get updated info
+            info = registry.get_model_info(profile)
+            return jsonify({
+                "success": True,
+                "message": f"Successfully rolled back {profile}",
+                "new_active_version": info.get("active") if info else None
+            })
+        else:
+            return jsonify({"error": "Rollback failed"}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_dashboard_bp.route("/api/models/cleanup", methods=["POST"])
+@login_required
+@limiter.exempt
+def cleanup_models():
+    """Clean up old model versions."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": "Forbidden"}), 403
+
+    try:
+        data = request.get_json()
+        profile = data.get("profile", "all")
+        keep_count = data.get("keep_count", 5)
+
+        from app.ml import ModelRegistry
+        registry = ModelRegistry("./models/registry")
+
+        if profile == "all":
+            # Cleanup all profiles
+            registry_data = registry._load_registry()
+            cleaned_profiles = []
+
+            for profile_name in registry_data.keys():
+                registry.cleanup_old_versions(profile_name, keep_count)
+                cleaned_profiles.append(profile_name)
+        else:
+            # Cleanup specific profile
+            registry.cleanup_old_versions(profile, keep_count)
+            cleaned_profiles = [profile]
+
+        return jsonify({
+            "success": True,
+            "message": f"Cleaned up old versions for: {', '.join(cleaned_profiles)}",
+            "keep_count": keep_count
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_dashboard_bp.route("/api/models/register", methods=["POST"])
+@login_required
+@limiter.exempt
+def register_model():
+    """Manually register a model file."""
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": "Forbidden"}), 403
+
+    try:
+        data = request.get_json()
+        model_path = data.get("model_path")
+        profile = data.get("profile")
+        metadata = data.get("metadata", {})
+
+        if not model_path or not profile:
+            return jsonify({"error": "Model path and profile are required"}), 400
+
+        if not os.path.exists(model_path):
+            return jsonify({"error": "Model file does not exist"}), 404
+
+        # Load the model
+        import pickle
+        with open(model_path, 'rb') as f:
+            model = pickle.load(f)
+
+        # Register with registry
+        from app.ml import ModelRegistry
+        registry = ModelRegistry("./models/registry")
+
+        metadata["profile"] = profile
+        metadata["manually_registered"] = True
+        metadata["source_path"] = model_path
+
+        version = registry.register_model(model, metadata)
+
+        return jsonify({
+            "success": True,
+            "message": f"Model registered as version {version}",
+            "version": version
+        })
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Optional
 import os
 
-from flask import Flask, request
+from flask import Flask
 from .config import Config
 from .extensions import init_extensions
 from .routes import register_blueprints
@@ -21,15 +21,6 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
         static_folder="static",
     )
     app.config.from_object(config_cls)
-    
-    # Add cache control for static files in development
-    @app.after_request
-    def add_cache_control(response):
-        if request.path.startswith('/static/'):
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            response.headers['Pragma'] = 'no-cache'
-            response.headers['Expires'] = '0'
-        return response
 
     # If tests signal to skip runtime behavior via environment variable,
     # ensure SQLAlchemy uses an in-memory database by default so any early
@@ -55,6 +46,17 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
         app.config["TESTING"] = True
 
     init_extensions(app)
+
+    # Initialize tenant isolation for multi-user support (optional)
+    try:
+        from .core.tenant_isolation import init_tenant_isolation
+        init_tenant_isolation(app)
+    except Exception:
+        # Tenant isolation is optional in local/dev setups or when the
+        # module is not present. Skip initialization to allow the app
+        # to start for debugging and development tasks.
+        pass
+
     register_blueprints(app)
 
     bootstrap_runtime(app)

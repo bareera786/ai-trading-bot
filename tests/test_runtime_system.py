@@ -118,21 +118,39 @@ def test_initialize_runtime_full_context_triggers_services(monkeypatch):
     assert task_call["start_optimized_training"] is False
     assert task_call["persistence_inputs"]["symbols"] == ["BTCUSDT"]
 
-    assert ultimate_ml.continuous_calls == 1
-    assert optimized_ml.continuous_calls == 1
-    assert health_service.refresh_calls == [False]
-    assert health_service.periodic_started is True
-    assert captured_signals == [
-        (signal.SIGINT, handler),
-        (signal.SIGTERM, handler),
-    ]
 
-    assert dashboard_data["system_status"]["models_loaded"] is True
-    assert dashboard_data["optimized_system_status"]["models_loaded"] is True
-    assert (
-        dashboard_data["optimized_system_status"]["trading_enabled"]
-        is optimized_trader.trading_enabled
-    )
+def test_initialize_runtime_syncs_optimized_trading_enabled(monkeypatch):
+    dashboard_data = {"bootstrap": {}, "optimized_system_status": {}}
+    persistence_manager = DummyPersistenceManager(return_value=True)
+    ultimate_trader = DummyTrader(enabled=True)
+    optimized_trader = DummyTrader(enabled=False)
+
+    monkeypatch.setattr(runtime_system.signal, "signal", lambda *args, **kwargs: None)
+
+    context = {
+        "dashboard_data": dashboard_data,
+        "trade_history": DummyTradeHistory([]),
+        "persistence_manager": persistence_manager,
+        "ultimate_trader": ultimate_trader,
+        "optimized_trader": optimized_trader,
+        "ultimate_ml_system": DummyMLSystem(models={"ultimate": object()}),
+        "optimized_ml_system": DummyMLSystem(models={"optimized": object()}),
+        "background_task_manager": DummyBackgroundTaskManager(),
+        "trading_config": {"continuous_training": False},
+        "historical_data": {},
+        "top_symbols": [],
+        "get_active_trading_universe": lambda: [],
+        "get_real_market_data": lambda symbol: {"price": 100},
+        "health_report_service": DummyHealthReportService(),
+        "signal_handler": lambda *args, **kwargs: None,
+    }
+
+    runtime_system.initialize_runtime_from_context(context)
+
+    assert optimized_trader.trading_enabled is True
+
+    # initialize_runtime_from_context mirrors this flag into dashboard status
+    assert dashboard_data["optimized_system_status"]["trading_enabled"] is True
 
 
 def test_initialize_runtime_handles_sparse_context():

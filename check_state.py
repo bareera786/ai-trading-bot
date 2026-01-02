@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from app import create_app
+from app.services.pathing import resolve_profile_path
 
 
 def _get_ai_context(app):
@@ -34,7 +35,10 @@ def main() -> None:
             getattr(optimized, "trading_enabled", None),
         )
 
-    state_path = Path("bot_persistence/bot_state.json")
+    state_root = resolve_profile_path(
+        "bot_persistence", allow_legacy=False, migrate_legacy=True
+    )
+    state_path = Path(state_root) / "bot_state.json"
     if state_path.exists():
         with state_path.open("r") as f:
             state = json.load(f)

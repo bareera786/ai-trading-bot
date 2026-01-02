@@ -3,96 +3,36 @@ import { fetchJson } from '../utils/network.js';
 let performanceChart = null;
 
 export async function refreshDashboardCards() {
-  try {
-    const data = await fetchJson('/api/status');
-    
-    // Update portfolio value
-    const portfolioCard = document.querySelector('#dashboard .dashboard-card:nth-child(1) .card-value');
-    if (portfolioCard) {
-      if (data && data.portfolio) {
-        const totalValue = (data.portfolio.total_balance || 0) + (data.portfolio.unrealized_pnl || 0);
-        portfolioCard.textContent = formatCurrency(totalValue);
-        
-        const portfolioChange = document.getElementById('portfolio-change');
-        if (portfolioChange) {
-          const changePercent = data.portfolio.daily_change_percent || 0;
-          portfolioChange.textContent = `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(1)}% today`;
-          portfolioChange.style.color = changePercent >= 0 ? 'var(--success)' : 'var(--danger)';
-        }
-      } else {
-        portfolioCard.textContent = '$0.00';
-        const portfolioChange = document.getElementById('portfolio-change');
-        if (portfolioChange) portfolioChange.textContent = 'No data available';
-      }
-    }
+  const data = await fetchJson('/api/status');
+  if (!data || data.error) return;
 
-    // Update active trades
-    const tradesCard = document.querySelector('#dashboard .dashboard-card:nth-child(2) .card-value');
-    if (tradesCard) {
-      if (data && data.portfolio) {
-        const openPositions = Object.keys(data.portfolio.open_positions || {}).length;
-        tradesCard.textContent = openPositions;
-        
-        const tradesSubtitle = document.getElementById('trades-subtitle');
-        if (tradesSubtitle) {
-          tradesSubtitle.textContent = openPositions > 0 ? `${openPositions} active positions` : 'No active positions';
-        }
-      } else {
-        tradesCard.textContent = '0';
-        const tradesSubtitle = document.getElementById('trades-subtitle');
-        if (tradesSubtitle) tradesSubtitle.textContent = 'No active positions';
-      }
-    }
-
-    // Update win rate
-    const winRateCard = document.querySelector('#dashboard .dashboard-card:nth-child(3) .card-value');
-    if (winRateCard) {
-      if (data && data.performance) {
-        const winRate = data.performance.win_rate || 0;
-        winRateCard.textContent = `${(winRate * 100).toFixed(1)}%`;
-        
-        const winRatePeriod = document.getElementById('win-rate-period');
-        if (winRatePeriod) winRatePeriod.textContent = 'Last 30 days';
-      } else {
-        winRateCard.textContent = '0.0%';
-        const winRatePeriod = document.getElementById('win-rate-period');
-        if (winRatePeriod) winRatePeriod.textContent = 'No trading history';
-      }
-    }
-
-    // Update system status
-    const systemCard = document.getElementById('system-status-indicator');
-    if (systemCard) {
-      if (data && data.system_status) {
-        const isOnline = data.system_status.trading_enabled && data.system_status.models_loaded;
-        systemCard.className = `status-indicator ${isOnline ? 'status-success' : 'status-warning'}`;
-        systemCard.textContent = isOnline ? 'ONLINE' : 'OFFLINE';
-      } else {
-        systemCard.className = 'status-indicator status-warning';
-        systemCard.textContent = 'UNKNOWN';
-      }
-    }
-
-    await loadUserDashboardData();
-    await updatePerformanceChart();
-  } catch (error) {
-    console.error('Failed to refresh dashboard cards:', error);
-    // Set fallback values
-    const portfolioCard = document.querySelector('#dashboard .dashboard-card:nth-child(1) .card-value');
-    if (portfolioCard) portfolioCard.textContent = '$0.00';
-    
-    const tradesCard = document.querySelector('#dashboard .dashboard-card:nth-child(2) .card-value');
-    if (tradesCard) tradesCard.textContent = '0';
-    
-    const winRateCard = document.querySelector('#dashboard .dashboard-card:nth-child(3) .card-value');
-    if (winRateCard) winRateCard.textContent = '0.0%';
-    
-    const systemCard = document.getElementById('system-status-indicator');
-    if (systemCard) {
-      systemCard.className = 'status-indicator status-error';
-      systemCard.textContent = 'ERROR';
-    }
+  const portfolioCard = document.querySelector('#dashboard .dashboard-card:nth-child(1) .card-value');
+  if (portfolioCard && data.portfolio) {
+    const totalValue = (data.portfolio.total_balance || 0) + (data.portfolio.unrealized_pnl || 0);
+    portfolioCard.textContent = formatCurrency(totalValue);
   }
+
+  const tradesCard = document.querySelector('#dashboard .dashboard-card:nth-child(2) .card-value');
+  if (tradesCard && data.portfolio) {
+    const openPositions = Object.keys(data.portfolio.open_positions || {}).length;
+    tradesCard.textContent = openPositions;
+  }
+
+  const winRateCard = document.querySelector('#dashboard .dashboard-card:nth-child(3) .card-value');
+  if (winRateCard && data.performance) {
+    const winRate = data.performance.win_rate || 0;
+    winRateCard.textContent = `${(winRate * 100).toFixed(1)}%`;
+  }
+
+  const systemCard = document.querySelector('#dashboard .dashboard-card:nth-child(4) .card-value .status-indicator');
+  if (systemCard && data.system_status) {
+    const isOnline = data.system_status.trading_enabled && data.system_status.models_loaded;
+    systemCard.className = `status-indicator ${isOnline ? 'status-success' : 'status-warning'}`;
+    systemCard.textContent = isOnline ? 'ONLINE' : 'OFFLINE';
+  }
+
+  await loadUserDashboardData();
+  await updatePerformanceChart();
 }
 
 async function updatePerformanceChart() {

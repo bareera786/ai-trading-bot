@@ -7,33 +7,9 @@ export function initEventHandlers() {
   // Navigation & modal handlers
   document.addEventListener('DOMContentLoaded', () => {
     // Mobile menu toggle
-    document.getElementById('mobile-menu-toggle')?.addEventListener('click', () => {
+    document.getElementById('mobile-menu-toggle-btn')?.addEventListener('click', () => {
       const sidebar = document.querySelector('.sidebar');
-      const toggle = document.getElementById('mobile-menu-toggle');
-      const overlay = document.querySelector('.sidebar-overlay');
       if (sidebar) sidebar.classList.toggle('open');
-      if (toggle) toggle.classList.toggle('active');
-      if (overlay) overlay.classList.toggle('active');
-    });
-
-    // Close sidebar when clicking outside on mobile
-    document.addEventListener('click', (e) => {
-      const sidebar = document.querySelector('.sidebar');
-      const toggle = document.getElementById('mobile-menu-toggle');
-      const overlay = document.querySelector('.sidebar-overlay');
-      const target = e.target;
-
-      if (window.innerWidth <= 1024 &&
-          sidebar &&
-          toggle &&
-          overlay &&
-          !sidebar.contains(target) &&
-          !toggle.contains(target) &&
-          sidebar.classList.contains('open')) {
-        sidebar.classList.remove('open');
-        toggle.classList.remove('active');
-        overlay.classList.remove('active');
-      }
     });
 
     // Logout button

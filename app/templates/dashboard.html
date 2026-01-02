@@ -8,15 +8,8 @@
 </head>
 <body>
     <div class="app">
-        <!-- Mobile Menu Toggle -->
-        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle mobile menu">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
-
         <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
+        <aside class="sidebar">
             <div class="sidebar-header">
                 <h1>🚀 AI TRADER</h1>
                 <p class="sidebar-subtitle">Professional Trading Bot</p>
@@ -26,23 +19,15 @@
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title" style="color:#f59e0b;font-weight:700;">Admin</div>
-                    <a href="#" class="nav-item" data-page="admin-overview">
-                        <span class="nav-icon">👑</span>
-                        <span class="nav-text">Admin Overview</span>
-                    </a>
-                    <a href="#" class="nav-item" data-page="admin-self-improvement">
-                        <span class="nav-icon">🤖</span>
-                        <span class="nav-text">AI Self-Improvement</span>
-                    </a>
-                    <a href="#" class="nav-item" data-page="admin-ribs">
-                        <span class="nav-icon">🧬</span>
-                        <span class="nav-text">RIBS Evolution</span>
+                    <a href="#" class="nav-item" data-page="admin-dashboard">
+                        <span class="nav-icon">🛡️</span>
+                        <span class="nav-text">Admin Dashboard</span>
                     </a>
                     <a href="#" class="nav-item" data-page="user-management">
                         <span class="nav-icon">👥</span>
                         <span class="nav-text">User Management</span>
                     </a>
-                    <a href="#" class="nav-item" data-page="symbol-management">
+                    <a href="#" class="nav-item" data-page="symbols">
                         <span class="nav-icon">🪙</span>
                         <span class="nav-text">Symbol Management</span>
                     </a>
@@ -64,6 +49,10 @@
                     <a href="#" class="nav-item" data-page="market-data">
                         <span class="nav-icon">📈</span>
                         <span class="nav-text">Market Data</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="symbols">
+                        <span class="nav-icon">🪙</span>
+                        <span class="nav-text">Symbols</span>
                     </a>
                 </div>
 
@@ -105,6 +94,10 @@
                         <span class="nav-icon">🧪</span>
                         <span class="nav-text">Backtest Lab</span>
                     </a>
+                    <a href="#" class="nav-item" data-page="ml-telemetry">
+                        <span class="nav-icon">🤖</span>
+                        <span class="nav-text">ML Telemetry</span>
+                    </a>
                     <a href="#" class="nav-item" data-page="ribs-dashboard">
                         <span class="nav-icon">🧬</span>
                         <span class="nav-text">RIBS Evolution</span>
@@ -113,6 +106,14 @@
 
                 <div class="nav-section">
                     <div class="nav-section-title">System</div>
+                    <a href="#" class="nav-item" data-page="user-management">
+                        <span class="nav-icon">👥</span>
+                        <span class="nav-text">User Management</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="admin-settings">
+                        <span class="nav-icon">💳</span>
+                        <span class="nav-text">Admin Settings</span>
+                    </a>
                     <a href="#" class="nav-item" data-page="safety">
                         <span class="nav-icon">🛡️</span>
                         <span class="nav-text">Safety</span>
@@ -137,9 +138,6 @@
             </nav>
         </aside>
 
-        <!-- Sidebar Overlay for Mobile -->
-        <div class="sidebar-overlay"></div>
-
         <!-- Main Content -->
         <main class="main-content">
             <header class="content-header">
@@ -156,7 +154,7 @@
                     <span id="current-user-info" style="color: var(--text-secondary); font-size: var(--font-size-sm);">
                         Logged in as: <span id="current-username">admin</span>
                     </span>
-                    <button id="logout-btn" class="btn btn-secondary" style="padding: 8px 16px;" onclick="logout()">
+                    <button id="logout-btn" class="btn btn-secondary" style="padding: 8px 16px;">
                         <span style="margin-right: 4px;">🚪</span>
                         Logout
                     </button>
@@ -164,17 +162,23 @@
             </header>
 
             <div class="content-body">
-                <!-- Admin Overview Page -->
-                <section id="admin-overview" class="page-section admin-overview-page">
+                <!-- Admin Dashboard Page -->
+                <section id="admin-dashboard" class="page-section admin-dashboard-page">
                     <div class="section-header">
                         <h2 class="section-title">
-                            <span class="section-icon">👑</span>
-                            Admin Overview
+                            <span class="section-icon">️</span>
+                            Admin Dashboard
                         </h2>
-                        <p class="section-helper">Core administrative metrics and system status at a glance.</p>
+                        <p class="section-helper">Industrial-grade overview and controls for administrators.</p>
                     </div>
 
-                    <!-- System Status Overview -->
+                    <script>
+                    // Helper to avoid redeclaring block-scoped variables in inline onclicks
+                    function scrollToRibsLogs() {
+                        const el = document.getElementById('ribs-logs-section');
+                        if (el) el.scrollIntoView({behavior: 'smooth'});
+                    }
+                    </script>
                     <div class="dashboard-grid">
                         <div class="dashboard-card">
                             <div class="card-header"><span class="card-icon">👥</span><h3 class="card-title">Total Users</h3></div>
@@ -197,127 +201,24 @@
                             <p class="card-subtitle">All systems operational</p>
                         </div>
                     </div>
-
-                    <!-- Quick Admin Actions -->
                     <div class="section-header" style="margin-top:2.5rem;">
                         <h3 class="section-title">Quick Admin Actions</h3>
-                        <p class="section-helper">Essential administrative controls and navigation.</p>
                     </div>
-                    <div class="admin-actions-grid">
-                        <a href="#" class="btn btn-primary admin-action-card" data-page="user-management">
-                            <div class="action-icon">👥</div>
-                            <div class="action-content">
-                                <div class="action-title">User Management</div>
-                                <div class="action-desc">Manage users, subscriptions, and permissions</div>
-                            </div>
-                        </a>
-                        <a href="#" class="btn btn-secondary admin-action-card" data-page="admin-self-improvement">
-                            <div class="action-icon">🤖</div>
-                            <div class="action-content">
-                                <div class="action-title">AI Self-Improvement</div>
-                                <div class="action-desc">Monitor and control autonomous optimization</div>
-                            </div>
-                        </a>
-                        <a href="#" class="btn btn-secondary admin-action-card" data-page="admin-ribs">
-                            <div class="action-icon">🧬</div>
-                            <div class="action-content">
-                                <div class="action-title">RIBS Evolution</div>
-                                <div class="action-desc">Advanced AI evolution and adaptation</div>
-                            </div>
-                        </a>
-                        <a href="#" class="btn btn-secondary admin-action-card" data-page="symbol-management">
-                            <div class="action-icon">🪙</div>
-                            <div class="action-content">
-                                <div class="action-title">Symbol Management</div>
-                                <div class="action-desc">Configure trading symbols and models</div>
-                            </div>
-                        </a>
-                        <a href="#" class="btn btn-secondary admin-action-card nav-item" data-page="trade-history">
-                            <div class="action-icon">📊</div>
-                            <div class="action-content">
-                                <div class="action-title">Trade History</div>
-                                <div class="action-desc">Review all trading activity and performance</div>
-                            </div>
-                        </a>
-                        <a href="#" class="btn btn-secondary admin-action-card" data-page="backtest-lab">
-                            <div class="action-icon">🧪</div>
-                            <div class="action-content">
-                                <div class="action-title">Backtest Lab</div>
-                                <div class="action-desc">Test strategies and analyze performance</div>
-                            </div>
-                        </a>
-                        <a href="#" class="btn btn-secondary admin-action-card" data-page="admin-settings">
-                            <div class="action-icon">⚙️</div>
-                            <div class="action-content">
-                                <div class="action-title">System Settings</div>
-                                <div class="action-desc">Configure system parameters and preferences</div>
-                            </div>
-                        </a>
-                        <button class="btn btn-danger admin-action-card" onclick="resetStatistics()">
-                            <div class="action-icon">🔄</div>
-                            <div class="action-content">
-                                <div class="action-title">Reset Statistics</div>
-                                <div class="action-desc">Clear all trading data and performance metrics</div>
-                            </div>
-                        </button>
+                    <div style="display:flex;gap:2rem;flex-wrap:wrap;">
+                        <a href="#" class="btn btn-primary" data-page="user-management" style="min-width:180px;">User Management</a>
+                        <a href="#" class="btn btn-secondary" data-page="symbols" style="min-width:180px;">Symbol Management</a>
+                        <!-- Make this a nav-item so admin quick-action triggers page navigation -->
+                        <a href="#" class="btn btn-secondary nav-item" data-page="trade-history" style="min-width:180px;">Trade History</a>
+                        <a href="#" class="btn btn-secondary" data-page="backtest-lab" style="min-width:180px;">Backtest Lab</a>
+                        <a href="#" class="btn btn-secondary" data-page="admin-settings" style="min-width:180px;">System Settings</a>
                     </div>
 
-                    <!-- System Status Details -->
+                    <!-- Self-Improvement System Dashboard -->
                     <div class="section-header" style="margin-top:3rem;">
-                        <h3 class="section-title">System Status</h3>
-                        <p class="section-helper">Detailed system health and operational metrics.</p>
-                    </div>
-                    <div class="status-grid">
-                        <div class="status-card">
-                            <div class="status-header">
-                                <span class="status-icon">🗄️</span>
-                                <h4>Database</h4>
-                            </div>
-                            <div class="status-value">
-                                <span class="status-indicator status-success" id="db-status">ONLINE</span>
-                            </div>
-                            <p class="status-desc">Database connectivity and performance</p>
-                        </div>
-                        <div class="status-card">
-                            <div class="status-header">
-                                <span class="status-icon">📡</span>
-                                <h4>API Services</h4>
-                            </div>
-                            <div class="status-value">
-                                <span class="status-indicator status-success" id="api-status">ONLINE</span>
-                            </div>
-                            <p class="status-desc">External API connectivity status</p>
-                        </div>
-                        <div class="status-card">
-                            <div class="status-header">
-                                <span class="status-icon">🤖</span>
-                                <h4>AI Models</h4>
-                            </div>
-                            <div class="status-value">
-                                <span class="status-indicator status-success" id="models-status">LOADED</span>
-                            </div>
-                            <p class="status-desc">ML model loading and inference status</p>
-                        </div>
-                        <div class="status-card">
-                            <div class="status-header">
-                                <span class="status-icon">💰</span>
-                                <h4>Trading Engine</h4>
-                            </div>
-                            <div class="status-value">
-                                <span class="status-indicator status-warning" id="trading-status">IDLE</span>
-                            </div>
-                            <p class="status-desc">Automated trading system status</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Admin Self-Improvement Page -->
-                <section id="admin-self-improvement" class="page-section admin-self-improvement-page">
-                    <div class="section-header">
-                        <h2 class="section-title">
+                        <h3 class="section-title">
                             <span class="section-icon">🤖</span>
                             AI Self-Improvement System
-                        </h2>
+                        </h3>
                         <p class="section-helper">Advanced autonomous optimization and predictive analytics.</p>
                     </div>
 
@@ -344,276 +245,157 @@
                             <p class="card-subtitle" id="si-health-desc">Self-improvement status</p>
                         </div>
                         <div class="dashboard-card">
-                            <div class="card-header"><span class="card-icon">🧠</span><h3 class="card-title">Models Trained</h3></div>
-                            <div class="card-value" id="ml-models-trained">27</div>
-                            <p class="card-subtitle">Active ML models</p>
-                        </div>
-                        <div class="dashboard-card">
-                            <div class="card-header"><span class="card-icon">🎯</span><h3 class="card-title">Prediction Accuracy</h3></div>
-                            <div class="card-value" id="ml-prediction-accuracy">78.5%</div>
-                            <p class="card-subtitle">Last 24 hours</p>
-                        </div>
-                        <div class="dashboard-card">
-                            <div class="card-header"><span class="card-icon">⏱️</span><h3 class="card-title">Training Time</h3></div>
-                            <div class="card-value" id="ml-training-time">2.3h</div>
-                            <p class="card-subtitle">Average per model</p>
+                            <div class="card-header"><span class="card-icon">🧬</span><h3 class="card-title">RIBS Health</h3></div>
+                            <div class="card-value"><span id="admin-ribs-status">UNKNOWN</span></div>
+                            <div style="margin-top:0.5rem;"><button id="admin-ribs-action" class="btn btn-sm btn-primary">Start</button></div>
+                            <p class="card-subtitle" id="admin-ribs-sub">Last checkpoint: --</p>
                         </div>
                     </div>
 
-                    <!-- Performance Charts -->
-                    <div class="section-header" style="margin-top:2.5rem;">
-                        <h3 class="section-title">Performance Analytics</h3>
-                        <p class="section-helper">Historical performance trends and model accuracy.</p>
+                    <!-- RIBS Evolution Controls -->
+                    <div class="ribs-toolbar admin-ribs-toolbar">
+                        <div class="ribs-toolbar-title">RIBS Evolution</div>
+                        <div class="ribs-toolbar-actions">
+                            <button id="refresh-ribs-logs-btn" class="btn btn-info">🔄 Refresh Logs</button>
+                            <button id="scroll-ribs-logs-btn" class="btn btn-secondary">📜 View Logs</button>
+                            <a href="#" class="btn btn-primary" data-page="ribs-dashboard">🧬 Go to RIBS Dashboard</a>
+                        </div>
                     </div>
-                    <div class="charts-grid">
+
+                    <script>
+                    // Lightweight admin ribs health updater
+                    function updateAdminRIBSHealth() {
+                        fetch('/api/ribs/progress')
+                        .then(r => {
+                            if (!r.ok) throw new Error('no-status');
+                            return r.json();
+                        })
+                        .then(data => {
+                            const el = document.getElementById('admin-ribs-status');
+                            const sub = document.getElementById('admin-ribs-sub');
+                            if (!el) return;
+                            if (data.status === 'missing') {
+                                el.textContent = 'UNAVAILABLE';
+                                el.className = 'text-muted';
+                                if (sub) sub.textContent = 'RIBS status missing';
+                                return;
+                            }
+                            const healthy = data.healthy ? 'OK' : 'STALE';
+                            el.textContent = healthy;
+                            el.className = data.healthy ? 'status-indicator status-success' : 'status-indicator status-warning';
+
+                            // Update action button
+                            const action = document.getElementById('admin-ribs-action');
+                            if (action) {
+                                const running = !!data.running;
+                                action.textContent = running ? 'Pause' : 'Start';
+                                action.disabled = false;
+                                action.onclick = function () {
+                                    action.disabled = true;
+                                    const url = running ? '/api/ribs/pause' : '/api/ribs/start';
+                                    fetch(url, {method: 'POST'})
+                                        .then(r => r.json())
+                                        .then(j => {
+                                            setTimeout(updateAdminRIBSHealth, 800);
+                                        })
+                                        .catch(() => {
+                                            action.disabled = false;
+                                            alert('Failed to update RIBS status');
+                                        });
+                                };
+                            }
+
+                            if (sub) {
+                                const age = data.latest_checkpoint_age_seconds;
+                                sub.textContent = age != null ? `Last checkpoint: ${age}s ago` : 'Last checkpoint: unknown';
+                            }
+                        })
+                        .catch(() => {
+                            const el = document.getElementById('admin-ribs-status');
+                            if (el) {
+                                el.textContent = 'ERROR';
+                                el.className = 'text-danger';
+                            }
+                        });
+                    }
+                    // Update every 30s
+                    setInterval(updateAdminRIBSHealth, 30000);
+                    updateAdminRIBSHealth();
+                    </script>
+
+                    <!-- Performance Charts -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin:2rem 0;">
                         <div class="dashboard-card">
                             <div class="card-header"><h3 class="card-title">Success Rate Trend</h3></div>
-                            <div style="height:250px;">
+                            <div style="height:200px;">
                                 <canvas id="si-success-chart" style="width:100%;height:100%;"></canvas>
                             </div>
                         </div>
                         <div class="dashboard-card">
                             <div class="card-header"><h3 class="card-title">Model Accuracy History</h3></div>
-                            <div style="height:250px;">
+                            <div style="height:200px;">
                                 <canvas id="si-accuracy-chart" style="width:100%;height:100%;"></canvas>
                             </div>
                         </div>
                     </div>
 
                     <!-- Predictive Analytics -->
-                    <div class="section-header" style="margin-top:2.5rem;">
-                        <h3 class="section-title">Predictive Intelligence</h3>
-                        <p class="section-helper">AI-driven predictions and market insights.</p>
-                    </div>
-                    <div class="dashboard-card">
-                        <div class="predictive-grid">
-                            <div class="predictive-item">
-                                <div class="predictive-icon">🔮</div>
-                                <div class="predictive-content">
-                                    <strong>Next Cycle Prediction</strong>
-                                    <div id="si-next-prediction">Calculating...</div>
-                                </div>
+                    <div class="dashboard-card" style="margin:2rem 0;">
+                        <div class="card-header"><span class="card-icon">🔮</span><h3 class="card-title">Predictive Analytics</h3></div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+                            <div>
+                                <strong>Next Cycle Prediction:</strong>
+                                <div id="si-next-prediction">Calculating...</div>
                             </div>
-                            <div class="predictive-item">
-                                <div class="predictive-icon">⏰</div>
-                                <div class="predictive-content">
-                                    <strong>Optimal Timing</strong>
-                                    <div id="si-optimal-timing">Analyzing...</div>
-                                </div>
+                            <div>
+                                <strong>Optimal Timing:</strong>
+                                <div id="si-optimal-timing">Analyzing...</div>
                             </div>
-                            <div class="predictive-item">
-                                <div class="predictive-icon">🎯</div>
-                                <div class="predictive-content">
-                                    <strong>Confidence Level</strong>
-                                    <div id="si-confidence">0%</div>
-                                </div>
+                            <div>
+                                <strong>Confidence Level:</strong>
+                                <div id="si-confidence">0%</div>
                             </div>
-                            <div class="predictive-item">
-                                <div class="predictive-icon">📊</div>
-                                <div class="predictive-content">
-                                    <strong>Market Regime</strong>
-                                    <div id="si-market-regime">Unknown</div>
-                                </div>
+                            <div>
+                                <strong>Market Regime:</strong>
+                                <div id="si-market-regime">Unknown</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Auto-Fix Actions -->
-                    <div class="section-header" style="margin-top:2.5rem;">
-                        <h3 class="section-title">System Optimization</h3>
-                        <p class="section-helper">Automated maintenance and improvement actions.</p>
-                    </div>
-                    <div class="dashboard-card">
-                        <div class="auto-fix-grid">
-                            <button class="btn btn-primary auto-fix-btn" id="si-trigger-cycle">
-                                <span class="btn-icon">🔄</span>
-                                <span class="btn-text">Run Cycle Now</span>
-                            </button>
-                            <button class="btn btn-warning auto-fix-btn" id="si-model-retrain">
-                                <span class="btn-icon">🧠</span>
-                                <span class="btn-text">Retrain Models</span>
-                            </button>
-                            <button class="btn btn-warning auto-fix-btn" id="si-optimize-indicators">
-                                <span class="btn-icon">📊</span>
-                                <span class="btn-text">Optimize Indicators</span>
-                            </button>
-                            <button class="btn btn-danger auto-fix-btn" id="si-reset-config">
-                                <span class="btn-icon">⚙️</span>
-                                <span class="btn-text">Reset Config</span>
-                            </button>
-                            <button class="btn btn-info auto-fix-btn" id="si-cleanup-memory">
-                                <span class="btn-icon">🧹</span>
-                                <span class="btn-text">Memory Cleanup</span>
-                            </button>
+                    <div class="dashboard-card" style="margin:2rem 0;">
+                        <div class="card-header"><span class="card-icon">🔧</span><h3 class="card-title">Auto-Fix System</h3></div>
+                        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+                            <button class="btn btn-secondary" id="si-trigger-cycle" style="min-width:150px;">🔄 Run Cycle Now</button>
+                            <button class="btn btn-warning" id="si-model-retrain" style="min-width:150px;">🧠 Retrain Models</button>
+                            <button class="btn btn-warning" id="si-optimize-indicators" style="min-width:150px;">📊 Optimize Indicators</button>
+                            <button class="btn btn-danger" id="si-reset-config" style="min-width:150px;">⚙️ Reset Config</button>
+                            <button class="btn btn-info" id="si-cleanup-memory" style="min-width:150px;">🧹 Memory Cleanup</button>
                         </div>
-                        <div class="auto-fix-status">
+                        <div style="margin-top:1rem;">
                             <strong>Last Auto-Fix:</strong> <span id="si-last-autofix">None</span>
                         </div>
                     </div>
 
                     <!-- Performance Details Table -->
-                    <div class="section-header" style="margin-top:2.5rem;">
-                        <h3 class="section-title">Performance History</h3>
-                        <p class="section-helper">Detailed improvement cycle performance data.</p>
-                    </div>
-                    <div class="dashboard-card">
-                        <div class="table-container">
-                            <table id="si-performance-table" class="performance-table">
+                    <div class="dashboard-card" style="margin:2rem 0;">
+                        <div class="card-header"><h3 class="card-title">Recent Performance Details</h3></div>
+                        <div style="overflow-x:auto;">
+                            <table id="si-performance-table" style="width:100%;border-collapse:collapse;">
                                 <thead>
-                                    <tr>
-                                        <th>Cycle #</th>
-                                        <th>Timestamp</th>
-                                        <th>Ultimate Rate</th>
-                                        <th>Optimized Rate</th>
-                                        <th>Average</th>
-                                        <th>Duration</th>
+                                    <tr style="background:#f8f9fa;">
+                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Cycle #</th>
+                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Timestamp</th>
+                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Ultimate Rate</th>
+                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Optimized Rate</th>
+                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Average</th>
+                                        <th style="padding:0.5rem;text-align:left;border:1px solid #dee2e6;">Duration</th>
                                     </tr>
                                 </thead>
                                 <tbody id="si-performance-body">
-                                    <tr><td colspan="6" class="loading-row">Loading performance data...</td></tr>
+                                    <tr><td colspan="6" style="text-align:center;padding:2rem;color:#6c757d;">Loading performance data...</td></tr>
                                 </tbody>
                             </table>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Admin RIBS Page -->
-                <section id="admin-ribs" class="page-section admin-ribs-page">
-                    <div class="section-header">
-                        <h2 class="section-title">
-                            <span class="section-icon">🧬</span>
-                            RIBS Evolution System
-                        </h2>
-                        <p class="section-helper">Advanced AI evolution, adaptation, and autonomous learning.</p>
-                    </div>
-
-                    <!-- RIBS Health Overview -->
-                    <div class="dashboard-grid">
-                        <div class="dashboard-card ribs-health-card">
-                            <div class="card-header"><span class="card-icon">🧬</span><h3 class="card-title">RIBS Status</h3></div>
-                            <div class="card-value"><span id="ribs-status">UNKNOWN</span></div>
-                            <div class="ribs-controls">
-                                <button id="ribs-action-btn" class="btn btn-primary">Start Evolution</button>
-                                <button id="ribs-pause-btn" class="btn btn-warning" style="display:none;">Pause</button>
-                            </div>
-                            <p class="card-subtitle" id="ribs-last-checkpoint">Last checkpoint: --</p>
-                        </div>
-                        <div class="dashboard-card">
-                            <div class="card-header"><span class="card-icon">📊</span><h3 class="card-title">Evolution Progress</h3></div>
-                            <div class="card-value" id="ribs-progress">0%</div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="ribs-progress-bar" style="width:0%;"></div>
-                            </div>
-                            <p class="card-subtitle">Current evolution cycle</p>
-                        </div>
-                        <div class="dashboard-card">
-                            <div class="card-header"><span class="card-icon">🧬</span><h3 class="card-title">Generations</h3></div>
-                            <div class="card-value" id="ribs-generations">0</div>
-                            <p class="card-subtitle">Total evolution generations</p>
-                        </div>
-                        <div class="dashboard-card">
-                            <div class="card-header"><span class="card-icon">🎯</span><h3 class="card-title">Fitness Score</h3></div>
-                            <div class="card-value" id="ribs-fitness">0.00</div>
-                            <p class="card-subtitle">Current population fitness</p>
-                        </div>
-                    </div>
-
-                    <!-- RIBS Control Panel -->
-                    <div class="section-header" style="margin-top:2.5rem;">
-                        <h3 class="section-title">Evolution Controls</h3>
-                        <p class="section-helper">Manage RIBS evolution parameters and monitoring.</p>
-                    </div>
-                    <div class="ribs-toolbar">
-                        <div class="ribs-toolbar-section">
-                            <button id="ribs-refresh-btn" class="btn btn-info">
-                                <span class="btn-icon">🔄</span>
-                                <span class="btn-text">Refresh Status</span>
-                            </button>
-                            <button id="ribs-logs-btn" class="btn btn-secondary">
-                                <span class="btn-icon">📜</span>
-                                <span class="btn-text">View Logs</span>
-                            </button>
-                            <button id="ribs-config-btn" class="btn btn-warning">
-                                <span class="btn-icon">⚙️</span>
-                                <span class="btn-text">Evolution Config</span>
-                            </button>
-                        </div>
-                        <div class="ribs-toolbar-section">
-                            <button id="ribs-export-btn" class="btn btn-success">
-                                <span class="btn-icon">💾</span>
-                                <span class="btn-text">Export Data</span>
-                            </button>
-                            <button id="ribs-reset-btn" class="btn btn-danger">
-                                <span class="btn-icon">🔄</span>
-                                <span class="btn-text">Reset Evolution</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Evolution Metrics -->
-                    <div class="section-header" style="margin-top:2.5rem;">
-                        <h3 class="section-title">Evolution Analytics</h3>
-                        <p class="section-helper">Detailed metrics and performance of the RIBS evolution system.</p>
-                    </div>
-                    <div class="evolution-metrics-grid">
-                        <div class="dashboard-card">
-                            <div class="card-header"><h3 class="card-title">Population Diversity</h3></div>
-                            <div class="metric-value" id="ribs-diversity">0.00</div>
-                            <div class="metric-chart">
-                                <canvas id="ribs-diversity-chart" height="100"></canvas>
-                            </div>
-                        </div>
-                        <div class="dashboard-card">
-                            <div class="card-header"><h3 class="card-title">Mutation Rate</h3></div>
-                            <div class="metric-value" id="ribs-mutation-rate">0.00</div>
-                            <div class="metric-chart">
-                                <canvas id="ribs-mutation-chart" height="100"></canvas>
-                            </div>
-                        </div>
-                        <div class="dashboard-card">
-                            <div class="card-header"><h3 class="card-title">Selection Pressure</h3></div>
-                            <div class="metric-value" id="ribs-selection-pressure">0.00</div>
-                            <div class="metric-chart">
-                                <canvas id="ribs-selection-chart" height="100"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Evolution Logs -->
-                    <div class="section-header" style="margin-top:2.5rem;">
-                        <h3 class="section-title">Evolution Logs</h3>
-                        <p class="section-helper">Real-time monitoring of RIBS evolution activities.</p>
-                    </div>
-                    <div class="dashboard-card">
-                        <div class="logs-container">
-                            <div class="logs-header">
-                                <div class="logs-controls">
-                                    <button id="logs-autoscroll-btn" class="btn btn-sm btn-secondary">Auto-scroll</button>
-                                    <button id="logs-clear-btn" class="btn btn-sm btn-warning">Clear Logs</button>
-                                    <button id="logs-export-logs-btn" class="btn btn-sm btn-info">Export Logs</button>
-                                </div>
-                                <div class="logs-filter">
-                                    <select id="logs-level-filter" class="form-input">
-                                        <option value="all">All Levels</option>
-                                        <option value="info">Info</option>
-                                        <option value="warning">Warning</option>
-                                        <option value="error">Error</option>
-                                        <option value="debug">Debug</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div id="ribs-logs-section" class="logs-content">
-                                <div class="log-entry log-info">
-                                    <span class="log-timestamp">2025-12-30 10:00:00</span>
-                                    <span class="log-level">INFO</span>
-                                    <span class="log-message">RIBS evolution system initialized</span>
-                                </div>
-                                <div class="log-entry log-warning">
-                                    <span class="log-timestamp">2025-12-30 10:00:05</span>
-                                    <span class="log-level">WARNING</span>
-                                    <span class="log-message">Waiting for initial population data</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </section>
@@ -626,8 +408,8 @@
                                 <span class="card-icon">💰</span>
                                 <h3 class="card-title">Portfolio Value</h3>
                             </div>
-                            <div class="card-value" id="portfolio-value">Loading...</div>
-                            <p class="card-subtitle" id="portfolio-change">Loading...</p>
+                            <div class="card-value" id="portfolio-value">$10,000.00</div>
+                            <p class="card-subtitle" id="portfolio-change">+2.5% today</p>
                         </div>
 
                         <div class="dashboard-card">
@@ -635,8 +417,8 @@
                                 <span class="card-icon">📈</span>
                                 <h3 class="card-title">Active Trades</h3>
                             </div>
-                            <div class="card-value" id="active-trades">Loading...</div>
-                            <p class="card-subtitle" id="trades-subtitle">Loading...</p>
+                            <div class="card-value" id="active-trades">12</div>
+                            <p class="card-subtitle" id="trades-subtitle">5 profitable, 7 pending</p>
                         </div>
 
                         <div class="dashboard-card">
@@ -644,8 +426,8 @@
                                 <span class="card-icon">🎯</span>
                                 <h3 class="card-title">Win Rate</h3>
                             </div>
-                            <div class="card-value" id="win-rate">Loading...</div>
-                            <p class="card-subtitle" id="win-rate-period">Loading...</p>
+                            <div class="card-value" id="win-rate">68%</div>
+                            <p class="card-subtitle" id="win-rate-period">Last 30 days</p>
                         </div>
 
                         <div class="dashboard-card">
@@ -654,9 +436,9 @@
                                 <h3 class="card-title">System Status</h3>
                             </div>
                             <div class="card-value">
-                                <span class="status-indicator status-warning" id="system-status-indicator">LOADING</span>
+                                <span class="status-indicator status-success">ONLINE</span>
                             </div>
-                            <p class="card-subtitle">Initializing...</p>
+                            <p class="card-subtitle">All systems operational</p>
                         </div>
 
                         <!-- User-Specific Widgets -->
@@ -665,8 +447,8 @@
                                 <span class="card-icon">👤</span>
                                 <h3 class="card-title">My Portfolio</h3>
                             </div>
-                            <div class="card-value" id="user-portfolio-value">Loading...</div>
-                            <p class="card-subtitle" id="user-portfolio-status">Loading...</p>
+                            <div class="card-value" id="user-portfolio-value">$0.00</div>
+                            <p class="card-subtitle" id="user-portfolio-status">No active positions</p>
                         </div>
 
                         <div class="dashboard-card" id="user-performance-card">
@@ -674,8 +456,8 @@
                                 <span class="card-icon">📊</span>
                                 <h3 class="card-title">My Performance</h3>
                             </div>
-                            <div class="card-value" id="user-total-pnl">Loading...</div>
-                            <p class="card-subtitle" id="user-trade-count">Loading...</p>
+                            <div class="card-value" id="user-total-pnl">$0.00</div>
+                            <p class="card-subtitle" id="user-trade-count">0 trades</p>
                         </div>
 
                         <div class="dashboard-card" id="user-risk-card">
@@ -684,9 +466,9 @@
                                 <h3 class="card-title">Risk Level</h3>
                             </div>
                             <div class="card-value">
-                                <span class="status-indicator status-warning" id="user-risk-level">LOADING</span>
+                                <span class="status-indicator status-success" id="user-risk-level">LOW</span>
                             </div>
-                            <p class="card-subtitle" id="user-risk-details">Loading...</p>
+                            <p class="card-subtitle" id="user-risk-details">Portfolio well diversified</p>
                         </div>
 
                         <div class="dashboard-card" id="user-activity-card">
@@ -694,8 +476,8 @@
                                 <span class="card-icon">⏰</span>
                                 <h3 class="card-title">Last Activity</h3>
                             </div>
-                            <div class="card-value" id="user-last-activity">Loading...</div>
-                            <p class="card-subtitle" id="user-activity-type">Loading...</p>
+                            <div class="card-value" id="user-last-activity">Never</div>
+                            <p class="card-subtitle" id="user-activity-type">No recent trades</p>
                         </div>
                     </div>
 
@@ -786,6 +568,43 @@
                     </div>
                 </section>
 
+                <!-- Symbols Page -->
+                <section id="symbols" class="page-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span class="section-icon">🪙</span>
+                            Premium Custom Symbols
+                        </h2>
+                        <p class="section-helper">Premium users can add custom USDT pairs for training and auto-trading.</p>
+                    </div>
+
+                    <div id="premium-guard" class="premium-guard" style="display: none;">
+                        <div>
+                            <h3>Premium Required</h3>
+                            <p>Upgrade to manage custom symbols and unlock training for any USDT pair.</p>
+                        </div>
+                    </div>
+
+                    <div id="premium-symbols-content" class="card-panel" style="display: none;">
+                        <div class="custom-symbols-grid">
+                            <div class="custom-symbols-left">
+                                <h3>Add Custom Symbols</h3>
+                                <p class="section-helper">Enter pairs like <code>ARBUSDT</code>, <code>PEPEUSDT</code>, <code>JTOUSDT</code>. Must end with USDT.</p>
+                                <div class="input-row">
+                                    <input id="custom-symbol-input" type="text" placeholder="e.g., ARBUSDT" aria-label="Custom symbol" />
+                                    <button id="custom-symbol-add" class="btn btn-secondary" type="button">Add</button>
+                                    <button id="custom-symbol-save" class="btn btn-primary" type="button">Save</button>
+                                </div>
+                                <div id="custom-symbol-status" class="status-pill status-neutral">Loading symbols...</div>
+                            </div>
+                            <div class="custom-symbols-right">
+                                <h3>Your Custom Symbols</h3>
+                                <div id="custom-symbols-list" class="pill-collection"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Market Data Page -->
                 <section id="market-data" class="page-section">
                     <div class="section-header">
@@ -813,6 +632,70 @@
                                 <!-- Market data will be populated here -->
                             </tbody>
                         </table>
+                    </div>
+                </section>
+
+                <!-- Symbols Page -->
+                <section id="symbols" class="page-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span class="section-icon">🪙</span>
+                            Symbol Management
+                        </h2>
+                        <button class="btn btn-primary">Add Symbol</button>
+                    </div>
+
+                    <div style="margin-bottom: var(--spacing-xl);">
+                        <div style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
+                            <input type="text" class="form-input" placeholder="Search symbols..." style="flex: 1;">
+                            <select class="form-input" style="width: 200px;">
+                                <option>All Status</option>
+                                <option>Active</option>
+                                <option>Disabled</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="data-table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Status</th>
+                                    <th>Model Ready</th>
+                                    <th>Last Trained</th>
+
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="symbols-table">
+                                <!-- Symbols will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Backtest Modal -->
+                    <div id="symbol-backtest-modal" class="modal" style="display:none;position:fixed;z-index:9999;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;">
+                        <div class="modal-content" style="background:#181f2e;padding:2rem 2.5rem;border-radius:16px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;">
+                            <button onclick="document.getElementById('symbol-backtest-modal').style.display='none'" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.5rem;color:#fff;cursor:pointer;">&times;</button>
+                            <h3 style="margin-bottom:1.2rem;">Run Backtest for <span id="backtest-modal-symbol"></span></h3>
+                            <form id="symbol-backtest-form" onsubmit="return false;">
+                                <div class="form-group">
+                                    <label for="backtest-date-range">Date Range</label>
+                                    <input type="text" id="backtest-date-range" class="form-input" placeholder="2024-01-01 to 2024-12-31" value="2024-01-01 to 2024-12-31" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="backtest-strategy">Strategy</label>
+                                    <select id="backtest-strategy" class="form-input">
+                                        <option>Ultimate Ensemble</option>
+                                        <option>Random Forest</option>
+                                        <option>Gradient Boosting</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary" id="run-symbol-backtest-btn">Run Backtest</button>
+                            </form>
+                            <div id="symbol-backtest-results" style="margin-top:1.5rem;"></div>
+                        </div>
                     </div>
                 </section>
 
@@ -1229,11 +1112,6 @@
                             Trade History
                         </h2>
                         <div style="display: flex; gap: var(--spacing-md); align-items: center;">
-                            <select id="trade-mode-filter" class="form-input" style="width: 120px;">
-                                <option value="all">All Modes</option>
-                                <option value="ultimate" selected>Ultimate</option>
-                                <option value="optimized">Optimized</option>
-                            </select>
                             <select id="trade-filter-select" class="form-input" style="width: 150px;">
                                 <option value="all">All Trades</option>
                                 <option value="profitable">Profitable</option>
@@ -1252,7 +1130,7 @@
                                 <option value="90">Last 3 Months</option>
                             </select>
                             <button id="refresh-trades-btn" class="btn btn-secondary">Refresh</button>
-                            <button class="btn btn-secondary">Export CSV</button>
+                            <button id="export-trades-btn" class="btn btn-secondary">Export CSV</button>
                         </div>
                     </div>
 
@@ -1265,9 +1143,10 @@
                                     <th>Type</th>
                                     <th>Side</th>
                                     <th>Quantity</th>
-                                    <th>P&L ($)</th>
+                                    <th>Price</th>
+                                    <th>Leverage</th>
+                                    <th>P&L</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="trade-history-table">
@@ -1275,12 +1154,33 @@
                             </tbody>
                         </table>
 
+                                                <!-- Trade Detail Modal -->
+                                                <div id="trade-detail-modal" class="modal" style="display: none; align-items: center; justify-content: center;">
+                                                    <div class="modal-content" style="max-width: 800px; width: 100%;">
+                                                        <div class="modal-header">
+                                                            <h3>Trade Details</h3>
+                                                            <button class="modal-close btn btn-secondary" onclick="document.getElementById('trade-detail-modal').style.display='none'">Close</button>
+                                                        </div>
+                                                        <div class="modal-body" style="padding: 1rem;">
+                                                            <p><strong>Timestamp:</strong> <span class="trade-detail-timestamp"></span></p>
+                                                            <p><strong>Symbol:</strong> <span class="trade-detail-symbol"></span></p>
+                                                            <p><strong>Side:</strong> <span class="trade-detail-side"></span></p>
+                                                            <p><strong>Quantity:</strong> <span class="trade-detail-qty"></span></p>
+                                                            <p><strong>Entry Price:</strong> $<span class="trade-detail-entry"></span></p>
+                                                            <p><strong>Exit Price:</strong> $<span class="trade-detail-exit"></span></p>
+                                                            <p><strong>P&L:</strong> $<span class="trade-detail-pnl"></span></p>
+                                                            <p><strong>Status:</strong> <span class="trade-detail-status"></span></p>
+                                                            <h4>Raw Meta</h4>
+                                                            <pre class="trade-detail-meta" style="background:#f7fafc;padding:12px;border-radius:6px;max-height:300px;overflow:auto;font-size:12px;"></pre>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
                         <!-- Pagination Controls -->
                         <div id="trade-pagination" class="pagination-controls" style="display: none; margin-top: var(--spacing-lg); text-align: center;">
                             <button id="prev-page-btn" class="btn btn-secondary" disabled>Previous</button>
                             <span id="page-info" style="margin: 0 var(--spacing-md);">Page 1 of 1</span>
                             <button id="next-page-btn" class="btn btn-secondary" disabled>Next</button>
-                            <span id="trade-count" style="margin-left: var(--spacing-md); font-size: var(--font-size-sm); color: var(--text-secondary);">Showing 0 trades</span>
                         </div>
                     </div>
                 </section>
@@ -1460,11 +1360,11 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Date Range</label>
-                                <input type="text" id="lab-backtest-date-range" class="form-input" placeholder="2024-01-01 to 2024-12-31">
+                                <input type="text" id="backtest-date-range" class="form-input" placeholder="2024-01-01 to 2024-12-31">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Strategy</label>
-                                <select id="lab-backtest-strategy" class="form-input">
+                                <select id="backtest-strategy" class="form-input">
                                     <option>Ultimate Ensemble</option>
                                     <option>Optimized Model</option>
                                 </select>
@@ -1476,6 +1376,46 @@
                             <div id="backtest-results">
                                 <p style="color: var(--text-secondary);">No backtest results available</p>
                             </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ML Telemetry Page -->
+                <section id="ml-telemetry" class="page-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span class="section-icon">🤖</span>
+                            ML Telemetry
+                        </h2>
+                        <button class="btn btn-primary">Refresh Metrics</button>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <span class="card-icon">🧠</span>
+                                <h3 class="card-title">Models Trained</h3>
+                            </div>
+                            <div class="card-value">27</div>
+                            <p class="card-subtitle">Active ML models</p>
+                        </div>
+
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <span class="card-icon">⚡</span>
+                                <h3 class="card-title">Training Time</h3>
+                            </div>
+                            <div class="card-value">2.3h</div>
+                            <p class="card-subtitle">Average per model</p>
+                        </div>
+
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <span class="card-icon">🎯</span>
+                                <h3 class="card-title">Prediction Accuracy</h3>
+                            </div>
+                            <div class="card-value">78.5%</div>
+                            <p class="card-subtitle">Last 24 hours</p>
                         </div>
                     </div>
                 </section>
@@ -1560,7 +1500,7 @@
                                 <h3 class="card-title">API Status</h3>
                             </div>
                             <div class="card-value">
-                                <span class="status-indicator" id="health-api-status">LOADING</span>
+                                <span class="status-indicator" id="api-status">LOADING</span>
                             </div>
                             <p class="card-subtitle">Exchange connectivity</p>
                         </div>
@@ -1591,7 +1531,7 @@
                                 <h3 class="card-title">Trading Status</h3>
                             </div>
                             <div class="card-value">
-                                <span class="status-indicator" id="health-trading-status">LOADING</span>
+                                <span class="status-indicator" id="trading-status">LOADING</span>
                             </div>
                             <p class="card-subtitle">Live trading state</p>
                         </div>
@@ -2073,143 +2013,6 @@
                                 <button class="btn btn-secondary" onclick="closeAssignSubscriptionModal()">Cancel</button>
                                 <button class="btn btn-primary" onclick="assignSubscription()">Assign Subscription</button>
                             </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Symbol Management Page -->
-                <section id="symbol-management" class="page-section" style="display: none;">
-                    <div class="section-header">
-                        <h2 class="section-title">
-                            <span class="section-icon">🪙</span>
-                            Symbol Management
-                        </h2>
-                        <p class="section-helper">Manage trading symbols, custom pairs, and model training configurations.</p>
-                    </div>
-
-                    <!-- Admin Symbol Management (Admin Only) -->
-                    <div id="admin-symbol-management" class="admin-section" style="display: none;">
-                        <div class="section-header">
-                            <h3>System Symbol Management</h3>
-                            <button class="btn btn-primary" id="add-system-symbol-btn">Add Symbol</button>
-                        </div>
-
-                        <div style="margin-bottom: var(--spacing-xl);">
-                            <div style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
-                                <input type="text" class="form-input" id="admin-symbol-search" placeholder="Search symbols..." style="flex: 1;">
-                                <select class="form-input" id="admin-symbol-status-filter" style="width: 200px;">
-                                    <option value="">All Status</option>
-                                    <option value="active">Active</option>
-                                    <option value="disabled">Disabled</option>
-                                    <option value="training">Training</option>
-                                </select>
-                                <button class="btn btn-secondary" id="admin-symbol-refresh-btn">Refresh</button>
-                            </div>
-                        </div>
-
-                        <div class="data-table-container">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Symbol</th>
-                                        <th>Status</th>
-                                        <th>Model Ready</th>
-                                        <th>Last Trained</th>
-                                        <th>Training Progress</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="admin-symbols-table">
-                                    <!-- Admin symbols will be populated here -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Custom Symbols Management (Premium Users) -->
-                    <div id="custom-symbol-management" class="premium-section" style="display: none;">
-                        <div class="section-header">
-                            <h3>Custom Symbols</h3>
-                            <p class="section-helper">Add custom USDT pairs for training and auto-trading.</p>
-                        </div>
-
-                        <div id="premium-guard" class="premium-guard" style="display: none;">
-                            <div class="premium-upgrade-prompt">
-                                <h3>Premium Required</h3>
-                                <p>Upgrade to manage custom symbols and unlock training for any USDT pair.</p>
-                                <button class="btn btn-primary" onclick="showSubscriptionModal()">Upgrade Now</button>
-                            </div>
-                        </div>
-
-                        <div id="premium-symbols-content" class="card-panel" style="display: none;">
-                            <div class="custom-symbols-grid">
-                                <div class="custom-symbols-left">
-                                    <h3>Add Custom Symbols</h3>
-                                    <p class="section-helper">Enter pairs like <code>ARBUSDT</code>, <code>PEPEUSDT</code>, <code>JTOUSDT</code>. Must end with USDT.</p>
-                                    <div class="input-row">
-                                        <input id="custom-symbol-input" type="text" placeholder="e.g., ARBUSDT" aria-label="Custom symbol" />
-                                        <button id="custom-symbol-add" class="btn btn-secondary" type="button">Add</button>
-                                        <button id="custom-symbol-save" class="btn btn-primary" type="button">Save</button>
-                                    </div>
-                                    <div id="custom-symbol-status" class="status-pill status-neutral">Loading symbols...</div>
-                                </div>
-                                <div class="custom-symbols-right">
-                                    <h3>Your Custom Symbols</h3>
-                                    <div id="custom-symbols-list" class="pill-collection"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Backtest Modal -->
-                    <div id="symbol-backtest-modal" class="modal" style="display:none;position:fixed;z-index:9999;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;">
-                        <div class="modal-content" style="background:#181f2e;padding:2rem 2.5rem;border-radius:16px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;">
-                            <button onclick="document.getElementById('symbol-backtest-modal').style.display='none'" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.5rem;color:#fff;cursor:pointer;">&times;</button>
-                            <h3 style="margin-bottom:1.2rem;">Run Backtest for <span id="backtest-modal-symbol"></span></h3>
-                            <form id="symbol-backtest-form" onsubmit="return false;">
-                                <div class="form-group">
-                                    <label for="symbol-backtest-date-range">Date Range</label>
-                                    <input type="text" id="symbol-backtest-date-range" class="form-input" placeholder="2024-01-01 to 2024-12-31" value="2024-01-01 to 2024-12-31" />
-                                </div>
-                                <div class="form-group">
-                                    <label for="symbol-backtest-strategy">Strategy</label>
-                                    <select id="symbol-backtest-strategy" class="form-input">
-                                        <option>Ultimate Ensemble</option>
-                                        <option>Random Forest</option>
-                                        <option>Gradient Boosting</option>
-                                    </select>
-                                </div>
-                                <button type="submit" class="btn btn-primary" id="run-symbol-backtest-btn">Run Backtest</button>
-                            </form>
-                            <div id="symbol-backtest-results" style="margin-top:1.5rem;"></div>
-                        </div>
-                    </div>
-
-                    <!-- Add System Symbol Modal -->
-                    <div id="add-system-symbol-modal" class="modal" style="display:none;position:fixed;z-index:9999;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;">
-                        <div class="modal-content" style="background:#181f2e;padding:2rem 2.5rem;border-radius:16px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;">
-                            <button onclick="document.getElementById('add-system-symbol-modal').style.display='none'" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.5rem;color:#fff;cursor:pointer;">&times;</button>
-                            <h3 style="margin-bottom:1.2rem;">Add System Symbol</h3>
-                            <form id="add-system-symbol-form" onsubmit="return false;">
-                                <div class="form-group">
-                                    <label for="new-symbol-name">Symbol Name</label>
-                                    <input type="text" id="new-symbol-name" class="form-input" placeholder="e.g., BTCUSDT" required />
-                                </div>
-                                <div class="form-group">
-                                    <label for="new-symbol-status">Initial Status</label>
-                                    <select id="new-symbol-status" class="form-input">
-                                        <option value="active">Active</option>
-                                        <option value="disabled">Disabled</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" id="auto-train-new-symbol" checked />
-                                        Start training immediately
-                                    </label>
-                                </div>
-                                <button type="submit" class="btn btn-primary" id="submit-add-symbol-btn">Add Symbol</button>
-                            </form>
                         </div>
                     </div>
                 </section>

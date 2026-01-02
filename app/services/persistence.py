@@ -11,8 +11,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict
 
-from app.config import Config
-
 LoggerLike = logging.Logger
 
 logger = logging.getLogger(__name__)
@@ -22,35 +20,16 @@ def _default_noop(*_: Any, **__: Any) -> None:
     """Fallback noop for optional callbacks."""
 
 
-def _logger_has_open_streams(lgr: LoggerLike) -> bool:
-    """Return True if at least one handler appears to have an open stream.
-
-    This helps avoid calling into the logging subsystem during shutdown when
-    handlers may be closed and could raise errors while emitting messages.
-    """
-    try:
-        for h in getattr(lgr, "handlers", []):
-            stream = getattr(h, "stream", None)
-            if stream is None:
-                # Handler may not expose a stream (file-rotating or custom),
-                # assume it's usable.
-                return True
-            try:
-                if not getattr(stream, "closed", False):
-                    return True
-            except Exception:
-                # If we can't determine stream state, be conservative and
-                # assume it's open.
-                return True
-    except Exception:
-        # Any problem inspecting handlers -- assume logging is available.
-        return True
-    return False
-
-
 def ensure_persistence_dirs():
     """Create persistence directories with proper permissions"""
-    base_path = Config.DATA_DIR
+    # Prefer an explicit environment override for persistence directory so
+    # local development doesn't try to write to container paths like /app.
+    env_path = os.getenv("BOT_PERSISTENCE_DIR")
+    if env_path:
+        base_path = Path(env_path)
+    else:
+        # Fall back to project-local bot_persistence directory
+        base_path = Path(__file__).resolve().parent.parent / "bot_persistence"
     profile = os.getenv("BOT_PROFILE", "default")
     
     dirs_to_create = [
@@ -66,32 +45,16 @@ def ensure_persistence_dirs():
             directory.mkdir(parents=True, exist_ok=True)
             # Set permissions: owner RWX, group RX, others RX
             directory.chmod(0o755)
-            try:
-                # Use the module logger so handlers can be managed centrally.
-                if _logger_has_open_streams(logger):
-                    logger.info(f"Created/verified directory: {directory}")
-                else:
-                    # Fallback to stdout when logging is unavailable (e.g., during
-                    # shutdown) to avoid raising errors from closed handler streams.
-                    print(f"INFO: Created/verified directory: {directory}")
-            except Exception:
-                # Best-effort logging: don't let logging failures prevent directory creation
-                pass
+            logging.info(f"Created/verified directory: {directory}")
         except PermissionError as e:
-            try:
-                logger.warning(f"Permission error creating {directory}: {e}")
-            except Exception:
-                pass
+            logging.warning(f"Permission error creating {directory}: {e}")
             # Try with more permissive settings
             try:
                 directory.chmod(0o777)
             except:
                 pass
         except Exception as e:
-            try:
-                logger.error(f"Error creating {directory}: {e}")
-            except Exception:
-                pass
+            logging.error(f"Error creating {directory}: {e}")
     
     return base_path / profile / profile
 
@@ -151,17 +114,12 @@ class ProfessionalPersistence:
             except Exception:
                 t_enabled = None
                 t_paper = None
-            if _logger_has_open_streams(logger):
-                logger.info(
-                    "Persistence.save_complete_state called - id(trader)=%s, trading_enabled=%s, paper_trading=%s",
-                    id(trader),
-                    t_enabled,
-                    t_paper,
-                )
-            else:
-                print(
-                    f"Persistence.save_complete_state called - id(trader)={id(trader)}, trading_enabled={t_enabled}, paper_trading={t_paper}"
-                )
+            logger.info(
+                "Persistence.save_complete_state called - id(trader)=%s, trading_enabled=%s, paper_trading=%s",
+                id(trader),
+                t_enabled,
+                t_paper,
+            )
             state = {
                 "version": self.current_version,
                 "timestamp": datetime.now().isoformat(),
@@ -196,10 +154,7 @@ class ProfessionalPersistence:
                 try:
                     shutil.copy2(state_file, backup_file)
                 except Exception as e:
-                    if _logger_has_open_streams(logger):
-                        logger.warning(f"Failed to create backup: {e}")
-                    else:
-                        print(f"WARNING: Failed to create backup: {e}")
+                    logger.warning(f"Failed to create backup: {e}")
             
             with open(state_file, "w") as handle:
                 json.dump(state, handle, indent=2, default=str)

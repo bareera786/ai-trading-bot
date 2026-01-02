@@ -8,14 +8,8 @@ services:
     container_name: ai-bot-container
     restart: unless-stopped
     network_mode: host
-    user: "1000:1000"
     env_file:
       - config/deploy.env
-    volumes:
-      - ./bot_persistence:/app/bot_persistence:rw
-      - ./logs:/app/logs:rw
-      - ./artifacts:/app/artifacts:rw
-      - ./reports:/app/reports:rw
     depends_on:
       - timescaledb
       - redis
@@ -65,7 +59,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5434:5432"
+      - "5432:5432"
 
   # Portainer for container management
   portainer:

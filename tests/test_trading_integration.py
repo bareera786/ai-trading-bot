@@ -1,12 +1,6 @@
-"""Comprehensive trading integration tests.
-
-NOTE: This file conflicts with the namespaced copy in `tests/integration/`
-and causes pytest import collisions during full runs. Temporarily skip this
-module to avoid the import-file mismatch until the duplicate is consolidated.
-"""
+"""Comprehensive trading integration tests."""
 
 import pytest
-pytest.skip("Legacy duplicate test file - skip in full runs; remove when consolidated", allow_module_level=True)
 from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime, timedelta
 import time

@@ -40,9 +40,7 @@ class InMemoryCredentialsStore:
         }
         return self._store[uid][acct]
 
-    def get_credentials(
-        self, user_id: Optional[int] = None, account_type: Optional[str] = None
-    ):
+    def get_credentials(self, user_id: Optional[int] = None, account_type: Optional[str] = None):
         uid = int(user_id) if user_id is not None else 0
         acct = self._normalize_account_type(account_type) if account_type else None
         user_creds = self._store.get(uid, {})
@@ -50,9 +48,7 @@ class InMemoryCredentialsStore:
             return user_creds.get(acct)
         return user_creds
 
-    def clear_credentials(
-        self, account_type: Optional[str] = None, user_id: Optional[int] = None
-    ):
+    def clear_credentials(self, account_type: Optional[str] = None, user_id: Optional[int] = None):
         uid = int(user_id) if user_id is not None else 0
         acct = self._normalize_account_type(account_type) if account_type else None
         if uid not in self._store:
@@ -69,16 +65,9 @@ class SimpleLogManager:
         self._logs: List[Dict[str, Any]] = []
 
     def add(self, event_type: str, message: str, **kwargs):
-        self._logs.insert(
-            0, {"type": event_type, "message": message, "details": kwargs}
-        )
+        self._logs.insert(0, {"type": event_type, "message": message, "details": kwargs})
 
-    def get_logs(
-        self,
-        limit: int = 50,
-        account_type: Optional[str] = None,
-        severity: Optional[str] = None,
-    ):
+    def get_logs(self, limit: int = 50, account_type: Optional[str] = None, severity: Optional[str] = None):
         return self._logs[:limit]
 
 
@@ -92,24 +81,13 @@ class FallbackTrader:
         return {"enabled": bool(self.real_trading_enabled)}
 
 
-def default_apply_credentials(
-    account_type: str = "spot", creds: Optional[Dict[str, Any]] = None
-) -> bool:
+def default_apply_credentials(account_type: str = "spot", creds: Optional[Dict[str, Any]] = None) -> bool:
     # Pretend we connected successfully
     return True
 
 
-def default_get_status(
-    include_connection: bool = True,
-    include_logs: bool = True,
-    user_id: Optional[int] = None,
-):
-    return {
-        "ultimate_status": {},
-        "optimized_status": {},
-        "logs": [],
-        "account_connections": {},
-    }
+def default_get_status(include_connection: bool = True, include_logs: bool = True, user_id: Optional[int] = None):
+    return {"ultimate_status": {}, "optimized_status": {}, "logs": [], "account_connections": {}}
 
 
 __all__ = [

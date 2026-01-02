@@ -263,11 +263,7 @@ def api_market_data():
     dashboard_data = _dashboard_data(ctx)
     get_market_data = _callable(ctx, "get_real_market_data")
 
-    active = set(
-        symbols.get_user_trading_universe(current_user)
-        if current_user.is_authenticated
-        else symbols.get_active_trading_universe()
-    )
+    active = set(symbols.get_user_trading_universe(current_user) if current_user.is_authenticated else symbols.get_active_trading_universe())
     market_data = {}
     if get_market_data:
         for symbol in active:
@@ -335,9 +331,7 @@ def api_crt_data():
 def api_trades():
     ctx = _ctx()
     try:
-        current_app.logger.info(
-            f"[MERGED_VIEW_REQUEST] args={dict(request.args)} cookies={dict(request.cookies)} remote={request.remote_addr}"
-        )
+        current_app.logger.info(f"[MERGED_VIEW_REQUEST] args={dict(request.args)} cookies={dict(request.cookies)} remote={request.remote_addr}")
     except Exception:
         current_app.logger.exception("[MERGED_VIEW_REQUEST] failed to log")
     try:
@@ -347,8 +341,10 @@ def api_trades():
     except Exception:
         current_app.logger.exception("[MERGED_VIEW_ENTER] failed to log request intro")
     mode = request.args.get("mode", "ultimate").lower()
-    
-    # Define common parameters
+    trader = _pick_trader(ctx, mode)
+    if not trader:
+        return jsonify({"error": f"Trader for mode '{mode}' is unavailable"}), 503
+
     page = request.args.get("page", 1, type=int)
     symbol = request.args.get("symbol")
     days = request.args.get("days", type=int)
@@ -359,50 +355,17 @@ def api_trades():
         filters["symbol"] = symbol
     if days:
         filters["days"] = days
-    
-    # Handle "all" mode by combining trades from both traders
-    if mode == "all":
-        ultimate, optimized = _get_traders(ctx)
-        traders_to_query = []
-        if ultimate:
-            traders_to_query.append(("ultimate", ultimate))
-        if optimized:
-            traders_to_query.append(("optimized", optimized))
-        
-        if not traders_to_query:
-            return jsonify({"error": "No traders available"}), 503
-            
-        all_trades = []
-        for profile_name, trader in traders_to_query:
-            try:
-                trader_filters = filters.copy()
-                trader_trades = trader.trade_history.get_trade_history(trader_filters)
-                # Add profile info to each trade
-                for trade in trader_trades:
-                    trade["profile"] = profile_name.upper()
-                all_trades.extend(trader_trades)
-            except Exception as exc:
-                print(f"❌ Error fetching {profile_name} trade history: {exc}")
-                continue
-        
-        trades = all_trades
-        default_real_only = False  # Mixed modes, show all execution types
-    else:
-        trader = _pick_trader(ctx, mode)
-        if not trader:
-            return jsonify({"error": f"Trader for mode '{mode}' is unavailable"}), 503
+    default_real_only = bool(getattr(trader, "real_trading_enabled", False))
+    if execution_mode:
+        filters["execution_mode"] = execution_mode
+    elif default_real_only:
+        filters["execution_mode"] = "real"
 
-        default_real_only = bool(getattr(trader, "real_trading_enabled", False))
-        if execution_mode:
-            filters["execution_mode"] = execution_mode
-        elif default_real_only:
-            filters["execution_mode"] = "real"
-
-        try:
-            trades = trader.trade_history.get_trade_history(filters)
-        except Exception as exc:  # pragma: no cover - runtime defensive log
-            print(f"❌ Error fetching trade history: {exc}")
-            return jsonify({"error": str(exc)}), 500
+    try:
+        trades = trader.trade_history.get_trade_history(filters)
+    except Exception as exc:  # pragma: no cover - runtime defensive log
+        print(f"❌ Error fetching trade history: {exc}")
+        return jsonify({"error": str(exc)}), 500
 
     trades.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
 
@@ -413,9 +376,7 @@ def api_trades():
     # Optional: merge DB `UserTrade` rows into the response for admin users
     merge_db = str(request.args.get("merge_db", "")).lower() in ("1", "true", "yes")
     try:
-        current_app.logger.info(
-            f"[MERGED_VIEW_HDR] headers_present={{'X-Debug-Merged': bool(request.headers.get('X-Debug-Merged'))}} args={dict(request.args)} remote={request.remote_addr}"
-        )
+        current_app.logger.info(f"[MERGED_VIEW_HDR] headers_present={{'X-Debug-Merged': bool(request.headers.get('X-Debug-Merged'))}} args={dict(request.args)} remote={request.remote_addr}")
     except Exception:
         current_app.logger.exception("[MERGED_VIEW_HDR] failed to log headers")
     if merge_db:
@@ -443,9 +404,7 @@ def api_trades():
         # Add diagnostics: log auth/session state when an admin merged view is requested
         try:
             auth_state = {
-                "current_user_authenticated": bool(
-                    getattr(current_user, "is_authenticated", False)
-                ),
+                "current_user_authenticated": bool(getattr(current_user, "is_authenticated", False)),
                 "current_user_id": getattr(current_user, "id", None),
                 "session_user_id": session.get("user_id"),
                 "remote_addr": request.remote_addr,
@@ -454,20 +413,13 @@ def api_trades():
             # Use app logger to preserve structured logs
             current_app.logger.info(f"[MERGED_VIEW] auth_state={auth_state}")
         except Exception:
-            current_app.logger.exception(
-                "[MERGED_VIEW] Failed to log auth/session state"
-            )
+            current_app.logger.exception("[MERGED_VIEW] Failed to log auth/session state")
 
         if not getattr(current_user, "is_authenticated", False):
             user_id = session.get("user_id")
             if not user_id:
-                current_app.logger.warning(
-                    "[MERGED_VIEW] blocked: unauthenticated request with no session user_id"
-                )
-                return (
-                    jsonify({"error": "Authentication required for merged view"}),
-                    401,
-                )
+                current_app.logger.warning("[MERGED_VIEW] blocked: unauthenticated request with no session user_id")
+                return jsonify({"error": "Authentication required for merged view"}), 401
             user = User.query.get(user_id)
         else:
             user = User.query.get(getattr(current_user, "id", None))
@@ -511,9 +463,9 @@ def api_trades():
     return jsonify(
         {
             "trades": paginated,
-            "total_trades": len(combined) if merge_db else len(trades),
+            "total_trades": len(trades),
             "current_page": page,
-            "total_pages": max(1, (len(combined) if merge_db else len(trades)) // per_page + (1 if (len(combined) if merge_db else len(trades)) % per_page > 0 else 0)),
+            "total_pages": max(1, (len(trades) + per_page - 1) // per_page),
             "per_page": per_page,
             "mode": mode,
             "execution_mode": filters.get(
@@ -534,9 +486,7 @@ def api_debug_merged_auth():
 
     try:
         auth_state = {
-            "current_user_authenticated": bool(
-                getattr(current_user, "is_authenticated", False)
-            ),
+            "current_user_authenticated": bool(getattr(current_user, "is_authenticated", False)),
             "current_user_id": getattr(current_user, "id", None),
             "session_user_id": session.get("user_id"),
             "remote_addr": request.remote_addr,

@@ -41,8 +41,4 @@ jobs:
           AI_BOT_TEST_MODE: '1'
           SKIP_RUNTIME_BOOTSTRAP: '1'
         run: |
-          # Run the single focused test and avoid failing the job on global
-          # coverage gating in `pyproject.toml` by overriding the fail-under
-          # setting for this quick CI check. Integration workflow remains
-          # opt-in and keeps its coverage behaviour disabled.
-          pytest -q tests/test_config_database_url.py --maxfail=1 --cov-fail-under=0
+          pytest -q tests/test_config_database_url.py

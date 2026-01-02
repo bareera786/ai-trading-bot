@@ -1,9 +1,35 @@
 """Lightweight RIBS progress endpoint (separate blueprint to avoid touching status.py)
 """
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, current_app
 import os
 import json
 import time
+import asyncio
+try:
+    from app.integrations.ribs_connector import RIBSConnector
+except Exception:
+    # Optional integration - provide a safe fallback so the app can start
+    class RIBSConnector:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def connect(self):
+            raise RuntimeError("RIBS connector unavailable in this environment")
+
+        async def disconnect(self):
+            return None
+
+        async def get_market_regime(self):
+            return None
+
+        async def get_behavioral_analytics(self, user_id):
+            return []
+
+        async def get_user_risk_score(self, user_id):
+            return None
+
+        async def get_user_risk_adjustments(self, user_id):
+            return {}
 
 ribs_progress_bp = Blueprint("ribs_progress", __name__)
 
@@ -73,6 +99,7 @@ def api_ribs_progress():
             except Exception as e:
                 # Silently fail, use empty arrays
                 print(f"DEBUG: Failed to extract behavior data: {e}")
+                pass
 
         progress = {
             "running": status.get("running", False),
@@ -113,3 +140,126 @@ def api_ribs_logs():
         return jsonify({"logs": ribs_logs[-50:]})  # Last 50 RIBS logs
     except Exception as e:
         return jsonify({"logs": [], "error": str(e)}), 500
+
+
+@ribs_progress_bp.route("/api/ribs/connector/status", methods=["GET"])
+def api_ribs_connector_status():
+    """Return RIBS connector status and health information"""
+    try:
+        connector = RIBSConnector()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        async def get_status():
+            try:
+                await connector.connect()
+                # Test connection by getting market regime
+                regime = await connector.get_market_regime()
+                await connector.disconnect()
+
+                return {
+                    "connected": True,
+                    "market_regime": regime,
+                    "last_check": int(time.time()),
+                    "healthy": True
+                }
+            except Exception as e:
+                return {
+                    "connected": False,
+                    "error": str(e),
+                    "last_check": int(time.time()),
+                    "healthy": False
+                }
+
+        status = loop.run_until_complete(get_status())
+        loop.close()
+
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({
+            "connected": False,
+            "error": str(e),
+            "last_check": int(time.time()),
+            "healthy": False
+        }), 500
+
+
+@ribs_progress_bp.route("/api/ribs/connector/analytics/<user_id>", methods=["GET"])
+def api_ribs_connector_analytics(user_id):
+    """Return behavioral analytics for a specific user"""
+    try:
+        connector = RIBSConnector()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        async def get_analytics():
+            try:
+                await connector.connect()
+                analytics = await connector.get_behavioral_analytics(user_id)
+                risk_score = await connector.get_user_risk_score(user_id)
+                risk_adjustments = await connector.get_user_risk_adjustments(user_id)
+                await connector.disconnect()
+
+                return {
+                    "user_id": user_id,
+                    "behavioral_analytics": analytics,
+                    "risk_score": risk_score,
+                    "risk_adjustments": risk_adjustments,
+                    "last_updated": int(time.time())
+                }
+            except Exception as e:
+                return {
+                    "user_id": user_id,
+                    "error": str(e),
+                    "last_updated": int(time.time())
+                }
+
+        analytics = loop.run_until_complete(get_analytics())
+        loop.close()
+
+        return jsonify(analytics)
+    except Exception as e:
+        return jsonify({
+            "user_id": user_id,
+            "error": str(e),
+            "last_updated": int(time.time())
+        }), 500
+
+
+@ribs_progress_bp.route("/api/ribs/connector/market-regime", methods=["GET"])
+def api_ribs_connector_market_regime():
+    """Return current market regime from RIBS connector"""
+    try:
+        connector = RIBSConnector()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        async def get_regime():
+            try:
+                await connector.connect()
+                regime = await connector.get_market_regime()
+                correlation = await connector.get_correlation_matrix()
+                await connector.disconnect()
+
+                return {
+                    "current_regime": regime,
+                    "correlation_matrix": correlation,
+                    "last_updated": int(time.time())
+                }
+            except Exception as e:
+                return {
+                    "current_regime": "unknown",
+                    "error": str(e),
+                    "last_updated": int(time.time())
+                }
+
+        regime_data = loop.run_until_complete(get_regime())
+        loop.close()
+
+        return jsonify(regime_data)
+    except Exception as e:
+        return jsonify({
+            "current_regime": "unknown",
+            "error": str(e),
+            "last_updated": int(time.time())
+        }), 500

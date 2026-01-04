@@ -108,11 +108,12 @@ from app.runtime.system import initialize_runtime_from_context
 def _get_auto_user_ids_from_db() -> list[int]:
     try:
         from app.models import User
+        from typing import Any, cast
 
         # Only include active, subscribed, non-admin users by default.
         users = (
-            User.query.filter(User.is_active.is_(True))
-            .filter(User.is_admin.is_(False))
+            User.query.filter(cast(Any, User.is_active).is_(True))
+            .filter(cast(Any, User.is_admin).is_(False))
             .all()
         )
         eligible: list[int] = []
@@ -11031,10 +11032,13 @@ class UltimateAIAutoTrader:
                 stabilized = self._stabilize_ensemble_confidence(
                     ensemble_signal.get("confidence", 0.5)
                 )
-            try:
-                all_confidence.append(float(stabilized))
-            except Exception:
-                all_confidence.append(float(ensemble_signal.get("confidence", 0.5)))
+            all_confidence.append(
+                float(
+                    stabilized
+                    if stabilized is not None
+                    else ensemble_signal.get("confidence", 0.5)
+                )
+            )
         if crt_signal:
             all_confidence.append(crt_signal["confidence"])
 
@@ -13205,7 +13209,7 @@ def _persist_multiuser_states_on_shutdown() -> int:
         user_ultimate = traders[0]
         try:
             profile = (
-                profile_name(int(user_id))
+                str(profile_name(int(user_id)))
                 if callable(profile_name)
                 else f"user_{int(user_id)}"
             )
@@ -13371,14 +13375,22 @@ def record_user_trade(
 
 def update_portfolio_daily_pnl(user_id=None):
     """Update UserPortfolio daily_pnl from trader daily_pnl accumulation"""
-    def _resolve_user_traders(user_id_value):
-        service = globals().get("market_data_service")
+    def _resolve_user_traders(user_id_value: int):
+        from typing import Any, Optional, Tuple
+
+        service: Any = globals().get("market_data_service")
         getter = getattr(service, "_get_or_create_user_traders", None)
-        if callable(getter):
-            try:
-                return getter(int(user_id_value))
-            except Exception:
-                return None
+        if not callable(getter):
+            return None
+        try:
+            res: Any = getter(int(user_id_value))
+        except Exception:
+            return None
+
+        if isinstance(res, tuple) and len(res) == 2:
+            return res  # type: ignore[return-value]
+        if isinstance(res, list) and len(res) == 2:
+            return (res[0], res[1])
         return None
 
     try:
@@ -13397,8 +13409,8 @@ def update_portfolio_daily_pnl(user_id=None):
                 if not user_portfolio:
                     continue
 
-                traders = _resolve_user_traders(user.id)
-                if not traders or len(traders) != 2:
+                traders = _resolve_user_traders(int(user.id))
+                if traders is None:
                     # Without user-scoped traders, we cannot safely compute per-user P&L.
                     continue
 

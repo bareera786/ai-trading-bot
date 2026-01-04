@@ -71,8 +71,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
-    ports:
-      - "5433:5432"
     networks:
       - trading-network
     healthcheck:
@@ -88,8 +86,6 @@ services:
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
-    ports:
-      - "6380:6379"
     networks:
       - trading-network
     healthcheck:

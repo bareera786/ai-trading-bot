@@ -9,12 +9,10 @@ function setStatus(message, tone = 'muted') {
   const el = document.getElementById(IDS.status);
   if (!el) return;
   el.textContent = message || '';
-  const colors = {
-    success: '#2ecc71',
-    error: '#e74c3c',
-    muted: 'var(--text-secondary)',
-  };
-  el.style.color = colors[tone] || colors.muted;
+  el.classList.remove('text-success', 'text-danger', 'text-muted');
+  if (tone === 'success') el.classList.add('text-success');
+  else if (tone === 'error') el.classList.add('text-danger');
+  else el.classList.add('text-muted');
 }
 
 async function loadPaymentSettings() {
@@ -43,7 +41,12 @@ async function savePaymentAddress() {
       credentials: 'same-origin',
       body: JSON.stringify({ payment_address: paymentAddress }),
     });
-    const data = await response.json();
+    let data = null;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
     if (!response.ok || data?.error) {
       throw new Error(data?.error || 'Save failed');
     }

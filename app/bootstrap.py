@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import glob
+import json
 import os
 from threading import Lock
 from typing import Any, Optional
@@ -97,26 +98,61 @@ def _check_ui_assets(app) -> None:
         app.logger.warning("Static directory not found: %s", static_dir)
         return
 
-    # Check for hashed CSS files (common pattern: app-*.css)
-    css_files = glob.glob(os.path.join(static_dir, "**", "app-*.css"), recursive=True)
-    if not css_files:
+    dist_dir = os.path.join(static_dir, "dist")
+    manifest_path = app.config.get("ASSET_MANIFEST_PATH") or os.path.join(
+        dist_dir, "manifest.json"
+    )
+
+    if not os.path.exists(manifest_path):
         app.logger.warning(
-            "No hashed CSS assets found. Run 'npm run build' or 'yarn build' to build UI assets."
+            "UI asset manifest not found at %s. Run 'npm run build:assets' to build UI assets.",
+            manifest_path,
+        )
+        return
+
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as handle:
+            manifest = json.load(handle) or {}
+    except Exception as exc:
+        app.logger.warning("Failed to load UI asset manifest %s: %s", manifest_path, exc)
+        return
+
+    css_assets: list[str] = []
+    js_assets: list[str] = []
+    for logical_name, rel_path in manifest.items():
+        if not isinstance(rel_path, str):
+            continue
+        if logical_name.endswith(".css") or rel_path.endswith(".css"):
+            css_assets.append(rel_path)
+        if logical_name.endswith(".js") or rel_path.endswith(".js"):
+            js_assets.append(rel_path)
+
+    if not css_assets:
+        app.logger.warning(
+            "No hashed CSS assets found in manifest. Run 'npm run build:assets' to build UI assets."
+        )
+    if not js_assets:
+        app.logger.warning(
+            "No hashed JS assets found in manifest. Run 'npm run build:assets' to build UI assets."
         )
 
-    # Check for hashed JS files (common pattern: app-*.js)
-    js_files = glob.glob(os.path.join(static_dir, "**", "app-*.js"), recursive=True)
-    if not js_files:
+    missing_files: list[str] = []
+    for rel_path in sorted(set(css_assets + js_assets)):
+        abs_path = os.path.join(static_dir, rel_path)
+        if not os.path.exists(abs_path):
+            missing_files.append(rel_path)
+
+    if missing_files:
         app.logger.warning(
-            "No hashed JS assets found. Run 'npm run build' or 'yarn build' to build UI assets."
+            "UI asset manifest references missing files: %s. Re-run 'npm run build:assets'.",
+            ", ".join(missing_files[:10])
+            + ("..." if len(missing_files) > 10 else ""),
         )
 
-    # Check for source maps (optional but good indicator of built assets)
-    map_files = glob.glob(os.path.join(static_dir, "**", "*.map"), recursive=True)
+    # Optional: source maps can be disabled in production builds.
+    map_files = glob.glob(os.path.join(dist_dir, "**", "*.map"), recursive=True)
     if not map_files:
-        app.logger.info(
-            "No source maps found. Consider enabling source maps in development."
-        )
+        app.logger.info("No source maps found in %s.", dist_dir)
 
 
 def bootstrap_runtime(app) -> Optional[BootstrapContext]:

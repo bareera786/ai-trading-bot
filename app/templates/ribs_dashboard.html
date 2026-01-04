@@ -731,7 +731,7 @@
     }
 </style>
 {% endif %}
-<div class="ribs-dashboard" style="padding: 20px; background: #f8f9fa; border-radius: 10px; margin: 20px 0;">
+<div class="ribs-dashboard" style="padding: var(--spacing-xl, 20px); background: var(--bg-card, var(--bg-primary, #f8f9fa)); border-radius: var(--radius-lg, 10px); margin: var(--spacing-xl, 20px) 0; border: 1px solid var(--border-color, #e2e8f0);">
     <h2>RIBS Strategy Evolution</h2>
 
     <!-- Progress Overview Section -->
@@ -1162,9 +1162,23 @@
         renderRIBS3D(ribsData);
 
         // Performance Metrics Real-time Updates
+        if (typeof window.__ribs_full_page === 'undefined') {
+            window.__ribs_full_page = {{ 'true' if is_full_page else 'false' }};
+        }
+        const __RIBS_STATE = (window.__ribs_state = window.__ribs_state || { perfStarted: false, perfInterval: null, statusStarted: false, statusInterval: null, archiveStarted: false, archiveIntervals: [] });
+
+        if (typeof window.__ribs_isActive !== 'function') {
+            window.__ribs_isActive = function() {
+                if (window.__ribs_full_page) return true;
+                const section = document.getElementById('ribs-dashboard');
+                return !!(section && section.classList.contains('active'));
+            };
+        }
+
         let performanceUpdateInterval;
 
         function updatePerformanceMetrics() {
+            if (!window.__ribs_isActive()) return;
             fetch('/api/performance/metrics')
                 .then(response => response.json())
                 .then(data => {
@@ -1195,11 +1209,18 @@
         }
 
         function startPerformanceUpdates() {
+            if (__RIBS_STATE.perfStarted) return;
+            __RIBS_STATE.perfStarted = true;
+
             // Initial update
             updatePerformanceMetrics();
 
-            // Update every 5 seconds
-            performanceUpdateInterval = setInterval(updatePerformanceMetrics, 5000);
+            // Update every 5 seconds (no-op when RIBS tab not active)
+            performanceUpdateInterval = setInterval(() => {
+                if (!window.__ribs_isActive()) return;
+                updatePerformanceMetrics();
+            }, 5000);
+            __RIBS_STATE.perfInterval = performanceUpdateInterval;
         }
 
         function stopPerformanceUpdates() {
@@ -1209,11 +1230,27 @@
             }
         }
 
-        // Start performance monitoring when page loads
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', startPerformanceUpdates);
-        } else {
+        // Start performance monitoring only when RIBS is visible (or full-page)
+        function maybeStartPerformanceUpdates() {
+            if (!window.__ribs_isActive()) return;
             startPerformanceUpdates();
+        }
+
+        window.addEventListener('dashboard:ribs-dashboard-visible', maybeStartPerformanceUpdates);
+        window.addEventListener('dashboard:admin-ribs-visible', maybeStartPerformanceUpdates);
+
+        if (window.__ribs_full_page) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', startPerformanceUpdates);
+            } else {
+                startPerformanceUpdates();
+            }
+        } else {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', maybeStartPerformanceUpdates);
+            } else {
+                maybeStartPerformanceUpdates();
+            }
         }
 
         // Stop updates when page unloads
@@ -1390,10 +1427,28 @@ function updateRIBSStatusWidget() {
     });
 }
 
-// Start polling every 2 seconds for live progress updates
-setInterval(updateRIBSStatusWidget, 2000);
-// Initial update
-updateRIBSStatusWidget();
+// Start polling for live progress updates only when RIBS is visible (or full-page)
+function startRIBSStatusPolling() {
+    const state = (window.__ribs_state = window.__ribs_state || { perfStarted: false, perfInterval: null, statusStarted: false, statusInterval: null, archiveStarted: false, archiveIntervals: [] });
+    if (state.statusStarted) return;
+    state.statusStarted = true;
+    updateRIBSStatusWidget();
+    state.statusInterval = setInterval(() => {
+        if (!window.__ribs_isActive || !window.__ribs_isActive()) return;
+        updateRIBSStatusWidget();
+    }, 2000);
+}
+
+function maybeStartRIBSStatusPolling() {
+    if (!window.__ribs_isActive || !window.__ribs_isActive()) return;
+    startRIBSStatusPolling();
+}
+
+window.addEventListener('dashboard:ribs-dashboard-visible', maybeStartRIBSStatusPolling);
+window.addEventListener('dashboard:admin-ribs-visible', maybeStartRIBSStatusPolling);
+if (window.__ribs_full_page) {
+    maybeStartRIBSStatusPolling();
+}
 
 function showRibsToast(msg, kind = 'info') {
     const container = document.getElementById('ribs-toast-container');
@@ -1835,11 +1890,36 @@ async function fetchAndUpdateProgress() {
 }
 
 // Initial load and polling
-document.addEventListener('DOMContentLoaded', function() {
+function startRIBSArchivePolling() {
+    const state = (window.__ribs_state = window.__ribs_state || { perfStarted: false, perfInterval: null, statusStarted: false, statusInterval: null, archiveStarted: false, archiveIntervals: [] });
+    if (state.archiveStarted) return;
+    state.archiveStarted = true;
     fetchAndRenderArchive();
     fetchAndUpdateProgress();
-    setInterval(fetchAndRenderArchive, 10000); // every 10s
-    setInterval(fetchAndUpdateProgress, 5000); // every 5s
+    state.archiveIntervals.push(setInterval(() => {
+        if (!window.__ribs_isActive || !window.__ribs_isActive()) return;
+        fetchAndRenderArchive();
+    }, 10000)); // every 10s
+    state.archiveIntervals.push(setInterval(() => {
+        if (!window.__ribs_isActive || !window.__ribs_isActive()) return;
+        fetchAndUpdateProgress();
+    }, 5000)); // every 5s
+}
+
+function maybeStartRIBSArchivePolling() {
+    if (!window.__ribs_isActive || !window.__ribs_isActive()) return;
+    startRIBSArchivePolling();
+}
+
+window.addEventListener('dashboard:ribs-dashboard-visible', maybeStartRIBSArchivePolling);
+window.addEventListener('dashboard:admin-ribs-visible', maybeStartRIBSArchivePolling);
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.__ribs_full_page) {
+        startRIBSArchivePolling();
+    } else {
+        maybeStartRIBSArchivePolling();
+    }
 });
 </script>
 {% if is_full_page %}

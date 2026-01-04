@@ -199,19 +199,30 @@ def initialize_runtime_from_context(context: Mapping[str, Any]) -> None:
     print("🎉 ULTIMATE AI TRADING BOT FULLY INITIALIZED AND READY!")
     print("💾 Professional Persistence: ACTIVE")
 
-    # Get the actual port from Flask app config or default to 5000
-    port = 5000  # Default port we're using
+    # Best-effort: derive the effective host/port from env/config for friendly logs.
+    host = os.getenv("FLASK_RUN_HOST") or os.getenv("HOST") or "localhost"
+    port = 5000
+    try:
+        port = int(os.getenv("PORT") or os.getenv("FLASK_RUN_PORT") or "5000")
+    except (TypeError, ValueError):
+        port = 5000
+
     try:
         if hasattr(current_app, "config"):
-            # Try to get port from SERVER_NAME if set
             server_name = current_app.config.get("SERVER_NAME")
-            if server_name and ":" in server_name:
-                port = int(server_name.split(":")[-1])
+            if server_name:
+                if ":" in server_name:
+                    port = int(server_name.split(":")[-1])
+                else:
+                    host = server_name
     except Exception:
-        pass  # Fall back to default
+        pass
 
-    print(f"📍 Dashboard available at: http://localhost:{port}")
-    print(f"📍 Health check at: http://localhost:{port}/health")
+    if host in ("0.0.0.0", "::"):
+        host = "localhost"
+
+    print(f"📍 Dashboard available at: http://{host}:{port}")
+    print(f"📍 Health check at: http://{host}:{port}/health")
     print("=" * 80)
 
 

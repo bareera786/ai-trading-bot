@@ -198,6 +198,17 @@ def dashboard_redirect():
 @dashboard_bp.route("/api/indicator_options", endpoint="api_indicator_options")
 def api_indicator_options():
     ctx = _get_ai_bot_context()
+    if getattr(current_user, "is_authenticated", False):
+        get_all_selections = ctx.get("get_all_indicator_selections")
+        selections = get_all_selections() if callable(get_all_selections) else {}
+        return jsonify(
+            {
+                "options": ctx.get("indicator_signal_options", []),
+                "selections": selections,
+                "timestamp": time.time(),
+            }
+        )
+
     refresher = ctx.get("refresh_indicator_dashboard_state")
     if callable(refresher):
         refresher()
@@ -220,6 +231,15 @@ def api_get_indicator_selection():
 
     get_selection = ctx.get("get_indicator_selection")
     get_all_selections = ctx.get("get_all_indicator_selections")
+
+    if getattr(current_user, "is_authenticated", False):
+        if profile and callable(get_selection):
+            return jsonify({"profile": profile, "selections": get_selection(profile)})
+
+        if callable(get_all_selections):
+            return jsonify({"selections": get_all_selections()})
+
+        return jsonify({"selections": {}})
 
     if profile and callable(get_selection):
         return jsonify({"profile": profile, "selections": get_selection(profile)})
@@ -263,6 +283,21 @@ def api_set_indicator_selection():
         updated = setter(profile, selections)
     else:
         updated = list(selections)
+
+    if getattr(current_user, "is_authenticated", False):
+        get_all_selections = ctx.get("get_all_indicator_selections")
+        selections_snapshot = (
+            get_all_selections() if callable(get_all_selections) else {}
+        )
+        return jsonify(
+            {
+                "profile": profile,
+                "selections": updated,
+                "options": options,
+                "indicator_selections": selections_snapshot,
+                "message": f"Indicator selection updated for {profile}",
+            }
+        )
 
     refresher = ctx.get("refresh_indicator_dashboard_state")
     if callable(refresher):
@@ -345,20 +380,33 @@ def api_dashboard_overview():
     dashboard_data = _get_dashboard_data(ctx)
     indicator_options = ctx.get("indicator_signal_options", [])
 
-    # Ensure binance_logs are populated if not already
-    if "binance_logs" not in dashboard_data:
-        status_fn = ctx.get("get_binance_credential_status")
-        if callable(status_fn):
+    get_all_selections = ctx.get("get_all_indicator_selections")
+    indicator_selections = get_all_selections() if callable(get_all_selections) else {}
+
+    binance_logs: list[dict[str, Any]] = []
+    binance_credentials: dict[str, Any] = {}
+    status_fn = ctx.get("get_binance_credential_status")
+    if callable(status_fn):
+        try:
             try:
                 status = status_fn(
-                    include_logs=True, user_id=getattr(current_user, "id", None)
+                    include_connection=True,
+                    include_logs=True,
+                    user_id=getattr(current_user, "id", None),
                 )
-                if isinstance(status, dict):
-                    dashboard_data["binance_logs"] = status.get("logs", [])
-                else:
-                    dashboard_data["binance_logs"] = []
-            except Exception:
-                dashboard_data["binance_logs"] = []
+            except TypeError:
+                status = status_fn(
+                    include_logs=True,
+                    user_id=getattr(current_user, "id", None),
+                )
+
+            if isinstance(status, dict):
+                binance_credentials = status
+                raw_logs = status.get("logs", [])
+                binance_logs = raw_logs if isinstance(raw_logs, list) else []
+        except Exception:
+            binance_logs = []
+            binance_credentials = {}
 
     return jsonify(
         {
@@ -388,13 +436,53 @@ def api_dashboard_overview():
             "futures_dashboard": dashboard_data.get("futures_dashboard", {}),
             "futures_manual": dashboard_data.get("futures_manual", {}),
             "indicator_options": indicator_options,
-            "indicator_selections": dashboard_data.get("indicator_selections", {}),
-            "binance_credentials": dashboard_data.get("binance_credentials", {}),
-            "binance_logs": dashboard_data.get("binance_logs", []),
+            "indicator_selections": indicator_selections,
+            "binance_credentials": binance_credentials,
+            "binance_logs": binance_logs,
             "ml_telemetry": dashboard_data.get("ml_telemetry", {}),
             "health_report": dashboard_data.get("health_report", {}),
         }
     )
+
+
+@dashboard_bp.route("/api/phases", endpoint="api_phases")
+@login_required
+def api_phases():
+    """Return lightweight per-symbol execution phase telemetry."""
+    ctx = _get_ai_bot_context()
+
+    phases: dict[str, Any] = {}
+    phase_order: list[str] = []
+
+    # Preferred: MarketDataService phase snapshot (live in-process).
+    market_service = ctx.get("market_data_service")
+    snapshot_fn = getattr(market_service, "get_phase_snapshot", None)
+    order_fn = getattr(market_service, "get_phase_order", None)
+    if callable(snapshot_fn):
+        try:
+            phases = snapshot_fn() or {}
+        except Exception:
+            phases = {}
+
+    if callable(order_fn):
+        try:
+            phase_order = list(order_fn() or [])
+        except Exception:
+            phase_order = []
+
+    # Optional: filter to the current user's trading universe when available.
+    # (Best-effort only; fall back to returning all phases.)
+    if getattr(current_user, "is_authenticated", False) and phases:
+        get_universe = ctx.get("get_user_trading_universe")
+        if callable(get_universe):
+            try:
+                universe = set(get_universe(current_user) or [])
+                if universe:
+                    phases = {sym: payload for sym, payload in phases.items() if sym in universe}
+            except Exception:
+                pass
+
+    return jsonify({"phase_order": phase_order, "phases": phases, "timestamp": time.time()})
 
 
 @dashboard_bp.route("/api/performance", endpoint="api_performance_metrics")

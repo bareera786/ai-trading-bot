@@ -31,6 +31,7 @@ import sys
 import json
 import random
 import warnings
+import copy
 import logging
 import math
 import uuid
@@ -102,6 +103,29 @@ from app.runtime.persistence import build_persistence_runtime
 from app.runtime.payloads import build_ai_bot_context_payload
 from app.runtime.services import build_service_runtime
 from app.runtime.system import initialize_runtime_from_context
+
+# DB-backed user enumeration for automated multi-user trading.
+def _get_auto_user_ids_from_db() -> list[int]:
+    try:
+        from app.models import User
+
+        # Only include active, subscribed, non-admin users by default.
+        users = (
+            User.query.filter(User.is_active.is_(True))
+            .filter(User.is_admin.is_(False))
+            .all()
+        )
+        eligible: list[int] = []
+        for user in users:
+            try:
+                subscription = getattr(user, "active_subscription", None)
+                if subscription and getattr(subscription, "is_active", False):
+                    eligible.append(int(user.id))
+            except Exception:
+                continue
+        return eligible
+    except Exception:
+        return []
 from app.runtime.symbols import (
     DEFAULT_DISABLED_SYMBOLS,
     DEFAULT_FUTURES_SYMBOLS,
@@ -1980,6 +2004,8 @@ class _StdoutTee(io.TextIOBase):
 
 def setup_application_logging(log_dir):
     """Configure rotating file logging with optional console output and stdout capture."""
+    import logging
+    root_logger = logging.getLogger()
     if not log_dir:
         log_dir = os.path.join(os.getcwd(), "logs")
     try:
@@ -1990,6 +2016,7 @@ def setup_application_logging(log_dir):
         import logging
         logging.getLogger("ai_trading_bot").warning(f"Could not create log directory {log_dir}, file logging disabled")
         log_dir = None
+
 
     if log_dir is None:
         # File logging disabled due to permission issues
@@ -2338,21 +2365,36 @@ if testnet_override in ("0", "false", "no"):
 
 indicator_selection_manager = IndicatorSelectionManager()
 
+try:
+    from app.runtime.context import UserScopedProxy
+
+    _indicator_selection_proxy = UserScopedProxy(
+        base=indicator_selection_manager,
+        factory=IndicatorSelectionManager,
+    )
+except Exception:
+    _indicator_selection_proxy = None
+
+
+def _get_indicator_selection_manager():
+    proxy = _indicator_selection_proxy
+    return proxy if proxy is not None else indicator_selection_manager
+
 
 def get_indicator_selection(profile):
-    return indicator_selection_manager.get_selection(profile)
+    return _get_indicator_selection_manager().get_selection(profile)
 
 
 def set_indicator_selection(profile, selections):
-    return indicator_selection_manager.set_selection(profile, selections)
+    return _get_indicator_selection_manager().set_selection(profile, selections)
 
 
 def is_indicator_enabled(profile, indicator):
-    return indicator_selection_manager.is_indicator_enabled(profile, indicator)
+    return _get_indicator_selection_manager().is_indicator_enabled(profile, indicator)
 
 
 def get_all_indicator_selections():
-    return indicator_selection_manager.snapshot()
+    return _get_indicator_selection_manager().snapshot()
 
 
 # ==================== SAFETY MANAGEMENT SYSTEM ====================
@@ -8586,6 +8628,56 @@ class FuturesMLTrainingSystem(UltimateMLTrainingSystem):
 
 # ==================== ULTIMATE AI TRADER ====================
 class UltimateAIAutoTrader:
+    def _get_trading_config(self) -> dict:
+        cfg = getattr(self, "trading_config", None)
+        return cfg if isinstance(cfg, dict) else TRADING_CONFIG
+
+    def _stabilize_ensemble_confidence(self, confidence_value, default: float = 0.5) -> float:
+        """Return a stable, per-instance ensemble confidence value.
+
+        This is intentionally conservative: it only guards against non-finite
+        inputs and rate-limits extreme single-tick jumps.
+        """
+
+        previous = getattr(self, "_last_ensemble_confidence", None)
+        previous_float = None
+        if isinstance(previous, (int, float)):
+            try:
+                previous_float = float(previous)
+            except Exception:
+                previous_float = None
+            else:
+                if not math.isfinite(previous_float):
+                    previous_float = None
+
+        try:
+            candidate = float(confidence_value)
+        except Exception:
+            candidate = None
+
+        if candidate is None or not math.isfinite(candidate):
+            stabilized = previous_float if previous_float is not None else float(default)
+            setattr(self, "_last_ensemble_confidence", stabilized)
+            return stabilized
+
+        candidate = max(0.0, min(1.0, candidate))
+
+        max_jump = self._get_trading_config().get("ensemble_confidence_max_jump", 0.35)
+        try:
+            max_jump = float(max_jump)
+        except Exception:
+            max_jump = 0.35
+
+        stabilized = candidate
+        if previous_float is not None and max_jump > 0:
+            delta = candidate - previous_float
+            if abs(delta) > max_jump:
+                stabilized = previous_float + (max_jump if delta > 0 else -max_jump)
+                stabilized = max(0.0, min(1.0, stabilized))
+
+        setattr(self, "_last_ensemble_confidence", stabilized)
+        return stabilized
+
     def initialize_performance_analytics(self):
         """Initialize comprehensive performance analytics system"""
         self.performance_analytics = {
@@ -8672,12 +8764,16 @@ class UltimateAIAutoTrader:
                 )
                 return
 
-            user_id = cfg.get("system_trade_user_id")
+            user_id = (
+                (trade_record or {}).get("user_id")
+                or getattr(self, "user_id", None)
+                or cfg.get("system_trade_user_id")
+            )
             if not user_id:
-                # Nothing to do without a configured user id
+                # Nothing to do without a resolved user id
                 log_component_event(
                     "TRADE_HISTORY",
-                    "System trade recording skipped: no system_trade_user_id configured",
+                    "System trade recording skipped: no user_id resolved",
                     level=logging.DEBUG,
                 )
                 return
@@ -8696,7 +8792,7 @@ class UltimateAIAutoTrader:
 
             # Call module-level helper to persist to DB
             ok = record_user_trade(
-                user_id,
+                int(user_id),
                 symbol,
                 side,
                 quantity,
@@ -9094,6 +9190,7 @@ class UltimateAIAutoTrader:
         self.initial_balance = initial_balance
         self.balance = initial_balance
         self.positions = {}
+        self.trading_config = deepcopy(TRADING_CONFIG)
         # NEW: Use ComprehensiveTradeHistory instead of EnhancedTradeHistory
         self.trade_history = ComprehensiveTradeHistory(log_callback=log_component_event)
         # Initialize TimescaleDB service for efficient candle storage
@@ -9122,6 +9219,8 @@ class UltimateAIAutoTrader:
         self.stop_loss_system = AdvancedStopLossSystem()
         self.parallel_engine = ParallelPredictionEngine()
         self.qfm_engine = QuantumFusionMomentumEngine()
+        # QFM analytics must be per-trader (multi-user safe) and always initialized.
+        self.initialize_performance_analytics()
         # NEW: CRT Module
         self.crt_generator = CRTSignalGenerator()
         self.symbol_min_notional_cache = {}
@@ -9359,6 +9458,15 @@ class UltimateAIAutoTrader:
         response = self.futures_trader.place_market_order(
             symbol, side, qty, reduce_only=reduce_only
         )
+        safe_response = response
+        if response is not None:
+            try:
+                safe_response = copy.deepcopy(response)
+            except Exception:
+                if isinstance(response, dict):
+                    safe_response = dict(response)
+                elif isinstance(response, list):
+                    safe_response = list(response)
         journal_payload = {
             "symbol": symbol,
             "side": side,
@@ -9367,7 +9475,7 @@ class UltimateAIAutoTrader:
             "reduce_only": reduce_only,
             "status": "SUCCESS" if response else "FAILED",
             "testnet": self.futures_trader.testnet,
-            "raw_response": response,
+            "raw_response": safe_response,
             "timestamp": datetime.utcnow().isoformat(),
         }
         if hasattr(self.trade_history, "log_journal_event"):
@@ -9434,6 +9542,15 @@ class UltimateAIAutoTrader:
         response = self.real_trader.place_real_order(
             symbol, normalized_side, qty, price=price, order_type=order_type
         )
+        safe_response = response
+        if response is not None:
+            try:
+                safe_response = copy.deepcopy(response)
+            except Exception:
+                if isinstance(response, dict):
+                    safe_response = dict(response)
+                elif isinstance(response, list):
+                    safe_response = list(response)
         status = "SUCCESS" if response else "FAILED"
         journal_payload = {
             "symbol": symbol,
@@ -9469,7 +9586,7 @@ class UltimateAIAutoTrader:
         self.last_real_order = {
             "timestamp": datetime.now().isoformat(),
             **journal_payload,
-            "raw_response": response,
+            "raw_response": safe_response,
         }
         return response
 
@@ -10141,8 +10258,9 @@ class UltimateAIAutoTrader:
         portfolio_health=1.0,
     ):
         """Ultimate position sizing with all advanced factors"""
+        cfg = self._get_trading_config()
         base_risk = (
-            TRADING_CONFIG["risk_per_trade"] * self.risk_manager.get_risk_multiplier()
+            cfg["risk_per_trade"] * self.risk_manager.get_risk_multiplier()
         )
 
         # Confidence multiplier
@@ -10196,11 +10314,11 @@ class UltimateAIAutoTrader:
             * stress_factor
         )
 
-        max_position_value = self.balance * TRADING_CONFIG["max_position_size"]
+        max_position_value = self.balance * cfg["max_position_size"]
         position_value = min(position_value, max_position_value)
 
         min_notional = self._get_symbol_min_notional(symbol)
-        buffer = TRADING_CONFIG.get("min_notional_buffer", 1.0)
+        buffer = cfg.get("min_notional_buffer", 1.0)
 
         if min_notional and current_price:
             try:
@@ -10254,6 +10372,7 @@ class UltimateAIAutoTrader:
         historical_prices=None,
     ):
         """Ultimate trading decision with all advanced factors"""
+        cfg = self._get_trading_config()
         log_component_debug(
             "TRADE_DECISION",
             "Evaluating trade decision",
@@ -10274,7 +10393,7 @@ class UltimateAIAutoTrader:
                 else market_stress,
             },
         )
-        if len(current_positions) >= TRADING_CONFIG["max_positions"]:
+        if len(current_positions) >= cfg["max_positions"]:
             log_component_event(
                 "TRADE_DECISION",
                 "Decision blocked: max positions reached",
@@ -10368,11 +10487,18 @@ class UltimateAIAutoTrader:
             )
 
         # Add ensemble signal
+        ensemble_confidence = None
         if ensemble_signal:
+            if isinstance(ensemble_signal, dict):
+                ensemble_confidence = self._stabilize_ensemble_confidence(
+                    ensemble_signal.get("confidence", 0.5)
+                )
             all_signals.append(
                 {
                     "signal": ensemble_signal["signal"],
-                    "confidence": ensemble_signal["confidence"],
+                    "confidence": ensemble_confidence
+                    if isinstance(ensemble_confidence, (int, float))
+                    else ensemble_signal.get("confidence", 0.5),
                     "type": "ENSEMBLE",
                     "buy_ratio": ensemble_signal.get("buy_ratio", 0.5),
                     "consensus": ensemble_signal.get("weighted_consensus", 0),
@@ -10453,7 +10579,7 @@ class UltimateAIAutoTrader:
         sell_power = sell_strength / total_weight if total_weight > 0 else 0
 
         # Dynamic threshold with all factors
-        dynamic_threshold = TRADING_CONFIG["confidence_threshold"]
+        dynamic_threshold = cfg["confidence_threshold"]
 
         # Market stress adjustment
         if market_stress > 0.7:
@@ -10463,7 +10589,12 @@ class UltimateAIAutoTrader:
 
         # Ensemble-based adjustments
         if ensemble_signal:
-            ensemble_confidence = ensemble_signal.get("confidence", 0.5)
+            if ensemble_confidence is None and isinstance(ensemble_signal, dict):
+                ensemble_confidence = self._stabilize_ensemble_confidence(
+                    ensemble_signal.get("confidence", 0.5)
+                )
+            if ensemble_confidence is None:
+                ensemble_confidence = ensemble_signal.get("confidence", 0.5)
             if ensemble_confidence > 0.7:
                 dynamic_threshold -= 0.03
             elif ensemble_confidence < 0.4:
@@ -10476,14 +10607,14 @@ class UltimateAIAutoTrader:
             dynamic_threshold += 0.025
 
         # Clamp dynamic threshold to configured bounds
-        threshold_floor = TRADING_CONFIG.get("dynamic_threshold_floor", 0.35)
-        threshold_ceiling = TRADING_CONFIG.get("dynamic_threshold_ceiling", 0.55)
+        threshold_floor = cfg.get("dynamic_threshold_floor", 0.35)
+        threshold_ceiling = cfg.get("dynamic_threshold_ceiling", 0.55)
         dynamic_threshold = max(
             threshold_floor, min(dynamic_threshold, threshold_ceiling)
         )
 
         strength_diff = abs(buy_power - sell_power)
-        min_diff_required = TRADING_CONFIG.get("min_confidence_diff", 0.05)
+        min_diff_required = cfg.get("min_confidence_diff", 0.05)
 
         log_component_debug(
             "TRADE_DECISION",
@@ -10501,13 +10632,13 @@ class UltimateAIAutoTrader:
         )
 
         # Enhanced ensemble consensus requirement
-        if ensemble_signal and TRADING_CONFIG["use_ensemble"]:
+        if ensemble_signal and cfg["use_ensemble"]:
             ensemble_agreement = (
                 ensemble_signal.get("buy_ratio", 0.5)
                 if buy_power > sell_power
                 else (1 - ensemble_signal.get("buy_ratio", 0.5))
             )
-            min_agreement = TRADING_CONFIG.get("ensemble_min_agreement", 0.6)
+            min_agreement = cfg.get("ensemble_min_agreement", 0.6)
 
             if ensemble_agreement < min_agreement:
                 log_component_event(
@@ -10773,6 +10904,31 @@ class UltimateAIAutoTrader:
         ensemble_signal=None,
     ):
         """Execute ultimate trade with all advanced systems"""
+        # Refresh the in-memory toggle from persisted state so the trade executor
+        # honors the LIVE dashboard switch even if this instance was initialized
+        # with a different env value.
+        try:
+            profile = getattr(self, "persistence_profile", None) or "default"
+            candidate_files = [
+                os.path.join("bot_persistence", str(profile), str(profile), "bot_state.json"),
+                os.path.join("bot_persistence", str(profile), "bot_state.json"),
+            ]
+            state_file = next((p for p in candidate_files if os.path.exists(p)), None)
+            if state_file:
+                with open(state_file, "r") as handle:
+                    state = json.load(handle)
+                trader_state = state.get("trader_state") or {}
+                persisted_enabled = trader_state.get("trading_enabled")
+                if isinstance(persisted_enabled, bool):
+                    global_breaker_active = bool(
+                        getattr(getattr(self, "safety_manager", None), "global_breaker_active", False)
+                    )
+                    if persisted_enabled is False:
+                        self.trading_enabled = False
+                    elif not global_breaker_active:
+                        self.trading_enabled = True
+        except Exception:
+            pass
         log_component_event(
             "TRADE_EXECUTION",
             "Trade execution requested",
@@ -10870,7 +11026,15 @@ class UltimateAIAutoTrader:
             )
         all_confidence.extend([sig["confidence"] for sig in technical_signals])
         if ensemble_signal:
-            all_confidence.append(ensemble_signal["confidence"])
+            stabilized = getattr(self, "_last_ensemble_confidence", None)
+            if stabilized is None and isinstance(ensemble_signal, dict):
+                stabilized = self._stabilize_ensemble_confidence(
+                    ensemble_signal.get("confidence", 0.5)
+                )
+            try:
+                all_confidence.append(float(stabilized))
+            except Exception:
+                all_confidence.append(float(ensemble_signal.get("confidence", 0.5)))
         if crt_signal:
             all_confidence.append(crt_signal["confidence"])
 
@@ -11369,9 +11533,16 @@ class UltimateAIAutoTrader:
                 self.balance = pre_trade_balance + net_credit
                 # update recorded sale_value to actual received for reporting
                 sale_value = quote_received
+                # Recompute realized PnL from actual net proceeds (provably required for REAL exits).
+                invested = quantity * position["avg_price"]
+                pnl = net_credit - invested
+                pnl_percent = (pnl / invested) * 100 if invested > 0 else 0
                 trade_data["commissions"] = commissions
                 trade_data["quote_received"] = quote_received
                 trade_data["quote_commission"] = quote_commission
+                trade_data["total"] = sale_value
+                trade_data["pnl"] = pnl
+                trade_data["pnl_percent"] = pnl_percent
             else:
                 # paper trading: apply theoretical sale_value
                 self.balance += sale_value
@@ -12159,6 +12330,7 @@ class UltimateAIAutoTrader:
 
     def improve_bot_efficiency_ultimate(self):
         """Ultimate self-improvement with all systems"""
+        cfg = self._get_trading_config()
         self.bot_efficiency["learning_cycles"] += 1
         self.bot_efficiency["last_improvement"] = datetime.now().isoformat()
 
@@ -12201,19 +12373,19 @@ class UltimateAIAutoTrader:
 
         # Advanced strategy adjustment
         if success_rate < 30:
-            TRADING_CONFIG["confidence_threshold"] = max(
-                0.45, TRADING_CONFIG["confidence_threshold"] - 0.04
+            cfg["confidence_threshold"] = max(
+                0.45, cfg["confidence_threshold"] - 0.04
             )
             print(
-                f"🤖 {self.profile_prefix} Learning: Lowering confidence to {TRADING_CONFIG['confidence_threshold']}"
+                f"🤖 {self.profile_prefix} Learning: Lowering confidence to {cfg['confidence_threshold']}"
             )
 
         elif success_rate > 70:
-            TRADING_CONFIG["risk_per_trade"] = min(
-                0.025, TRADING_CONFIG["risk_per_trade"] + 0.004
+            cfg["risk_per_trade"] = min(
+                0.025, cfg["risk_per_trade"] + 0.004
             )
             print(
-                f"🤖 {self.profile_prefix} Learning: Increasing risk to {TRADING_CONFIG['risk_per_trade']}"
+                f"🤖 {self.profile_prefix} Learning: Increasing risk to {cfg['risk_per_trade']}"
             )
 
         print(
@@ -12542,9 +12714,45 @@ def _detect_testnet_exchange_session() -> bool:
     return False
 
 
-def _binance_api_success_hook() -> None:
+def _iter_active_traders_for_binance_hooks():
+    """Return active trader instances for applying Binance API hooks.
+
+    In multi-user auto-trading mode, MarketDataService maintains per-user trader
+    instances. We prefer those so that API failure/cooldown flags remain
+    user-scoped. Fall back to the global singleton traders otherwise.
+    """
+    service = globals().get("market_data_service")
+    user_traders = getattr(service, "_user_traders", None)
+    seen: set[int] = set()
+    resolved = []
+    if isinstance(user_traders, dict) and user_traders:
+        for pair in user_traders.values():
+            if not pair:
+                continue
+            for trader in pair:
+                if trader is None:
+                    continue
+                ident = id(trader)
+                if ident in seen:
+                    continue
+                seen.add(ident)
+                resolved.append(trader)
+        return resolved
+
     for trader_name in ("ultimate_trader", "optimized_trader"):
         trader = globals().get(trader_name)
+        if trader is None:
+            continue
+        ident = id(trader)
+        if ident in seen:
+            continue
+        seen.add(ident)
+        resolved.append(trader)
+    return resolved
+
+
+def _binance_api_success_hook() -> None:
+    for trader in _iter_active_traders_for_binance_hooks():
         safety_manager = getattr(trader, "safety_manager", None)
         clear_api_failures = getattr(safety_manager, "clear_api_failures", None)
         if callable(clear_api_failures):
@@ -12555,8 +12763,7 @@ def _binance_api_success_hook() -> None:
 
 
 def _binance_api_failure_hook(message: str) -> None:
-    for trader_name in ("ultimate_trader", "optimized_trader"):
-        trader = globals().get(trader_name)
+    for trader in _iter_active_traders_for_binance_hooks():
         safety_manager = getattr(trader, "safety_manager", None)
         log_api_failure = getattr(safety_manager, "log_api_failure", None)
         if callable(log_api_failure):
@@ -12961,6 +13168,14 @@ service_runtime = build_service_runtime(
     socketio=socketio,
     safe_float=_safe_float,
     bot_logger=bot_logger,
+    persistence_manager=persistence_manager,
+    symbols_for_persistence=get_active_trading_universe(),
+    auto_user_id_provider=lambda: sorted(
+        set(_get_auto_user_ids_from_db())
+        & set(getattr(binance_credentials_store, "list_user_ids", lambda: [])() or [])
+    )
+    or sorted(_get_auto_user_ids_from_db())
+    or sorted(getattr(binance_credentials_store, "list_user_ids", lambda: [])() or []),
 )
 
 historical_data = service_runtime.historical_data
@@ -12975,6 +13190,39 @@ refresh_indicator_dashboard_state()
 
 
 # ==================== GRACEFUL SHUTDOWN HANDLING ====================
+def _persist_multiuser_states_on_shutdown() -> int:
+    """Persist user-scoped trader state when multi-user auto trading is active."""
+    service = globals().get("market_data_service")
+    user_traders = getattr(service, "_user_traders", None)
+    if not isinstance(user_traders, dict) or not user_traders:
+        return 0
+
+    saved = 0
+    profile_name = getattr(service, "_user_profile_name", None)
+    for user_id, traders in list(user_traders.items()):
+        if not traders or len(traders) < 1:
+            continue
+        user_ultimate = traders[0]
+        try:
+            profile = (
+                profile_name(int(user_id))
+                if callable(profile_name)
+                else f"user_{int(user_id)}"
+            )
+            persistence_manager.save_complete_state(
+                user_ultimate,
+                ultimate_ml_system,
+                TRADING_CONFIG,
+                TOP_SYMBOLS,
+                historical_data,
+                profile=profile,
+            )
+            saved += 1
+        except Exception:
+            continue
+    return saved
+
+
 def graceful_shutdown():
     """Save state on application shutdown"""
     print("\n🛑 Shutdown detected - saving bot state...")
@@ -12989,13 +13237,15 @@ def graceful_shutdown():
     except Exception as exc:
         print(f"⚠️ Failed to stop live portfolio scheduler cleanly: {exc}")
     _ensure_logger_handlers_open(bot_logger)
-    persistence_scheduler.manual_save(
-        ultimate_trader,
-        ultimate_ml_system,
-        TRADING_CONFIG,
-        TOP_SYMBOLS,
-        historical_data,
-    )
+    saved_users = _persist_multiuser_states_on_shutdown()
+    if saved_users <= 0:
+        persistence_scheduler.manual_save(
+            ultimate_trader,
+            ultimate_ml_system,
+            TRADING_CONFIG,
+            TOP_SYMBOLS,
+            historical_data,
+        )
     print("✅ Bot state saved. Goodbye!")
 
 
@@ -13121,6 +13371,16 @@ def record_user_trade(
 
 def update_portfolio_daily_pnl(user_id=None):
     """Update UserPortfolio daily_pnl from trader daily_pnl accumulation"""
+    def _resolve_user_traders(user_id_value):
+        service = globals().get("market_data_service")
+        getter = getattr(service, "_get_or_create_user_traders", None)
+        if callable(getter):
+            try:
+                return getter(int(user_id_value))
+            except Exception:
+                return None
+        return None
+
     try:
         # Get all users or specific user
         if user_id:
@@ -13137,9 +13397,16 @@ def update_portfolio_daily_pnl(user_id=None):
                 if not user_portfolio:
                     continue
 
+                traders = _resolve_user_traders(user.id)
+                if not traders or len(traders) != 2:
+                    # Without user-scoped traders, we cannot safely compute per-user P&L.
+                    continue
+
+                ultimate_trader_for_user, optimized_trader_for_user = traders
+
                 # Get trader daily_pnl (sum from both ultimate and optimized traders)
-                ultimate_daily_pnl = getattr(ultimate_trader, "daily_pnl", 0)
-                optimized_daily_pnl = getattr(optimized_trader, "daily_pnl", 0)
+                ultimate_daily_pnl = getattr(ultimate_trader_for_user, "daily_pnl", 0)
+                optimized_daily_pnl = getattr(optimized_trader_for_user, "daily_pnl", 0)
                 total_daily_pnl = ultimate_daily_pnl + optimized_daily_pnl
 
                 # Update portfolio daily_pnl

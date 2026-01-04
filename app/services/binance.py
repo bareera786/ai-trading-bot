@@ -194,28 +194,82 @@ class BinanceCredentialStore:
             self._decryption_warning_emitted = True
         return ""
 
-    def _normalize_data(self, data: Any) -> dict[str, dict[str, Any]]:
-        normalized: dict[str, dict[str, Any]] = {}
-        if isinstance(data, dict):
-            # Support per-user 'users' mapping as well as legacy account_type -> entry maps
-            if "users" in data and isinstance(data["users"], dict):
-                for user_key, user_map in data["users"].items():
-                    if not isinstance(user_map, dict):
-                        continue
-                    for acct_key, entry in user_map.items():
-                        acct = self._normalize_account_type(acct_key)
-                        normalized.setdefault(str(user_key), {})[
-                            acct
-                        ] = self._sanitize_entry(entry, acct)
-                return normalized
-            if "api_key" in data or "api_secret" in data:
-                normalized["spot"] = self._sanitize_entry(data, "spot")
+    def _normalize_data(self, data: Any) -> dict[str, Any]:
+        """Return a canonical in-memory representation.
+
+        Canonical format:
+          {
+            "users": {"<user_id>": {"spot": <entry>, "futures": <entry>}},
+            "spot": <entry>,
+            "futures": <entry>
+          }
+
+        Supports legacy formats:
+          - {"spot": {...}, "futures": {...}}
+          - {"api_key": ..., "api_secret": ...} (spot)
+          - {"<user_id>": {"spot": {...}}, ...} (older per-user flat map)
+        """
+
+        normalized: dict[str, Any] = {}
+        if not isinstance(data, dict):
+            return normalized
+
+        # Per-user scoped format: {"users": {"1": {"spot": {...}}}}
+        users_in = data.get("users")
+        if isinstance(users_in, dict):
+            users_map: dict[str, dict[str, Any]] = {}
+            for user_key, user_map in users_in.items():
+                if not isinstance(user_map, dict):
+                    continue
+                user_id_key = str(user_key)
+                acct_map: dict[str, Any] = {}
+                for acct_key, entry in user_map.items():
+                    acct = self._normalize_account_type(acct_key)
+                    acct_map[acct] = self._sanitize_entry(entry, acct)
+                users_map[user_id_key] = acct_map
+            normalized["users"] = users_map
+
+        # Legacy: single entry implies spot
+        if "api_key" in data or "api_secret" in data:
+            normalized["spot"] = self._sanitize_entry(data, "spot")
+            return normalized
+
+        # Legacy/global account mapping + support older flat user maps
+        users_from_flat: dict[str, dict[str, Any]] = {}
+        saw_non_account_key = False
+
+        for key, value in data.items():
+            if key == "users":
+                continue
+
+            key_str = str(key)
+            if key_str in self.SUPPORTED_ACCOUNT_TYPES:
+                acct = self._normalize_account_type(key_str)
+                normalized[acct] = self._sanitize_entry(value, acct)
+                continue
+
+            # If it isn't an account type and looks like a per-user mapping, capture it.
+            if isinstance(value, dict):
+                saw_non_account_key = True
+                acct_map: dict[str, Any] = {}
+                for acct_key, entry in value.items():
+                    acct = self._normalize_account_type(acct_key)
+                    acct_map[acct] = self._sanitize_entry(entry, acct)
+                users_from_flat[key_str] = acct_map
             else:
-                for key, value in data.items():
-                    key_normalized = self._normalize_account_type(key)
-                    normalized[key_normalized] = self._sanitize_entry(
-                        value, key_normalized
-                    )
+                saw_non_account_key = True
+
+        # If the file was an older per-user flat map, fold it into canonical users.
+        if saw_non_account_key and users_from_flat:
+            existing_users = normalized.get("users")
+            if not isinstance(existing_users, dict):
+                existing_users = {}
+            # Merge (do not overwrite existing canonical users unless missing)
+            for user_id_key, acct_map in users_from_flat.items():
+                if user_id_key not in existing_users:
+                    existing_users[user_id_key] = acct_map
+            normalized["users"] = existing_users
+
         return normalized
 
     def _ensure_cache(self) -> dict[str, dict[str, Any]]:
@@ -236,6 +290,34 @@ class BinanceCredentialStore:
             print(f"⚠️ Unable to load Binance credentials: {exc}")
         return {}
 
+    def list_user_ids(self) -> list[int]:
+        """Return user ids that have at least one stored credential record."""
+
+        with self._lock:
+            data = self._load_from_disk()
+        users = data.get("users") if isinstance(data, dict) else None
+        if not isinstance(users, dict):
+            return []
+
+        out: list[int] = []
+        for key, value in users.items():
+            try:
+                user_id = int(key)
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(value, dict):
+                continue
+            for account_key in ("spot", "futures"):
+                entry = value.get(account_key) or {}
+                if not isinstance(entry, dict):
+                    continue
+                if (entry.get("api_key") or entry.get("api_key_encrypted")) and (
+                    entry.get("api_secret") or entry.get("api_secret_encrypted")
+                ):
+                    out.append(user_id)
+                    break
+        return sorted(set(out))
+
     def _serialize_entry(self, entry: dict[str, Any]) -> dict[str, Any]:
         serialized = dict(entry)
         if self._cipher.enabled:
@@ -252,25 +334,28 @@ class BinanceCredentialStore:
             serialized["encrypted"] = False
         return serialized
 
-    def _write_to_disk(self, data: dict[str, dict[str, Any]]) -> None:
-        # Accept either flat account_type -> entry maps (legacy) or
-        # a structure with a 'users' mapping for per-user scoped credentials.
+    def _write_to_disk(self, data: dict[str, Any]) -> None:
         normalized = self._normalize_data(data)
         to_write: dict[str, Any] = {}
 
-        # If the normalized mapping contains user ids already (string keys that are not account types),
-        # treat them as user scoped; otherwise write account_type -> entry mapping as legacy format.
-        user_keys = [k for k in normalized.keys() if k not in ("spot", "futures")]
-        if user_keys:
-            # Build users mapping
-            users_map: dict[str, dict[str, Any]] = {}
-            for k, v in normalized.items():
-                users_map[k] = self._serialize_entry(v) if isinstance(v, dict) else v
-            to_write["users"] = users_map
-        else:
-            to_write = {
-                key: self._serialize_entry(value) for key, value in normalized.items()
-            }
+        users = normalized.get("users")
+        if isinstance(users, dict):
+            users_out: dict[str, dict[str, Any]] = {}
+            for user_id_key, user_map in users.items():
+                if not isinstance(user_map, dict):
+                    continue
+                users_out[str(user_id_key)] = {
+                    self._normalize_account_type(acct_key): self._serialize_entry(entry)
+                    for acct_key, entry in user_map.items()
+                    if isinstance(entry, dict)
+                }
+            to_write["users"] = users_out
+
+        # Preserve global (legacy) credentials if present.
+        for acct in self.SUPPORTED_ACCOUNT_TYPES:
+            if acct in normalized and isinstance(normalized.get(acct), dict):
+                to_write[acct] = self._serialize_entry(normalized[acct])
+
         tmp_file = f"{self.credential_file}.tmp"
         with open(tmp_file, "w", encoding="utf-8") as handle:
             json.dump(to_write, handle, indent=2, default=str)
@@ -308,7 +393,11 @@ class BinanceCredentialStore:
             if account_type:
                 key = self._normalize_account_type(account_type)
                 return dict(cache.get(key) or {})
-            return {key: dict(value) for key, value in cache.items()}
+            return {
+                key: dict(value)
+                for key, value in cache.items()
+                if key in self.SUPPORTED_ACCOUNT_TYPES and isinstance(value, dict)
+            }
 
     def save_credentials(
         self,
@@ -410,9 +499,11 @@ class BinanceLogManager:
         severity: str = "info",
         account_type: str = "spot",
         details: Optional[dict[str, Any]] = None,
+        user_id: Optional[Union[int, str]] = None,
     ) -> dict[str, Any]:
         entry = {
             "timestamp": datetime.utcnow().isoformat(),
+            "user_id": str(user_id) if user_id is not None else None,
             "event_type": event_type,
             "message": message,
             "severity": severity,
@@ -429,9 +520,15 @@ class BinanceLogManager:
         limit: int = 50,
         account_type: Optional[str] = None,
         severity: Optional[str] = None,
+        user_id: Optional[Union[int, str]] = None,
     ) -> list[dict[str, Any]]:
         with self._lock:
             logs_iterable = list(reversed(self._logs))
+            if user_id is not None:
+                user_key = str(user_id)
+                logs_iterable = [
+                    log for log in logs_iterable if str(log.get("user_id")) == user_key
+                ]
             if account_type:
                 acct = str(account_type).strip().lower()
                 logs_iterable = [
@@ -510,11 +607,19 @@ class BinanceCredentialService:
         self.apply_credentials("futures")
 
     def apply_credentials(
-        self, account_type: str = "spot", creds: Optional[dict[str, Any]] = None
+        self,
+        account_type: str = "spot",
+        creds: Optional[dict[str, Any]] = None,
+        *,
+        user_id: Optional[Union[int, str]] = None,
     ) -> bool:
         account_key = self.credentials_store._normalize_account_type(account_type)
         if creds is None or not isinstance(creds, dict) or not creds.get("api_key"):
-            creds_map = self.credentials_store.get_credentials()
+            creds_map = (
+                self.credentials_store.get_credentials(user_id=user_id)
+                if user_id is not None
+                else self.credentials_store.get_credentials()
+            )
             creds = creds_map.get(account_key) if isinstance(creds_map, dict) else {}
 
         if not creds:
@@ -525,6 +630,18 @@ class BinanceCredentialService:
         testnet = self._coerce_bool(creds.get("testnet", True), default=True)
         if not api_key or not api_secret:
             return False
+
+        # When called in a user-scoped context (multi-tenant dashboard), do not
+        # mutate the global trader instances. Instead, validate credentials and
+        # let per-user trade execution use isolated client instances.
+        if user_id is not None:
+            result = self.test_credentials(
+                str(api_key),
+                str(api_secret),
+                account_type=account_key,
+                testnet=testnet,
+            )
+            return bool(result.get("connected"))
 
         if not self._allowed_for_live_trading(testnet):
             self._log_event(
@@ -638,6 +755,28 @@ class BinanceCredentialService:
                 },
             )
 
+        if include_connection and user_id is not None:
+            for account_key, entry in accounts.items():
+                if not entry.get("has_credentials"):
+                    continue
+                try:
+                    # Re-fetch the concrete credential record so we get unmasked fields.
+                    creds = self.credentials_store.get_credentials(
+                        account_key, user_id=user_id
+                    )
+                    testnet = self._coerce_bool(creds.get("testnet", True), default=True)
+                    result = self.test_credentials(
+                        str(creds.get("api_key") or ""),
+                        str(creds.get("api_secret") or ""),
+                        account_type=account_key,
+                        testnet=testnet,
+                    )
+                    entry["connected"] = bool(result.get("connected"))
+                    entry["last_error"] = result.get("error")
+                except Exception as exc:  # pragma: no cover
+                    entry["connected"] = False
+                    entry["last_error"] = str(exc)
+
         active_account = (
             "spot" if "spot" in accounts else next(iter(accounts.keys()), "spot")
         )
@@ -737,7 +876,10 @@ class BinanceCredentialService:
             )
 
         if include_logs and self.binance_log_manager:
-            status["logs"] = self.binance_log_manager.get_logs(limit=50)
+            status["logs"] = self.binance_log_manager.get_logs(
+                limit=50,
+                user_id=user_id,
+            )
         else:
             status["logs"] = []
 
@@ -783,21 +925,44 @@ class BinanceCredentialService:
         Returns a dict with keys: connected (bool), error (optional str).
         """
         try:
-            # Import in-method to avoid circular imports during initial module import
+            account_key = self.credentials_store._normalize_account_type(account_type)
+            if account_key == "futures":
+                from app.services.trading import BinanceFuturesTrader
+                from binance.client import Client as BinanceClient
+                from binance.um_futures import UMFutures as BinanceFuturesClient
+
+                trader = BinanceFuturesTrader(
+                    api_key=api_key,
+                    api_secret=api_secret,
+                    testnet=testnet,
+                    binance_um_futures_cls=BinanceFuturesClient,
+                    binance_rest_client_cls=BinanceClient,
+                    coerce_bool=self._coerce_bool,
+                )
+                connected = bool(trader.connect())
+                status = trader.get_status() if hasattr(trader, "get_status") else {}
+                if not connected:
+                    return {"connected": False, "error": trader.last_error, "detail": status}
+                return {"connected": bool(status.get("connected")), "detail": status}
+
+            # Spot
             from app.services.trading import RealBinanceTrader
+            from binance.client import Client as BinanceClient
+            from binance.exceptions import BinanceAPIException
 
             trader = RealBinanceTrader(
-                api_key=api_key, api_secret=api_secret, testnet=testnet
+                api_key=api_key,
+                api_secret=api_secret,
+                testnet=testnet,
+                account_type="spot",
+                binance_client_cls=BinanceClient,
+                api_exception_cls=BinanceAPIException,
             )
-            connected = trader.connect()
+            connected = bool(trader.connect())
+            status = trader.get_status() if hasattr(trader, "get_status") else {}
             if not connected:
-                return {"connected": False, "error": trader.last_error}
-            # Try a safe status call
-            status = self._safe_trader_status(trader, "get_real_trading_status")
-            return {
-                "connected": bool(status.get("connected") if status else False),
-                "detail": status,
-            }
+                return {"connected": False, "error": trader.last_error, "detail": status}
+            return {"connected": bool(status.get("connected")), "detail": status}
         except Exception as exc:
             return {"connected": False, "error": str(exc)}
 

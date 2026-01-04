@@ -11,6 +11,7 @@ from typing import Any, Optional
 from flask import Blueprint, current_app, jsonify, request
 from flask_login import current_user, login_required
 
+from app.auth.decorators import subscription_required
 from app.services import FuturesManualService
 
 
@@ -77,11 +78,31 @@ def _coerce_bool_with_ctx(
 
 
 def _state_file_path() -> str:
-    return os.path.join("bot_persistence", "default", "bot_state.json")
+    try:
+        from app.services.persistence import ensure_persistence_dirs
+
+        persist_dir = ensure_persistence_dirs()
+        return str(persist_dir / "bot_state.json")
+    except Exception:
+        try:
+            from app.services.pathing import resolve_profile_path
+
+            persist_dir = resolve_profile_path(
+                "bot_persistence", allow_legacy=True, migrate_legacy=True
+            )
+            return os.path.join(persist_dir, "bot_state.json")
+        except Exception:
+            return os.path.join("bot_persistence", "default", "bot_state.json")
 
 
-def _update_state_file(field: str, value: Any) -> None:
-    state_file = _state_file_path()
+def _update_state_file(field: str, value: Any, *, profile: str | None = None) -> None:
+    try:
+        from app.services.persistence import ensure_persistence_dirs
+
+        persist_dir = ensure_persistence_dirs(profile)
+        state_file = str(persist_dir / "bot_state.json")
+    except Exception:
+        state_file = _state_file_path()
     if not os.path.exists(state_file):
         return
     try:
@@ -186,9 +207,16 @@ def api_binance_credentials():
                 severity="info",
                 account_type=account_type,
                 details={"testnet": testnet_flag},
+                user_id=current_user.id,
             )
 
-        connected = apply_credentials(account_type=account_type, creds=saved)
+        try:
+            connected = apply_credentials(
+                account_type=account_type, creds=saved, user_id=current_user.id
+            )
+        except TypeError:
+            # Backward-compat shim for older apply_credentials signatures
+            connected = apply_credentials(account_type=account_type, creds=saved)
         status = status_fn(
             include_connection=True, include_logs=True, user_id=current_user.id
         )
@@ -245,36 +273,30 @@ def api_binance_credentials():
     if account_type:
         account_type = credentials_store._normalize_account_type(account_type)
         credentials_store.clear_credentials(account_type, user_id=current_user.id)
-        if account_type == "spot":
-            for trader in (ultimate_trader, optimized_trader):
-                disable = getattr(trader, "disable_real_trading", None)
-                if callable(disable):
-                    disable(reason="credentials_cleared")
         if binance_log_manager:
             binance_log_manager.add(
                 "CREDENTIAL_CLEARED",
                 f"Cleared {account_type.upper()} credentials.",
                 severity="warning",
                 account_type=account_type,
+                user_id=current_user.id,
             )
     else:
         credentials_store.clear_credentials(user_id=current_user.id)
-        for trader in (ultimate_trader, optimized_trader):
-            disable = getattr(trader, "disable_real_trading", None)
-            if callable(disable):
-                disable(reason="credentials_cleared")
         if binance_log_manager:
             binance_log_manager.add(
                 "CREDENTIAL_CLEARED",
                 "Cleared all stored credentials.",
                 severity="warning",
                 account_type="spot",
+                user_id=current_user.id,
             )
             binance_log_manager.add(
                 "CREDENTIAL_CLEARED",
                 "Cleared all stored credentials.",
                 severity="warning",
                 account_type="futures",
+                user_id=current_user.id,
             )
 
     status = status_fn(
@@ -348,8 +370,10 @@ def api_binance_logs():
     if not binance_log_manager:
         return jsonify({"logs": [], "count": 0})
 
+    user_id = current_user.id if getattr(current_user, "is_authenticated", False) else None
+
     logs = binance_log_manager.get_logs(
-        limit=limit, account_type=account_type, severity=severity
+        limit=limit, account_type=account_type, severity=severity, user_id=user_id
     )
     return jsonify(
         {
@@ -456,6 +480,7 @@ def api_futures_manual_state():
 @trading_bp.route(
     "/api/futures/manual/select", methods=["POST"], endpoint="api_futures_manual_select"
 )
+@subscription_required
 def api_futures_manual_select():
     ctx = _get_bot_context()
     manual_service = _get_futures_manual_service(ctx)
@@ -556,7 +581,7 @@ def api_futures_manual_select():
     methods=["POST"],
     endpoint="api_futures_manual_toggle_trading",
 )
-@login_required
+@subscription_required
 def api_futures_manual_toggle_trading():
     ctx = _get_bot_context()
     manual_service = _get_futures_manual_service(ctx)
@@ -663,12 +688,30 @@ def api_futures_manual_toggle_trading():
 
 
 @trading_bp.route("/api/spot/toggle", methods=["POST"], endpoint="api_spot_toggle")
-@login_required
+@subscription_required
 def api_spot_toggle():
     ctx = _get_bot_context()
     dashboard_data = _get_dashboard_data(ctx)
-    ultimate_trader = ctx.get("ultimate_trader")
-    optimized_trader = ctx.get("optimized_trader")
+    market_data_service = ctx.get("market_data_service")
+
+    ultimate_trader = None
+    optimized_trader = None
+    if (
+        getattr(current_user, "is_authenticated", False)
+        and market_data_service is not None
+        and hasattr(market_data_service, "_get_or_create_user_traders")
+    ):
+        try:
+            ultimate_trader, optimized_trader = market_data_service._get_or_create_user_traders(
+                int(current_user.id)
+            )
+        except Exception:
+            ultimate_trader = None
+            optimized_trader = None
+
+    if ultimate_trader is None or optimized_trader is None:
+        ultimate_trader = ctx.get("ultimate_trader")
+        optimized_trader = ctx.get("optimized_trader")
 
     if not all([ultimate_trader, optimized_trader]):
         return jsonify({"error": "Trading engines unavailable"}), 500
@@ -700,7 +743,8 @@ def api_spot_toggle():
             getattr(optimized_trader, "real_trading_enabled", False)
         )
 
-        _update_state_file("trading_enabled", enable)
+        persistence_profile = getattr(ultimate_trader, "persistence_profile", None)
+        _update_state_file("trading_enabled", enable, profile=persistence_profile)
 
         # Diagnostic: log instance ids and flags so we can compare with persistence
         try:
@@ -722,9 +766,19 @@ def api_spot_toggle():
             history = ctx.get("historical_data") or {}
             if scheduler and hasattr(scheduler, "manual_save"):
                 try:
-                    scheduler.manual_save(
-                        ultimate_trader, ultimate_ml, trading_config, symbols, history
-                    )
+                    try:
+                        scheduler.manual_save(
+                            ultimate_trader,
+                            ultimate_ml,
+                            trading_config,
+                            symbols,
+                            history,
+                            profile=persistence_profile,
+                        )
+                    except TypeError:
+                        scheduler.manual_save(
+                            ultimate_trader, ultimate_ml, trading_config, symbols, history
+                        )
                 except Exception as exc:  # pragma: no cover - best-effort persistence
                     print(f"Error saving state after spot toggle: {exc}")
         except Exception:
@@ -742,7 +796,7 @@ def api_spot_toggle():
 
 
 @trading_bp.route("/api/spot/trade", methods=["POST"], endpoint="api_spot_trade")
-@login_required
+@subscription_required
 def api_spot_trade():
     ctx = _get_bot_context()
     get_user_trader = ctx.get("get_user_trader")
@@ -803,7 +857,7 @@ def api_spot_trade():
 @trading_bp.route(
     "/api/futures/toggle", methods=["POST"], endpoint="api_futures_toggle"
 )
-@login_required
+@subscription_required
 def api_futures_toggle():
     ctx = _get_bot_context()
     dashboard_data = _get_dashboard_data(ctx)
@@ -854,7 +908,7 @@ def api_futures_toggle():
 
 
 @trading_bp.route("/api/futures/trade", methods=["POST"], endpoint="api_futures_trade")
-@login_required
+@subscription_required
 def api_futures_trade():
     try:
         ctx = _get_bot_context()

@@ -20,43 +20,80 @@ def _default_noop(*_: Any, **__: Any) -> None:
     """Fallback noop for optional callbacks."""
 
 
-def ensure_persistence_dirs():
-    """Create persistence directories with proper permissions"""
-    # Prefer an explicit environment override for persistence directory so
-    # local development doesn't try to write to container paths like /app.
+def ensure_persistence_dirs(profile_override: str | None = None) -> Path:
+    """Return the profile-specific persistence directory, creating it if needed.
+
+    When profile_override is None, uses the workspace/profile-aware pathing rules.
+    When profile_override is provided (e.g. multi-user runtime profiles like
+    "user_123"), the directory is resolved without mutating process-wide
+    BOT_PROFILE.
+    """
+
+    # Invariant: resolving a profile override must not mutate global BOT_PROFILE.
+    before_env_profile = os.environ.get("BOT_PROFILE")
+    before_pathing_profile = None
+    if profile_override is not None:
+        try:
+            from app.services import pathing as _pathing
+
+            before_pathing_profile = getattr(_pathing, "BOT_PROFILE", None)
+        except Exception:
+            before_pathing_profile = None
+
     env_path = os.getenv("BOT_PERSISTENCE_DIR")
     if env_path:
         base_path = Path(env_path)
+        base_path.mkdir(parents=True, exist_ok=True)
+
+        if profile_override:
+            profile = str(profile_override).strip() or "default"
+            target = base_path / profile
+        else:
+            profile = str(os.getenv("BOT_PROFILE", "default")).strip() or "default"
+            target = base_path / profile
     else:
-        # Fall back to project-local bot_persistence directory
-        base_path = Path(__file__).resolve().parent.parent / "bot_persistence"
-    profile = os.getenv("BOT_PROFILE", "default")
-    
+        from app.services import pathing
+
+        if profile_override:
+            profile = pathing._sanitize_profile(profile_override)
+            target = pathing.PROJECT_ROOT_PATH / "bot_persistence" / profile
+        else:
+            # Preserve legacy-single-tenant behavior for BOT_PROFILE=default.
+            target = Path(
+                pathing.resolve_profile_path(
+                    "bot_persistence", allow_legacy=True, migrate_legacy=True
+                )
+            )
+
     dirs_to_create = [
-        base_path / profile / profile,
-        base_path / profile / profile / "backups",
-        base_path / profile / profile / "logs",
-        base_path / profile / profile / "models",
-        base_path,  # Base persistence directory
+        target,
+        target / "backups",
+        target / "logs",
+        target / "models",
     ]
-    
+
     for directory in dirs_to_create:
         try:
             directory.mkdir(parents=True, exist_ok=True)
-            # Set permissions: owner RWX, group RX, others RX
             directory.chmod(0o755)
-            logging.info(f"Created/verified directory: {directory}")
-        except PermissionError as e:
-            logging.warning(f"Permission error creating {directory}: {e}")
-            # Try with more permissive settings
+        except PermissionError as exc:
+            logging.warning("Permission error creating %s: %s", directory, exc)
             try:
                 directory.chmod(0o777)
-            except:
+            except Exception:
                 pass
-        except Exception as e:
-            logging.error(f"Error creating {directory}: {e}")
-    
-    return base_path / profile / profile
+        except Exception as exc:
+            logging.error("Error creating %s: %s", directory, exc)
+
+    if profile_override is not None:
+        assert os.environ.get("BOT_PROFILE") == before_env_profile
+        try:
+            from app.services import pathing as _pathing
+
+            assert getattr(_pathing, "BOT_PROFILE", None) == before_pathing_profile
+        except Exception:
+            pass
+    return target
 
 
 class ProfessionalPersistence:
@@ -71,8 +108,9 @@ class ProfessionalPersistence:
         futures_settings_setter: Callable[[Dict[str, Any]], None] | None = None,
     ) -> None:
         self.persistence_dir = persistence_dir
-        self.state_file = os.path.join(persistence_dir, "default", "bot_state.json")
-        self.backup_dir = os.path.join(persistence_dir, "default", "backups")
+        persist_dir = ensure_persistence_dirs()
+        self.state_file = str(persist_dir / "bot_state.json")
+        self.backup_dir = str(persist_dir / "backups")
         os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
         os.makedirs(self.backup_dir, exist_ok=True)
 
@@ -88,10 +126,12 @@ class ProfessionalPersistence:
         config,
         symbols,
         historical_data,
+        *,
+        profile: str | None = None,
     ) -> bool:
         """Persist the full bot state to disk."""
         # Ensure directories exist first
-        persist_dir = ensure_persistence_dirs()
+        persist_dir = ensure_persistence_dirs(profile)
         
         # Update file paths to use the ensured directory
         state_file = persist_dir / "bot_state.json"
@@ -136,7 +176,7 @@ class ProfessionalPersistence:
                 "futures_manual_settings": self._futures_settings_getter() or {},
                 "system_metrics": {
                     "total_uptime": self._calculate_uptime(),
-                    "save_count": self._get_save_count(),
+                    "save_count": self._get_save_count(profile),
                     "last_trade_time": trader.trade_history.get_trade_history()[-1][
                         "timestamp"
                     ]
@@ -160,17 +200,30 @@ class ProfessionalPersistence:
                 json.dump(state, handle, indent=2, default=str)
 
             self._save_critical_components(trader, ml_system)
-            self._update_save_count()
+            self._update_save_count(profile)
             return True
         except Exception as exc:  # pragma: no cover - defensive logging
             print(f"❌ Error saving bot state: {exc}")
             return False
 
-    def load_complete_state(self, trader, ml_system) -> bool:
-        # Ensure directories exist first
-        persist_dir = ensure_persistence_dirs()
+    def load_complete_state(
+        self,
+        trader,
+        ml_system,
+        *,
+        profile: str | None = None,
+        restore_ml_state: bool = True,
+        restore_futures_settings: bool = True,
+    ) -> bool:
+        """Load bot state from disk.
+
+        The persisted JSON schema remains unchanged. Optional flags allow
+        restoring only trader state (useful for multi-user isolation where the
+        ML engine is shared/read-only).
+        """
+        persist_dir = ensure_persistence_dirs(profile)
         state_file = persist_dir / "bot_state.json"
-        
+
         if not state_file.exists():
             print("💾 No previous state found - starting fresh")
             return False
@@ -182,16 +235,17 @@ class ProfessionalPersistence:
                 print("⚠️ State version mismatch - some data may not load correctly")
 
             self._restore_trader_state(trader, state.get("trader_state", {}))
-            self._restore_ml_system_state(ml_system, state.get("ml_system_state", {}))
-            self._restore_configuration(state.get("configuration", {}))
-            if "futures_manual_settings" in state:
+            if restore_ml_state:
+                self._restore_ml_system_state(ml_system, state.get("ml_system_state", {}))
+                self._restore_configuration(state.get("configuration", {}))
+            if restore_futures_settings and "futures_manual_settings" in state:
                 self._futures_settings_setter(state["futures_manual_settings"])
                 print("💾 Futures manual settings restored")
             print("💾 Bot state restored successfully from persistence")
             return True
         except Exception as exc:  # pragma: no cover
             print(f"❌ Error loading bot state: {exc}")
-            return self._emergency_recovery(trader, ml_system)
+            return self._emergency_recovery(trader, ml_system, profile=profile)
 
     def _get_trader_state(self, trader) -> Dict[str, Any]:
         return {
@@ -307,9 +361,9 @@ class ProfessionalPersistence:
                 f"💾 Configuration backup available: {len(config.get('TOP_SYMBOLS', []))} symbols"
             )
 
-    def _emergency_recovery(self, trader, ml_system) -> bool:
+    def _emergency_recovery(self, trader, ml_system, *, profile: str | None = None) -> bool:
         try:
-            persist_dir = ensure_persistence_dirs()
+            persist_dir = ensure_persistence_dirs(profile)
             critical_file = persist_dir / "critical_state.json"
             if critical_file.exists():
                 with open(critical_file, "r") as handle:
@@ -336,27 +390,31 @@ class ProfessionalPersistence:
             print(f"❌ Emergency recovery failed: {exc}")
         return False
 
-    def _create_backup(self) -> None:
-        if not os.path.exists(self.state_file):
+    def _create_backup(self, *, profile: str | None = None) -> None:
+        persist_dir = ensure_persistence_dirs(profile)
+        state_file = str(persist_dir / "bot_state.json")
+        backup_dir = str(persist_dir / "backups")
+        if not os.path.exists(state_file):
             return
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_file = os.path.join(
-                self.backup_dir, f"state_backup_{timestamp}.json"
-            )
-            shutil.copy2(self.state_file, backup_file)
-            self._cleanup_old_backups()
+            os.makedirs(backup_dir, exist_ok=True)
+            backup_file = os.path.join(backup_dir, f"state_backup_{timestamp}.json")
+            shutil.copy2(state_file, backup_file)
+            self._cleanup_old_backups(profile=profile)
         except Exception as exc:  # pragma: no cover
             print(f"⚠️ Backup creation failed: {exc}")
 
-    def _cleanup_old_backups(self) -> None:
+    def _cleanup_old_backups(self, *, profile: str | None = None) -> None:
         try:
+            persist_dir = ensure_persistence_dirs(profile)
+            backup_dir = str(persist_dir / "backups")
             backup_files = [
                 (
-                    os.path.join(self.backup_dir, file),
-                    os.path.getctime(os.path.join(self.backup_dir, file)),
+                    os.path.join(backup_dir, file),
+                    os.path.getctime(os.path.join(backup_dir, file)),
                 )
-                for file in os.listdir(self.backup_dir)
+                for file in os.listdir(backup_dir)
                 if file.startswith("state_backup_") and file.endswith(".json")
             ]
             backup_files.sort(key=lambda entry: entry[1])
@@ -372,9 +430,10 @@ class ProfessionalPersistence:
     def _calculate_uptime(self) -> str:
         return "unknown"
 
-    def _get_save_count(self) -> int:
+    def _get_save_count(self, profile: str | None = None) -> int:
         try:
-            count_file = os.path.join(self.persistence_dir, "save_count.txt")
+            persist_dir = ensure_persistence_dirs(profile)
+            count_file = str(persist_dir / "save_count.txt")
             if os.path.exists(count_file):
                 with open(count_file, "r") as handle:
                     return int(handle.read().strip())
@@ -382,28 +441,32 @@ class ProfessionalPersistence:
         except Exception:  # pragma: no cover
             return 0
 
-    def _update_save_count(self) -> None:
+    def _update_save_count(self, profile: str | None = None) -> None:
         try:
-            count_file = os.path.join(self.persistence_dir, "save_count.txt")
-            current_count = self._get_save_count()
+            persist_dir = ensure_persistence_dirs(profile)
+            count_file = str(persist_dir / "save_count.txt")
+            current_count = self._get_save_count(profile)
             with open(count_file, "w") as handle:
                 handle.write(str(current_count + 1))
         except Exception:  # pragma: no cover
             pass
 
-    def get_persistence_status(self) -> Dict[str, Any]:
+    def get_persistence_status(self, *, profile: str | None = None) -> Dict[str, Any]:
+        persist_dir = ensure_persistence_dirs(profile)
+        state_file = str(persist_dir / "bot_state.json")
+        backup_dir = str(persist_dir / "backups")
         status = {
             "persistence_enabled": True,
-            "state_file_exists": os.path.exists(self.state_file),
-            "backup_count": len(
-                [f for f in os.listdir(self.backup_dir) if f.endswith(".json")]
-            ),
+            "state_file_exists": os.path.exists(state_file),
+            "backup_count": len([f for f in os.listdir(backup_dir) if f.endswith(".json")])
+            if os.path.exists(backup_dir)
+            else 0,
             "last_save_time": None,
-            "total_saves": self._get_save_count(),
+            "total_saves": self._get_save_count(profile),
         }
         if status["state_file_exists"]:
             try:
-                with open(self.state_file, "r") as handle:
+                with open(state_file, "r") as handle:
                     state = json.load(handle)
                 status["last_save_time"] = state.get("timestamp")
             except Exception:
@@ -505,10 +568,19 @@ class PersistenceScheduler:
             "PERSISTENCE", "Automatic state saving stopped", level=logging.INFO
         )
 
-    def manual_save(self, trader, ml_system, config, symbols, historical_data) -> bool:
+    def manual_save(
+        self,
+        trader,
+        ml_system,
+        config,
+        symbols,
+        historical_data,
+        *,
+        profile: str | None = None,
+    ) -> bool:
         self._log_event("PERSISTENCE", "Manual save requested", level=logging.INFO)
         success = self.persistence_manager.save_complete_state(
-            trader, ml_system, config, symbols, historical_data
+            trader, ml_system, config, symbols, historical_data, profile=profile
         )
         if success:
             self.last_save_time = time.time()

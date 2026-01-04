@@ -26,6 +26,12 @@ class MockUser:
         self.id = user_id
         self.is_authenticated = True
         self.is_active = True
+        self.is_admin = False
+        self._active_subscription = type("_Sub", (), {"is_active": True})()
+
+    @property
+    def active_subscription(self):
+        return self._active_subscription
 
     def get_id(self):
         return str(self.id)
@@ -192,6 +198,35 @@ class TestTradingStatus:
         assert "total_trades" in data
         assert "success_rate" in data
         assert "daily_pnl" in data
+
+
+class TestPhasesApi:
+    def test_phases_endpoint_returns_phase_order_and_phases(self, client, mock_context, login_as):
+        service = MagicMock()
+        service.get_phase_order = MagicMock(return_value=["cycle_start", "ml_predict_ultimate"])  # minimal
+        service.get_phase_snapshot = MagicMock(
+            return_value={
+                "BTCUSDT": {
+                    "current_phase": "ml_predict_ultimate",
+                    "updated_at": 123.0,
+                    "phases": {
+                        "cycle_start": {"status": "ok", "progress": 0, "updated_at": 122.0},
+                        "ml_predict_ultimate": {"status": "running", "progress": 25, "updated_at": 123.0},
+                    },
+                }
+            }
+        )
+        mock_context["market_data_service"] = service
+
+        login_as()
+        resp = client.get('/api/phases')
+        assert resp.status_code == 200
+        payload = resp.get_json()
+        assert "phase_order" in payload
+        assert payload["phase_order"] == ["cycle_start", "ml_predict_ultimate"]
+        assert "phases" in payload
+        assert "BTCUSDT" in payload["phases"]
+        assert payload["phases"]["BTCUSDT"]["current_phase"] == "ml_predict_ultimate"
 
 
 class TestSpotToggle:
@@ -513,6 +548,125 @@ class TestBinanceLogs:
         assert data["logs"] == []
         assert data["count"] == 0
 
+    def test_binance_logs_authenticated_scopes_user(self, client, mock_context, login_as):
+        """Authenticated requests should scope logs to the current user."""
+        user = login_as(MockUser(user_id=123))
+        mock_log_manager = MagicMock()
+        mock_log_manager.get_logs.return_value = [
+            {"message": "User log", "severity": "info", "user_id": str(user.id)}
+        ]
+        mock_context["binance_log_manager"] = mock_log_manager
+
+        response = client.get('/api/binance/logs')
+        assert response.status_code == 200
+
+        mock_log_manager.get_logs.assert_called_once()
+        _, kwargs = mock_log_manager.get_logs.call_args
+        assert kwargs.get("user_id") == user.id
+
+    def test_binance_logs_two_users_isolated(self, client, mock_context, login_as):
+        """Logs added for user A must not be visible to user B (and vice versa)."""
+        from app.services.binance import BinanceLogManager
+
+        manager = BinanceLogManager(max_entries=50)
+        manager.add(
+            "CREDENTIAL_SAVE",
+            "Saved SPOT credentials.",
+            severity="info",
+            account_type="spot",
+            user_id=1,
+        )
+        manager.add(
+            "CREDENTIAL_SAVE",
+            "Saved SPOT credentials.",
+            severity="info",
+            account_type="spot",
+            user_id=2,
+        )
+        mock_context["binance_log_manager"] = manager
+
+        login_as(MockUser(user_id=1))
+        resp_a = client.get('/api/binance/logs')
+        assert resp_a.status_code == 200
+        data_a = resp_a.get_json()
+        assert all(str(log.get("user_id")) == "1" for log in data_a.get("logs", []))
+
+        login_as(MockUser(user_id=2))
+        resp_b = client.get('/api/binance/logs')
+        assert resp_b.status_code == 200
+        data_b = resp_b.get_json()
+        assert all(str(log.get("user_id")) == "2" for log in data_b.get("logs", []))
+
+    def test_binance_logs_unauthenticated_returns_all(self, client, mock_context):
+        """Unauthenticated access should behave as before: return all logs."""
+        from app.services.binance import BinanceLogManager
+
+        manager = BinanceLogManager(max_entries=50)
+        manager.add(
+            "CREDENTIAL_SAVE",
+            "Saved SPOT credentials.",
+            severity="info",
+            account_type="spot",
+            user_id=10,
+        )
+        manager.add(
+            "CREDENTIAL_SAVE",
+            "Saved SPOT credentials.",
+            severity="info",
+            account_type="spot",
+            user_id=20,
+        )
+        mock_context["binance_log_manager"] = manager
+
+        resp = client.get('/api/binance/logs')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        user_ids = {str(log.get("user_id")) for log in data.get("logs", [])}
+        assert user_ids.issuperset({"10", "20"})
+
+
+class TestBinanceCredentialsDashboardIsolation:
+    """Regression tests for multi-user isolation in /api/dashboard payload."""
+
+    def test_dashboard_binance_credentials_are_user_scoped(self, client, mock_context, login_as):
+        """User B must not receive User A's cached binance_credentials."""
+
+        def status_fn(*, include_logs=False, include_connection=False, user_id=None, **kwargs):
+            return {
+                "requested_user_id": user_id,
+                "include_logs": bool(include_logs),
+                "include_connection": bool(include_connection),
+                "logs": [
+                    {
+                        "message": f"log-for-{user_id}",
+                        "severity": "info",
+                        "user_id": str(user_id) if user_id is not None else None,
+                    }
+                ]
+                if include_logs
+                else [],
+            }
+
+        mock_context["get_binance_credential_status"] = status_fn
+
+        # Prime the shared dashboard cache with user A's credentials (simulates
+        # previous behavior where /api/binance/credentials wrote into dashboard_data).
+        login_as(MockUser(user_id=111))
+        resp_a = client.get("/api/binance/credentials")
+        assert resp_a.status_code == 200
+        assert mock_context["dashboard_data"].get("binance_credentials", {}).get(
+            "requested_user_id"
+        ) == 111
+
+        # Now user B requests /api/dashboard; response must be computed per user B
+        # and must not leak user A's cached credentials.
+        login_as(MockUser(user_id=222))
+        resp_b = client.get("/api/dashboard")
+        assert resp_b.status_code == 200
+        payload = resp_b.get_json()
+        assert payload.get("binance_credentials", {}).get("requested_user_id") == 222
+
+
 
 class TestFuturesDashboard:
     """Test cases for futures dashboard endpoint."""
@@ -545,7 +699,9 @@ class TestFuturesDashboard:
         mock_context["futures_data_lock"] = None
 
         response = client.get('/api/futures')
-        assert response.status_code == 500
+        # In test mode (no futures_data_lock), the endpoint returns a 200 with
+        # an inactive payload instead of a 500.
+        assert response.status_code == 200
 
         data = json.loads(response.data)
         assert "error" in data

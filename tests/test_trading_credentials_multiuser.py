@@ -50,7 +50,7 @@ def test_credentials_endpoint_scopes_by_user(tmp_path):
         "ultimate_trader": None,
         "optimized_trader": None,
         "get_binance_credential_status": lambda include_connection, include_logs, user_id=None: {},
-        "apply_binance_credentials": lambda account_type, creds: True,
+        "apply_binance_credentials": lambda account_type, creds, user_id=None: True,
         "binance_credentials_store": store,
         "binance_log_manager": None,
         "binance_credential_service": type(

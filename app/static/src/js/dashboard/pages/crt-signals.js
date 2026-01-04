@@ -24,7 +24,7 @@ function updateCRTSignalsTable(signalsData) {
   const tableBody = document.getElementById('crt-signals-table');
   if (!tableBody) return;
 
-  tableBody.innerHTML = '';
+  tableBody.textContent = '';
 
   // Convert signals object to array and sort by timestamp (most recent first)
   const signalsArray = Object.entries(signalsData)
@@ -37,7 +37,13 @@ function updateCRTSignalsTable(signalsData) {
 
   if (signalsArray.length === 0) {
     const emptyRow = document.createElement('tr');
-    emptyRow.innerHTML = '<td colspan="5" style="text-align: center; padding: var(--spacing-lg);">No CRT signals available</td>';
+    const cell = document.createElement('td');
+    cell.colSpan = 5;
+    cell.className = 'text-muted';
+    cell.style.textAlign = 'center';
+    cell.style.padding = 'var(--spacing-lg)';
+    cell.textContent = 'No CRT signals available';
+    emptyRow.appendChild(cell);
     tableBody.appendChild(emptyRow);
     return;
   }
@@ -53,25 +59,48 @@ function updateCRTSignalsTable(signalsData) {
     const confidencePercent = Math.round((signal.confidence || 0) * 100);
 
     // Format timestamp
-    const timestamp = new Date(signal.timestamp);
-    const timeString = timestamp.toLocaleString('en-US', {
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+    let timeString = '—';
+    try {
+      const ts = signal.timestamp ? new Date(signal.timestamp) : null;
+      if (ts && !Number.isNaN(ts.getTime())) {
+        timeString = ts.toLocaleString('en-US', {
+          month: 'short',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      }
+    } catch (_) {
+      // ignore
+    }
 
     // Calculate strength (using confidence as strength indicator)
     const strength = getStrengthLabel(signal.confidence || 0);
 
-    row.innerHTML = `
-      <td>${signal.symbol}</td>
-      <td><span class="status-indicator ${signalClass}">${signalText.replace('_', ' ')}</span></td>
-      <td>${confidencePercent}%</td>
-      <td>${timeString}</td>
-      <td>${strength}</td>
-    `;
+    const tdSymbol = document.createElement('td');
+    tdSymbol.textContent = signal.symbol || '';
+
+    const tdSignal = document.createElement('td');
+    const badge = document.createElement('span');
+    badge.className = `status-indicator ${signalClass}`;
+    badge.textContent = signalText.replace('_', ' ');
+    tdSignal.appendChild(badge);
+
+    const tdConfidence = document.createElement('td');
+    tdConfidence.textContent = `${confidencePercent}%`;
+
+    const tdTime = document.createElement('td');
+    tdTime.textContent = timeString;
+
+    const tdStrength = document.createElement('td');
+    tdStrength.textContent = strength;
+
+    row.appendChild(tdSymbol);
+    row.appendChild(tdSignal);
+    row.appendChild(tdConfidence);
+    row.appendChild(tdTime);
+    row.appendChild(tdStrength);
 
     tableBody.appendChild(row);
   });

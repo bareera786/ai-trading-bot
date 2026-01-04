@@ -12,9 +12,37 @@ export function initEventHandlers() {
       if (sidebar) sidebar.classList.toggle('open');
     });
 
-    // Logout button
-    document.getElementById('logout-btn')?.addEventListener('click', () => {
-      window.location.href = '/logout';
+    // Logout button - use fetch to capture server response and log details
+    document.getElementById('logout-btn')?.addEventListener('click', async (ev) => {
+      ev.preventDefault();
+      console.info('[logout] Logout button clicked - initiating logout flow');
+      try {
+        // Call server logout endpoint and allow redirects
+        const resp = await fetch('/logout', { method: 'GET', credentials: 'same-origin' });
+        console.info('[logout] /logout response', { status: resp.status, redirected: resp.redirected, url: resp.url });
+
+        if (resp.redirected) {
+          // Server asked to redirect (common behavior) — follow it in the browser
+          console.info('[logout] Server redirected to', resp.url);
+          window.location.href = resp.url;
+          return;
+        }
+
+        // If server returned OK (200/204/202), navigate to login page
+        if (resp.ok) {
+          console.info('[logout] Logout successful, navigating to /login');
+          window.location.href = '/login';
+          return;
+        }
+
+        // Otherwise, show error and still navigate to login to clear client state
+        console.warn('[logout] Unexpected logout response, forcing navigation to /login');
+        window.location.href = '/login';
+      } catch (err) {
+        console.error('[logout] Error during logout fetch', err);
+        // Fallback: navigate to `/login` to ensure client appears logged out
+        window.location.href = '/login';
+      }
     });
 
     // RIBS logs handlers
@@ -77,6 +105,19 @@ export function initEventHandlers() {
       }
     });
 
+    // Admin settings: payment address
+    document.getElementById('admin-settings-reset-btn')?.addEventListener('click', async () => {
+      if (window.loadPaymentSettings) {
+        await window.loadPaymentSettings();
+      }
+    });
+
+    document.getElementById('admin-settings-save-btn')?.addEventListener('click', async () => {
+      if (window.savePaymentAddress) {
+        await window.savePaymentAddress();
+      }
+    });
+
     // Modal close buttons (symbol backtest modal)
     document.querySelectorAll('[data-close-modal]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -117,6 +158,15 @@ export const handlers = {
     if (sidebar) sidebar.classList.toggle('open');
   },
   logout: () => {
+    // Prefer the fetch-based logout flow to capture server responses
+    if (typeof window !== 'undefined' && window.document) {
+      const btn = document.getElementById('logout-btn');
+      if (btn) {
+        btn.click();
+        return;
+      }
+    }
+    // Last-resort: direct navigation
     window.location.href = '/logout';
   },
 };

@@ -64,11 +64,29 @@ class SimpleLogManager:
     def __init__(self):
         self._logs: List[Dict[str, Any]] = []
 
-    def add(self, event_type: str, message: str, **kwargs):
-        self._logs.insert(0, {"type": event_type, "message": message, "details": kwargs})
+    def add(self, event_type: str, message: str, *, user_id: Optional[int] = None, **kwargs):
+        self._logs.insert(
+            0,
+            {
+                "type": event_type,
+                "message": message,
+                "user_id": str(user_id) if user_id is not None else None,
+                "details": kwargs,
+            },
+        )
 
-    def get_logs(self, limit: int = 50, account_type: Optional[str] = None, severity: Optional[str] = None):
-        return self._logs[:limit]
+    def get_logs(
+        self,
+        limit: int = 50,
+        account_type: Optional[str] = None,
+        severity: Optional[str] = None,
+        user_id: Optional[int] = None,
+    ):
+        logs = self._logs
+        if user_id is not None:
+            user_key = str(user_id)
+            logs = [log for log in logs if str(log.get("user_id")) == user_key]
+        return logs[:limit]
 
 
 class FallbackTrader:

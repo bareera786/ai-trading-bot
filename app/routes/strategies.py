@@ -9,6 +9,8 @@ from typing import Any
 from flask import Blueprint, current_app, jsonify, request
 from flask_login import current_user, login_required
 
+from app.auth.decorators import subscription_required
+
 
 strategies_bp = Blueprint("strategies", __name__)
 
@@ -79,7 +81,7 @@ def strategy_details(strategy_name: str):
 
 
 @strategies_bp.route("/api/strategies/<strategy_name>", methods=["PUT"])
-@login_required
+@subscription_required
 def update_strategy(strategy_name: str):
     manager = _strategy_manager()
     payload = request.get_json()
@@ -100,7 +102,7 @@ def update_strategy(strategy_name: str):
 
 
 @strategies_bp.route("/api/strategies/<strategy_name>/toggle", methods=["POST"])
-@login_required
+@subscription_required
 def toggle_strategy(strategy_name: str):
     manager = _strategy_manager()
     payload = request.get_json(silent=True) or {}
@@ -117,7 +119,7 @@ def toggle_strategy(strategy_name: str):
 
 
 @strategies_bp.route("/api/strategies/<strategy_name>/configure", methods=["POST"])
-@login_required
+@subscription_required
 def configure_strategy(strategy_name: str):
     manager = _strategy_manager()
     payload = request.get_json(silent=True) or {}
@@ -152,7 +154,7 @@ def all_strategies_performance():
 
 
 @strategies_bp.route("/api/strategies/<strategy_name>/execute", methods=["POST"])
-@login_required
+@subscription_required
 def execute_strategy(strategy_name: str):
     manager = _strategy_manager()
     payload = request.get_json(silent=True) or {}
@@ -172,7 +174,7 @@ def execute_strategy(strategy_name: str):
 
 
 @strategies_bp.route("/api/strategies/reset", methods=["POST"])
-@login_required
+@subscription_required
 def reset_strategies():
     manager = _strategy_manager()
     manager.reset_all_strategies()
@@ -182,7 +184,7 @@ def reset_strategies():
 
 
 @strategies_bp.route("/api/strategies/backtest", methods=["POST"])
-@login_required
+@subscription_required
 def backtest_strategies():
     manager = _strategy_manager()
     payload = request.get_json(silent=True) or {}

@@ -26,17 +26,39 @@ function updateCount(id, value) {
   if (el) el.textContent = value;
 }
 
-function formatSubscriptionInfo(subscription) {
+function formatMaybeDate(value, { dateOnly = false } = {}) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return dateOnly ? date.toLocaleDateString() : date.toLocaleString();
+}
+
+function buildSubscriptionCell(subscription) {
+  const root = document.createElement('div');
+
   if (!subscription) {
-    return '<span class="status-indicator status-neutral">None</span>';
+    const none = document.createElement('span');
+    none.className = 'status-indicator status-neutral';
+    none.textContent = 'None';
+    root.appendChild(none);
+    return root;
   }
-  
-  const status = subscription.is_active ? 'status-success' : 'status-error';
-  const statusText = subscription.is_active ? 'Active' : 'Inactive';
+
+  const badge = document.createElement('span');
+  badge.className = `status-indicator ${subscription.is_active ? 'status-success' : 'status-neutral'}`;
+  badge.textContent = subscription.is_active ? 'Active' : 'Inactive';
+  root.appendChild(badge);
+
+  const meta = document.createElement('div');
+  meta.className = 'text-muted';
+  meta.style.marginTop = '6px';
+  meta.style.fontSize = 'var(--font-size-xs)';
   const planName = subscription.plan_name || 'Unknown Plan';
-  const expires = subscription.expires_at ? new Date(subscription.expires_at).toLocaleDateString() : 'Never';
-  
-  return `<span class="status-indicator ${status}">${statusText}</span><br><small>${planName}<br>Expires: ${expires}</small>`;
+  const expires = subscription.expires_at ? formatMaybeDate(subscription.expires_at, { dateOnly: true }) : 'Never';
+  meta.innerHTML = `${planName}<br>Expires: ${expires}`;
+  root.appendChild(meta);
+
+  return root;
 }
 
 let availablePlans = [];
@@ -64,21 +86,54 @@ export async function refreshUsers() {
 
     users.forEach((user) => {
       const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${user.username}</td>
-        <td>${user.is_admin ? 'Administrator' : 'User'}</td>
-        <td>${user.is_active ? '<span class="status-indicator status-success">Active</span>' : '<span class="status-indicator status-neutral">Inactive</span>'}</td>
-        <td>${formatSubscriptionInfo(user.subscription)}</td>
-        <td>${user.last_login || 'Never'}</td>
-        <td>${user.created_at || 'Unknown'}</td>
-        <td>
-          <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="editUser('${user.username}')">Edit</button>
-          <button class="btn btn-info" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="viewUserActivity('${user.username}')">Activity</button>
-          <button class="btn btn-warning" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="updateUserPermissions('${user.username}')">Permissions</button>
-          <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="assignSubscriptionToUser('${user.username}')">Subscription</button>
-          <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteUser('${user.username}')">Delete</button>
-        </td>
-      `;
+
+      const usernameCell = document.createElement('td');
+      usernameCell.textContent = user.username || '';
+      row.appendChild(usernameCell);
+
+      const roleCell = document.createElement('td');
+      roleCell.textContent = user.is_admin ? 'Administrator' : 'User';
+      row.appendChild(roleCell);
+
+      const statusCell = document.createElement('td');
+      const statusBadge = document.createElement('span');
+      statusBadge.className = `status-indicator ${user.is_active ? 'status-success' : 'status-neutral'}`;
+      statusBadge.textContent = user.is_active ? 'Active' : 'Inactive';
+      statusCell.appendChild(statusBadge);
+      row.appendChild(statusCell);
+
+      const subscriptionCell = document.createElement('td');
+      subscriptionCell.appendChild(buildSubscriptionCell(user.subscription));
+      row.appendChild(subscriptionCell);
+
+      const lastLoginCell = document.createElement('td');
+      lastLoginCell.textContent = user.last_login ? formatMaybeDate(user.last_login) : 'Never';
+      row.appendChild(lastLoginCell);
+
+      const createdCell = document.createElement('td');
+      createdCell.textContent = user.created_at ? formatMaybeDate(user.created_at, { dateOnly: true }) : 'Unknown';
+      row.appendChild(createdCell);
+
+      const actionsCell = document.createElement('td');
+      actionsCell.className = 'user-col-actions';
+
+      const makeButton = (label, className, onClick) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `btn btn-sm ${className}`;
+        btn.textContent = label;
+        btn.addEventListener('click', onClick);
+        return btn;
+      };
+
+      const username = user.username;
+      actionsCell.appendChild(makeButton('Edit', 'btn-secondary', () => editUser(username)));
+      actionsCell.appendChild(makeButton('Activity', 'btn-info', () => viewUserActivity(username)));
+      actionsCell.appendChild(makeButton('Permissions', 'btn-warning', () => updateUserPermissions(username)));
+      actionsCell.appendChild(makeButton('Subscription', 'btn-primary', () => assignSubscriptionToUser(username)));
+      actionsCell.appendChild(makeButton('Delete', 'btn-danger', () => deleteUser(username)));
+
+      row.appendChild(actionsCell);
       tbody.appendChild(row);
     });
   } catch (error) {
@@ -337,7 +392,7 @@ export async function viewUserActivity(username) {
         data.activity.forEach(activity => {
           const timestamp = activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'Unknown';
           activityHtml += `
-            <div style="border: 1px solid #ddd; margin: 5px 0; padding: 10px; border-radius: 5px;">
+            <div style="border: 1px solid var(--border-color); margin: 5px 0; padding: 10px; border-radius: var(--radius-md); background: var(--bg-tertiary);">
               <strong>${activity.type.toUpperCase()}</strong> - ${timestamp}<br>
               ${activity.description}
               ${activity.details && Object.keys(activity.details).length > 0 ? 
@@ -355,13 +410,13 @@ export async function viewUserActivity(username) {
       const modal = document.createElement('div');
       modal.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.5); z-index: 1000; display: flex;
+        background: rgba(0,0,0,0.65); z-index: 2000; display: flex;
         align-items: center; justify-content: center;
       `;
       modal.innerHTML = `
-        <div style="background: white; padding: 20px; border-radius: 10px; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+        <div style="background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); padding: 20px; border-radius: var(--radius-xl); width: min(700px, 92vw); max-height: 80vh; overflow-y: auto;">
           ${activityHtml}
-          <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px;">Close</button>
+          <button class="btn btn-secondary btn-sm" onclick="this.parentElement.parentElement.remove()" style="margin-top: 10px;">Close</button>
         </div>
       `;
       document.body.appendChild(modal);
@@ -383,20 +438,20 @@ export async function updateUserPermissions(username) {
     const modal = document.createElement('div');
     modal.style.cssText = `
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5); z-index: 1000; display: flex;
+      background: rgba(0,0,0,0.65); z-index: 2000; display: flex;
       align-items: center; justify-content: center;
     `;
     
     modal.innerHTML = `
-      <div style="background: white; padding: 20px; border-radius: 10px; max-width: 400px;">
+      <div style="background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); padding: 20px; border-radius: var(--radius-xl); width: min(520px, 92vw);">
         <h3>Update Permissions for ${username}</h3>
         <form id="permissions-form">
           <label><input type="checkbox" id="perm-admin" ${userData.is_admin ? 'checked' : ''}> Admin Access</label><br>
           <label><input type="checkbox" id="perm-active" ${userData.is_active ? 'checked' : ''}> Account Active</label><br>
           <label><input type="checkbox" id="perm-trade" checked> Can Trade</label><br>
           <label><input type="checkbox" id="perm-backtest" checked> Can Backtest</label><br><br>
-          <button type="button" onclick="this.form.dispatchEvent(new Event('submit'))">Update</button>
-          <button type="button" onclick="this.parentElement.parentElement.remove()">Cancel</button>
+          <button class="btn btn-primary btn-sm" type="button" onclick="this.form.dispatchEvent(new Event('submit'))">Update</button>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="this.parentElement.parentElement.remove()">Cancel</button>
         </form>
       </div>
     `;

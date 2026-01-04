@@ -4,7 +4,7 @@ from __future__ import annotations
 from flask import Blueprint, current_app, jsonify, request
 from flask_login import current_user
 
-from app.auth.decorators import login_required
+from app.auth.decorators import subscription_required
 from app.runtime.symbols import get_active_trading_universe
 
 backtest_bp = Blueprint("backtest", __name__, url_prefix="/api")
@@ -18,7 +18,7 @@ def _ctx() -> dict:
 
 
 @backtest_bp.route("/backtest/run", methods=["POST"])
-@login_required
+@subscription_required
 def api_run_backtest():
     try:
         data = request.get_json() or {}

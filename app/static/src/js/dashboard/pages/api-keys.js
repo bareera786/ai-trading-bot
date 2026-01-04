@@ -49,23 +49,61 @@ async function loadApiKeys() {
       merged.raw[key] = acc;
     });
 
-    table.innerHTML = '';
+    table.textContent = '';
+
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${merged.exchange}</td>
-      <td>${merged.masked_key || 'Not set'}</td>
-      <td><span class="status-indicator ${merged.connected ? 'status-success' : 'status-warning'}">${merged.connected ? 'Active' : 'Inactive'}</span></td>
-      <td>${Array.from(merged.types).join(', ')}</td>
-      <td>${formatUpdatedAt(merged.updated_at)}</td>
-      <td>
-        <button class="btn btn-secondary btn-sm" onclick="openEditApiKeyModal('spot')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="removeApiKey('spot')">Remove</button>
-      </td>
-    `;
+
+    const tdExchange = document.createElement('td');
+    tdExchange.textContent = merged.exchange;
+
+    const tdKey = document.createElement('td');
+    tdKey.textContent = merged.masked_key || 'Not set';
+
+    const tdStatus = document.createElement('td');
+    const statusPill = document.createElement('span');
+    statusPill.className = `status-indicator ${merged.connected ? 'status-success' : 'status-warning'}`;
+    statusPill.textContent = merged.connected ? 'Active' : 'Inactive';
+    tdStatus.appendChild(statusPill);
+
+    const tdTypes = document.createElement('td');
+    tdTypes.textContent = Array.from(merged.types).join(', ');
+
+    const tdUpdated = document.createElement('td');
+    tdUpdated.textContent = formatUpdatedAt(merged.updated_at);
+
+    const tdActions = document.createElement('td');
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn btn-secondary btn-sm';
+    editBtn.type = 'button';
+    editBtn.textContent = 'Edit';
+    editBtn.addEventListener('click', () => openEditApiKeyModal('spot'));
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn btn-danger btn-sm';
+    removeBtn.type = 'button';
+    removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', () => removeApiKey('spot'));
+
+    tdActions.appendChild(editBtn);
+    tdActions.appendChild(removeBtn);
+
+    tr.appendChild(tdExchange);
+    tr.appendChild(tdKey);
+    tr.appendChild(tdStatus);
+    tr.appendChild(tdTypes);
+    tr.appendChild(tdUpdated);
+    tr.appendChild(tdActions);
     table.appendChild(tr);
   } catch (error) {
     console.error('Failed to load API keys', error);
-    table.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Unable to load API keys (are you logged in?)</td></tr>';
+    table.textContent = '';
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 5;
+    td.className = 'text-center text-muted';
+    td.textContent = 'Unable to load API keys (are you logged in?)';
+    tr.appendChild(td);
+    table.appendChild(tr);
   }
 }
 
@@ -137,33 +175,35 @@ async function removeApiKey(accountType) {
   }
 }
 
-// Expose helper functions for inline onclicks
+async function openEditApiKeyModal(accountType) {
+  try {
+    const status = await fetchJson('/api/binance/credentials');
+    const acc = (status.accounts || {})[accountType] || {};
+    openApiKeyModal(accountType, acc);
+  } catch {
+    openApiKeyModal(accountType, {});
+  }
+}
+
+let __apiKeysWired = false;
+function wireApiKeysUiOnce() {
+  if (__apiKeysWired) return;
+  __apiKeysWired = true;
+
+  document.getElementById(IDS.addBtn)?.addEventListener('click', openAddApiKeyModal);
+  document.getElementById(IDS.saveBtn)?.addEventListener('click', saveApiKey);
+  document.getElementById('api-keys-test-btn')?.addEventListener('click', testApiKey);
+  document.getElementById('api-keys-modal-close-btn')?.addEventListener('click', closeApiKeyModal);
+  document.getElementById('api-keys-cancel-btn')?.addEventListener('click', closeApiKeyModal);
+}
+
 if (typeof window !== 'undefined') {
-  window.openAddApiKeyModal = openAddApiKeyModal;
-  window.openEditApiKeyModal = function (accountType) {
-    // We fetch current status to prefill
-    fetchJson('/api/binance/credentials')
-      .then(status => {
-        const acc = (status.accounts || {})[accountType] || {};
-        openApiKeyModal(accountType, acc);
-      })
-      .catch(() => openApiKeyModal(accountType, {}));
-  };
-  window.removeApiKey = removeApiKey;
-
-  document.addEventListener('dashboard:api-keys-visible', loadApiKeys);
+  window.addEventListener('dashboard:api-keys-visible', () => {
+    wireApiKeysUiOnce();
+    loadApiKeys();
+  });
   document.addEventListener('DOMContentLoaded', () => {
-    const addBtn = document.getElementById(IDS.addBtn);
-    if (addBtn) addBtn.addEventListener('click', openAddApiKeyModal);
-
-    const modal = document.getElementById(IDS.modal);
-    if (modal) {
-      modal.querySelector('.modal-close')?.addEventListener('click', closeApiKeyModal);
-      document.getElementById(IDS.saveBtn)?.addEventListener('click', saveApiKey);
-        document.getElementById('api-keys-test-btn')?.addEventListener('click', testApiKey);
-    }
-
-    // Auto-load if visible
+    wireApiKeysUiOnce();
     const section = document.getElementById('api-keys');
     if (section && section.classList.contains('active')) {
       loadApiKeys();

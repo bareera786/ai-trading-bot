@@ -681,7 +681,6 @@
     background: linear-gradient(90deg, #00d4aa 0%, #26debc 100%);
     border-radius: 2px;
     transition: width 1s ease-out;
-}
     width: var(--width);
 }
 
@@ -1750,7 +1749,6 @@
 
 .auth-body.auth-landing .lead-status.error {
     color: #ef4444;
-}
 }
 
 .marketing-wrapper {

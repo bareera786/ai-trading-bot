@@ -4,47 +4,68 @@ import { showNotification } from '../utils/notifications.js';
 // Self-improvement dashboard state
 let siCharts = {};
 let siUpdateInterval = null;
+let adminUpdateInterval = null;
+
+function isAdminDashboardVisible() {
+    const section = document.getElementById('admin-dashboard');
+    return !!section && section.classList.contains('active');
+}
 
 function initAdminDashboard() {
-    // Initialize admin dashboard overview
-    loadAdminDashboardData();
-    
-    // Initialize self-improvement dashboard
+    if (!isAdminDashboardVisible()) return;
+
+    // Initialize self-improvement dashboard (handlers/charts are idempotent)
     initSelfImprovementDashboard();
 
-    // Set up Quick Admin Actions navigation
+    // Set up Quick Admin Actions navigation (scoped + idempotent)
     setupQuickAdminActions();
 
-    // Set up auto-refresh for admin data (every 60 seconds)
-    setInterval(loadAdminDashboardData, 60000);
-    
-    // Set up auto-refresh for self-improvement data
-    siUpdateInterval = setInterval(updateSelfImprovementData, 30000); // Update every 30 seconds
-
     // Initial data load
+    loadAdminDashboardData();
     updateSelfImprovementData();
+
+    // Auto-refresh (guarded + single interval)
+    if (!adminUpdateInterval) {
+        adminUpdateInterval = setInterval(() => {
+            if (!isAdminDashboardVisible()) return;
+            loadAdminDashboardData();
+        }, 60000);
+    }
+
+    if (!siUpdateInterval) {
+        siUpdateInterval = setInterval(() => {
+            if (!isAdminDashboardVisible()) return;
+            updateSelfImprovementData();
+        }, 30000);
+    }
 }
 
 function setupQuickAdminActions() {
-    // Handle clicks on Quick Admin Actions buttons
-    const actionButtons = document.querySelectorAll('[data-page]');
-    actionButtons.forEach(button => {
-        if (!button.classList.contains('nav-item')) { // Don't override existing nav items
-            button.addEventListener('click', (e) => {
-                e.preventDefault();
-                const pageId = button.getAttribute('data-page');
-                if (pageId) {
-                    // Trigger navigation to the page
-                    const navItem = document.querySelector(`.nav-item[data-page="${pageId}"]`);
-                    if (navItem) {
-                        navItem.click();
-                    } else {
-                        // Fallback: manually show the page
-                        showPage(pageId);
-                    }
-                }
-            });
-        }
+    const container = document.querySelector('#admin-dashboard .admin-quick-actions');
+    if (!container) return;
+
+    // Handle clicks on Quick Admin Actions buttons (admin page only)
+    const actionButtons = container.querySelectorAll('[data-page]');
+    actionButtons.forEach((button) => {
+        if (button.classList.contains('nav-item')) return; // Don't override existing nav items
+        if (button.dataset.bound === '1') return;
+        button.dataset.bound = '1';
+
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            const pageId = button.getAttribute('data-page');
+            if (!pageId) return;
+
+            // Trigger navigation to the page
+            const navItem = document.querySelector(`.nav-item[data-page="${pageId}"]`);
+            if (navItem) {
+                navItem.click();
+                return;
+            }
+
+            // Fallback: manually show the page
+            showPage(pageId);
+        });
     });
 }
 
@@ -78,8 +99,18 @@ function showPage(pageId) {
         // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
         
-        // Dispatch page change event for other components
-        window.dispatchEvent(new CustomEvent('pageChange', { detail: { page: pageId } }));
+        // Dispatch visibility event for other components (fallback parity with navigation.js)
+        const visibilityEvents = {
+            'user-management': 'dashboard:user-management-visible',
+            symbols: 'dashboard:symbols-visible',
+            'backtest-lab': 'dashboard:backtest-lab-visible',
+            'admin-settings': 'dashboard:admin-settings-visible',
+            'admin-dashboard': 'dashboard:admin-dashboard-visible',
+            'trade-history': 'dashboard:trade-history-visible'
+        };
+        if (visibilityEvents[pageId]) {
+            window.dispatchEvent(new CustomEvent(visibilityEvents[pageId]));
+        }
     }
 }
 
@@ -120,8 +151,12 @@ function updateAdminOverview(summary) {
     // Update revenue (total portfolio value as proxy)
     const revenueEl = document.getElementById('admin-total-revenue');
     if (revenueEl) {
-        const revenue = summary.total_portfolio_value || 0;
-        revenueEl.textContent = `$${revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const revenueValue = Number(summary.total_portfolio_value);
+        if (Number.isFinite(revenueValue)) {
+            revenueEl.textContent = `$${revenueValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        } else {
+            revenueEl.textContent = '—';
+        }
     }
     
     // Update system health based on risk level
@@ -133,7 +168,7 @@ function updateAdminOverview(summary) {
         
         if (riskLevel === 'high') {
             healthStatus = 'HIGH RISK';
-            healthClass = 'status-error';
+            healthClass = 'status-danger';
         } else if (riskLevel === 'medium') {
             healthStatus = 'MEDIUM RISK';
             healthClass = 'status-warning';
@@ -160,6 +195,8 @@ function initSelfImprovementDashboard() {
 }
 
 function initCharts() {
+    if (siCharts.successRate || siCharts.accuracy) return;
+
     const successCtx = document.getElementById('si-success-chart');
     const accuracyCtx = document.getElementById('si-accuracy-chart');
 
@@ -231,7 +268,8 @@ function initCharts() {
 function setupAutoFixHandlers() {
     // Manual cycle trigger
     const triggerCycleBtn = document.getElementById('si-trigger-cycle');
-    if (triggerCycleBtn) {
+    if (triggerCycleBtn && triggerCycleBtn.dataset.bound !== '1') {
+        triggerCycleBtn.dataset.bound = '1';
         triggerCycleBtn.addEventListener('click', async () => {
             try {
                 triggerCycleBtn.disabled = true;
@@ -254,25 +292,29 @@ function setupAutoFixHandlers() {
 
     // Model retraining
     const retrainBtn = document.getElementById('si-model-retrain');
-    if (retrainBtn) {
+    if (retrainBtn && retrainBtn.dataset.bound !== '1') {
+        retrainBtn.dataset.bound = '1';
         retrainBtn.addEventListener('click', () => triggerAutoFix('model_retraining'));
     }
 
     // Indicator optimization
     const optimizeBtn = document.getElementById('si-optimize-indicators');
-    if (optimizeBtn) {
+    if (optimizeBtn && optimizeBtn.dataset.bound !== '1') {
+        optimizeBtn.dataset.bound = '1';
         optimizeBtn.addEventListener('click', () => triggerAutoFix('indicator_optimization'));
     }
 
     // Config reset
     const resetBtn = document.getElementById('si-reset-config');
-    if (resetBtn) {
+    if (resetBtn && resetBtn.dataset.bound !== '1') {
+        resetBtn.dataset.bound = '1';
         resetBtn.addEventListener('click', () => triggerAutoFix('config_reset'));
     }
 
     // Memory cleanup
     const cleanupBtn = document.getElementById('si-cleanup-memory');
-    if (cleanupBtn) {
+    if (cleanupBtn && cleanupBtn.dataset.bound !== '1') {
+        cleanupBtn.dataset.bound = '1';
         cleanupBtn.addEventListener('click', () => triggerAutoFix('memory_cleanup'));
     }
 }
@@ -402,7 +444,7 @@ function updatePerformanceTable(siData) {
     const trends = siData.performance_trends.slice(-10); // Show last 10 entries
 
     if (trends.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#6c757d;">No performance data available</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:var(--spacing-2xl);">No performance data available</td></tr>';
         return;
     }
 
@@ -412,12 +454,12 @@ function updatePerformanceTable(siData) {
 
         return `
             <tr>
-                <td style="padding:0.5rem;border:1px solid #dee2e6;">${trend.cycle_number}</td>
-                <td style="padding:0.5rem;border:1px solid #dee2e6;">${timestamp.toLocaleString()}</td>
-                <td style="padding:0.5rem;border:1px solid #dee2e6;">${trend.ultimate_rate.toFixed(1)}%</td>
-                <td style="padding:0.5rem;border:1px solid #dee2e6;">${trend.optimized_rate.toFixed(1)}%</td>
-                <td style="padding:0.5rem;border:1px solid #dee2e6;">${trend.average_rate.toFixed(1)}%</td>
-                <td style="padding:0.5rem;border:1px solid #dee2e6;">${duration}</td>
+                <td>${trend.cycle_number}</td>
+                <td>${timestamp.toLocaleString()}</td>
+                <td>${trend.ultimate_rate.toFixed(1)}%</td>
+                <td>${trend.optimized_rate.toFixed(1)}%</td>
+                <td>${trend.average_rate.toFixed(1)}%</td>
+                <td>${duration}</td>
             </tr>
         `;
     }).join('');
@@ -427,14 +469,6 @@ function updatePerformanceTable(siData) {
 export { initAdminDashboard };
 
 // Auto-initialize when admin-dashboard page is shown
-document.addEventListener('pageChange', (e) => {
-    if (e.detail.page === 'admin-dashboard') {
-        initAdminDashboard();
-    } else {
-        // Clean up when leaving the page
-        if (siUpdateInterval) {
-            clearInterval(siUpdateInterval);
-            siUpdateInterval = null;
-        }
-    }
+window.addEventListener('dashboard:admin-dashboard-visible', () => {
+    initAdminDashboard();
 });

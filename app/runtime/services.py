@@ -55,6 +55,9 @@ def build_service_runtime(
     socketio: Any,
     safe_float: Callable[[Any, float], float],
     bot_logger: Any,
+    persistence_manager: Any | None = None,
+    symbols_for_persistence: Sequence[str] | None = None,
+    auto_user_id_provider: Callable[[], Sequence[int]] | None = None,
 ) -> ServiceRuntime:
     """Construct all runtime services that depend on dashboard state."""
 
@@ -100,6 +103,9 @@ def build_service_runtime(
         refresh_indicator_dashboard_state=refresh_indicator_dashboard_state,
         safe_float=safe_float,
         bot_logger=bot_logger,
+        auto_user_id_provider=auto_user_id_provider,
+        persistence_manager=persistence_manager,
+        symbols_for_persistence=symbols_for_persistence,
         sleep_interval=trading_config.get("market_data_interval_seconds", 30),
     )
 

@@ -10,6 +10,7 @@ from .context import (
     RuntimeContext,
     SymbolRuntime,
     build_runtime_context as _build_context,
+    UserScopedProxy,
 )
 from .indicators import INDICATOR_SIGNAL_OPTIONS
 from .payloads import build_ai_bot_context_payload
@@ -85,6 +86,24 @@ def _build_payload_from_module(
     service, apply_credentials, get_status = _resolve_binance_credential_methods(module)
     ultimate_ml_system = _require_attr(module, "ultimate_ml_system")
 
+    raw_qfm_engine = getattr(ultimate_ml_system, "qfm_engine", None)
+    if raw_qfm_engine is not None:
+        qfm_engine = UserScopedProxy(
+            base=raw_qfm_engine,
+            factory=lambda: raw_qfm_engine.__class__(),
+        )
+    else:
+        qfm_engine = None
+
+    raw_strategy_manager = _require_attr(module, "strategy_manager")
+
+    # The legacy module exposes a global StrategyManager singleton.
+    # Wrap it so user-facing routes do not share mutable strategy/analytics state.
+    strategy_manager = UserScopedProxy(
+        base=raw_strategy_manager,
+        factory=lambda: raw_strategy_manager.__class__(),
+    )
+
     return build_ai_bot_context_payload(
         dashboard_data=_require_attr(module, "dashboard_data"),
         health_data_lock=_require_attr(module, "health_data_lock"),
@@ -105,7 +124,7 @@ def _build_payload_from_module(
         optimized_ml_system=_require_attr(module, "optimized_ml_system"),
         futures_ml_system=_require_attr(module, "futures_ml_system"),
         parallel_engine=_require_attr(module, "parallel_engine"),
-        strategy_manager=_require_attr(module, "strategy_manager"),
+        strategy_manager=strategy_manager,
         backtest_manager=_require_attr(module, "backtest_manager"),
         get_active_trading_universe=get_training_universe,
         get_real_market_data=_require_attr(module, "get_real_market_data"),
@@ -130,7 +149,7 @@ def _build_payload_from_module(
         ),
         trading_config=_require_attr(module, "TRADING_CONFIG"),
         coerce_bool=_require_attr(module, "_coerce_bool"),
-        qfm_engine=getattr(ultimate_ml_system, "qfm_engine", None),
+        qfm_engine=qfm_engine,
         persistence_manager=_require_attr(module, "persistence_manager"),
         persistence_scheduler=_require_attr(module, "persistence_scheduler"),
         persistence_runtime=_require_attr(module, "persistence_runtime"),

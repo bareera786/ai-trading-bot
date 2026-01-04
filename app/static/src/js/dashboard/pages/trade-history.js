@@ -4,10 +4,16 @@ let currentPage = 1;
 let currentFilters = {
   symbol: '',
   days: '',
-  type: 'all'
+  type: 'all',
 };
 let totalPages = 1;
-let availableSymbols = new Set();
+const availableSymbols = new Set();
+let currentMode = 'ultimate';
+
+const toSafeNumber = (value, fallback = 0) => {
+  const n = Number(value ?? fallback);
+  return Number.isFinite(n) ? n : fallback;
+};
 
 export async function loadTradeHistory() {
   try {
@@ -15,17 +21,15 @@ export async function loadTradeHistory() {
     const isAdmin = Boolean(user?.is_admin);
     const userId = user?.id;
 
-    // Build query parameters
     const params = new URLSearchParams({
-      mode: 'ultimate',
-      page: currentPage,
-      merge_db: isAdmin ? '1' : '0'
+      mode: currentMode,
+      page: String(currentPage),
+      merge_db: isAdmin ? '1' : '0',
     });
 
     if (currentFilters.symbol) params.append('symbol', currentFilters.symbol);
     if (currentFilters.days) params.append('days', currentFilters.days);
 
-    // Add execution mode filter based on type
     if (currentFilters.type === 'futures') {
       params.append('execution_mode', 'futures');
     } else if (currentFilters.type === 'spot') {
@@ -44,17 +48,22 @@ export async function loadTradeHistory() {
       return;
     }
 
-    // Update pagination info
     totalPages = data.total_pages || 1;
-    updatePaginationControls(data.current_page, totalPages);
+    updatePaginationControls(data.current_page || currentPage, totalPages);
 
-    // Collect available symbols for filter
     data.trades.forEach(trade => {
-      if (trade.symbol) availableSymbols.add(trade.symbol);
+      if (trade?.symbol) availableSymbols.add(trade.symbol);
     });
     updateSymbolFilter();
 
-    populateTradeHistoryTable(data.trades);
+    const trades = Array.isArray(data.trades) ? [...data.trades] : [];
+    trades.sort((a, b) => {
+      const ta = new Date(a?.timestamp || 0).getTime();
+      const tb = new Date(b?.timestamp || 0).getTime();
+      return tb - ta;
+    });
+
+    populateTradeHistoryTable(trades);
   } catch (error) {
     console.error('Error loading trade history:', error);
     renderEmptyState('Unable to load trade history');
@@ -67,19 +76,18 @@ function populateTradeHistoryTable(trades) {
 
   tbody.innerHTML = '';
 
-  if (trades.length === 0) {
+  if (!trades || trades.length === 0) {
     const row = document.createElement('tr');
-    row.innerHTML = '<td colspan="9" style="text-align: center; padding: 2rem;">No trades found</td>';
+    row.innerHTML = '<td colspan="10" style="text-align: center; padding: 2rem;">No trades found</td>';
     tbody.appendChild(row);
     return;
   }
 
-  trades.forEach((trade) => {
+  trades.forEach(trade => {
     const row = document.createElement('tr');
 
-    // Format timestamp - API returns ISO string
-    const timestamp = new Date(trade.timestamp);
-    const dateString = timestamp.toLocaleDateString('en-US', {
+    const timestamp = new Date(trade.timestamp || Date.now());
+    const dateString = timestamp.toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -87,64 +95,89 @@ function populateTradeHistoryTable(trades) {
       minute: '2-digit',
     });
 
-    // Format P&L with color
-    const pnl = Number(trade.pnl) || 0;
+    const pnl = toSafeNumber(trade.pnl, 0);
     const pnlClass = pnl >= 0 ? 'text-success' : 'text-danger';
     const pnlText = pnl >= 0 ? `+$${pnl.toFixed(4)}` : `-$${Math.abs(pnl).toFixed(4)}`;
 
-    const quantity = Number(trade.quantity || trade.qty) || 0;
-    const entryPrice = Number(trade.entry_price ?? trade.price ?? trade.fill_price) || 0;
+    const quantity = toSafeNumber(trade.quantity ?? trade.qty, 0);
+    const entryPrice = toSafeNumber(trade.entry_price ?? trade.price ?? trade.fill_price, 0);
     const status = trade.status || trade.state || 'unknown';
+    const normalizedStatus = String(status || 'unknown').toLowerCase();
+    const isClosed = normalizedStatus === 'filled' || normalizedStatus === 'closed' || normalizedStatus === 'success';
     const side = trade.side || trade.position_side || 'N/A';
     const symbol = trade.symbol || trade.ticker || 'N/A';
 
-    // Determine trade type
-    const tradeType = trade.execution_mode === 'futures' ? 'Futures' :
-                     trade.execution_mode === 'real' ? 'Spot' : 'Paper';
+    const tradeType = trade.execution_mode === 'futures'
+      ? 'Futures'
+      : trade.execution_mode === 'real'
+        ? 'Spot'
+        : 'Paper';
 
-    // Leverage (only for futures)
     const leverage = trade.leverage ? `${trade.leverage}x` : '-';
 
+    row.classList.add('trade-row', isClosed ? 'trade-row-closed' : 'trade-row-open');
+
     row.innerHTML = `
-      <td>${dateString}</td>
-      <td>${symbol}</td>
-      <td><span class="trade-type-${tradeType.toLowerCase()}">${tradeType}</span></td>
-      <td>${side}</td>
-      <td>${quantity.toFixed(4)}</td>
-      <td>$${entryPrice.toFixed(4)}</td>
-      <td>${leverage}</td>
-      <td class="${pnlClass}">${pnlText}</td>
-      <td><span class="status-indicator status-${getStatusClass(status)}">${status}</span></td>
+      <td class="trade-col-date">${dateString}</td>
+      <td class="trade-col-symbol">${symbol}</td>
+      <td class="trade-col-type"><span class="trade-type-${tradeType.toLowerCase()}">${tradeType}</span></td>
+      <td class="trade-col-side">${side}</td>
+      <td class="trade-col-num">${quantity.toFixed(4)}</td>
+      <td class="trade-col-num">$${entryPrice.toFixed(4)}</td>
+      <td class="trade-col-num">${leverage}</td>
+      <td class="trade-col-num ${pnlClass}">${pnlText}</td>
+      <td class="trade-col-status"><span class="status-indicator status-${getStatusClass(status)}">${status}</span></td>
+      <td class="trade-col-actions"><button class="btn btn-secondary btn-sm trade-detail-btn">Details</button></td>
     `;
 
-    // Attach click handler to open detail view
     row.style.cursor = 'pointer';
-    row.addEventListener('click', () => {
-      showTradeDetail(trade);
-    });
+    row.addEventListener('click', () => showTradeDetail(trade));
+
+    const detailBtn = row.querySelector('.trade-detail-btn');
+    if (detailBtn) {
+      detailBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        showTradeDetail(trade);
+      });
+    }
 
     tbody.appendChild(row);
   });
 }
 
 function showTradeDetail(trade) {
-  // Ensure modal exists in DOM
   const modal = document.getElementById('trade-detail-modal');
   if (!modal) {
-    // Fallback alert if modal markup isn't present
     alert('Trade details:\n' + JSON.stringify(trade, null, 2));
     return;
   }
 
-  modal.querySelector('.trade-detail-timestamp')?.textContent = new Date(trade.timestamp).toLocaleString();
-  modal.querySelector('.trade-detail-symbol')?.textContent = trade.symbol || trade.ticker || 'N/A';
-  modal.querySelector('.trade-detail-side')?.textContent = trade.side || trade.position_side || 'N/A';
-  modal.querySelector('.trade-detail-qty')?.textContent = Number(trade.quantity || trade.qty || 0).toFixed(8);
-  modal.querySelector('.trade-detail-entry')?.textContent = Number(trade.entry_price ?? trade.price ?? trade.fill_price || 0).toFixed(8);
-  modal.querySelector('.trade-detail-exit')?.textContent = Number(trade.exit_price || trade.close_price || 0).toFixed(8);
-  modal.querySelector('.trade-detail-pnl')?.textContent = (Number(trade.pnl) || 0).toFixed(8);
-  modal.querySelector('.trade-detail-status')?.textContent = trade.status || trade.state || 'N/A';
-  modal.querySelector('.trade-detail-meta')?.textContent = JSON.stringify(trade, null, 2);
+  let el = modal.querySelector('.trade-detail-timestamp');
+  if (el) el.textContent = new Date(trade.timestamp || Date.now()).toLocaleString();
+
+  el = modal.querySelector('.trade-detail-symbol');
+  if (el) el.textContent = trade.symbol || trade.ticker || 'N/A';
+
+  el = modal.querySelector('.trade-detail-side');
+  if (el) el.textContent = trade.side || trade.position_side || 'N/A';
+
+  el = modal.querySelector('.trade-detail-qty');
+  if (el) el.textContent = toSafeNumber(trade.quantity ?? trade.qty, 0).toFixed(8);
+
+  el = modal.querySelector('.trade-detail-entry');
+  if (el) el.textContent = toSafeNumber(trade.entry_price ?? trade.price ?? trade.fill_price, 0).toFixed(8);
+
+  el = modal.querySelector('.trade-detail-exit');
+  if (el) el.textContent = toSafeNumber(trade.exit_price ?? trade.close_price, 0).toFixed(8);
+
+  el = modal.querySelector('.trade-detail-pnl');
+  if (el) el.textContent = toSafeNumber(trade.pnl, 0).toFixed(8);
+
+  el = modal.querySelector('.trade-detail-status');
+  if (el) el.textContent = trade.status || trade.state || 'N/A';
+
+  el = modal.querySelector('.trade-detail-meta');
+  if (el) el.textContent = JSON.stringify(trade, null, 2);
 
   modal.style.display = 'flex';
 }
@@ -152,23 +185,24 @@ function showTradeDetail(trade) {
 function renderEmptyState(message) {
   const tbody = document.getElementById('trade-history-table');
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 2rem;">${message}</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 2rem;">${message}</td></tr>`;
 }
 
 function getStatusClass(status) {
-  switch (status?.toLowerCase()) {
+  switch ((status || '').toLowerCase()) {
     case 'filled':
     case 'closed':
     case 'success':
       return 'success';
     case 'failed':
-      return 'error';
+    case 'error':
+      return 'danger';
     default:
-      return 'warning';
+      return 'neutral';
   }
 }
 
-function updatePaginationControls(currentPage, totalPages) {
+function updatePaginationControls(current, total) {
   const paginationDiv = document.getElementById('trade-pagination');
   const pageInfo = document.getElementById('page-info');
   const prevBtn = document.getElementById('prev-page-btn');
@@ -176,11 +210,11 @@ function updatePaginationControls(currentPage, totalPages) {
 
   if (!paginationDiv || !pageInfo || !prevBtn || !nextBtn) return;
 
-  if (totalPages > 1) {
+  if (total > 1) {
     paginationDiv.style.display = 'block';
-    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-    prevBtn.disabled = currentPage <= 1;
-    nextBtn.disabled = currentPage >= totalPages;
+    pageInfo.textContent = `Page ${current} of ${total}`;
+    prevBtn.disabled = current <= 1;
+    nextBtn.disabled = current >= total;
   } else {
     paginationDiv.style.display = 'none';
   }
@@ -190,12 +224,8 @@ function updateSymbolFilter() {
   const symbolSelect = document.getElementById('trade-symbol-filter');
   if (!symbolSelect) return;
 
-  // Clear existing options except "All Symbols"
-  while (symbolSelect.options.length > 1) {
-    symbolSelect.remove(1);
-  }
+  while (symbolSelect.options.length > 1) symbolSelect.remove(1);
 
-  // Add available symbols
   Array.from(availableSymbols).sort().forEach(symbol => {
     const option = document.createElement('option');
     option.value = symbol;
@@ -213,7 +243,7 @@ function setupFilters() {
   const nextBtn = document.getElementById('next-page-btn');
 
   if (filterSelect) {
-    filterSelect.addEventListener('change', (e) => {
+    filterSelect.addEventListener('change', e => {
       currentFilters.type = e.target.value;
       currentPage = 1;
       loadTradeHistory();
@@ -221,7 +251,7 @@ function setupFilters() {
   }
 
   if (symbolSelect) {
-    symbolSelect.addEventListener('change', (e) => {
+    symbolSelect.addEventListener('change', e => {
       currentFilters.symbol = e.target.value;
       currentPage = 1;
       loadTradeHistory();
@@ -229,7 +259,7 @@ function setupFilters() {
   }
 
   if (daysSelect) {
-    daysSelect.addEventListener('change', (e) => {
+    daysSelect.addEventListener('change', e => {
       currentFilters.days = e.target.value;
       currentPage = 1;
       loadTradeHistory();
@@ -262,80 +292,13 @@ function setupFilters() {
   }
 }
 
-async function exportTradesToCSV() {
-  try {
-    const user = await fetchJson('/api/current_user');
-    const isAdmin = Boolean(user?.is_admin);
-    const userId = user?.id;
-
-    // Show loading indicator
-    const exportBtn = document.querySelector('#trade-history .btn-secondary');
-    const originalText = exportBtn.textContent;
-    exportBtn.textContent = 'Exporting...';
-    exportBtn.disabled = true;
-
-    // Collect all trades (handle pagination)
-    const allTrades = [];
-    let page = 1;
-    let hasMorePages = true;
-
-    while (hasMorePages) {
-      const endpoint = isAdmin
-        ? `/api/trades?mode=${currentMode}&page=${page}&merge_db=1`
-        : `/api/user/${userId}/trades?page=${page}&mode=${currentMode}`;
-
-      const data = await fetchJson(endpoint);
-
-      if (!data || data.error || !Array.isArray(data.trades)) {
-        throw new Error(data?.error || 'Invalid response');
-      }
-
-      allTrades.push(...data.trades);
-
-      // Check if there are more pages
-      hasMorePages = page < data.total_pages;
-      page++;
-    }
-
-    if (allTrades.length === 0) {
-      alert('No trades to export');
-      return;
-    }
-
-    // Convert to CSV
-    const csvContent = convertTradesToCSV(allTrades);
-
-    // Download CSV file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `trades_${currentMode}_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-  } catch (error) {
-    console.error('Error exporting trades:', error);
-    alert('Failed to export trades. Please try again.');
-  } finally {
-    // Restore button state
-    const exportBtn = document.querySelector('#trade-history .btn-secondary');
-    if (exportBtn) {
-      exportBtn.textContent = originalText;
-      exportBtn.disabled = false;
-    }
-  }
-}
-
-function convertTradesToCSV(trades) {
+export function convertTradesToCSV(trades) {
   const headers = ['Date', 'Symbol', 'Side', 'Quantity', 'Entry Price', 'P&L', 'Status'];
-  let csv = headers.join(',') + '\n';
+  const lines = [headers.join(',')];
 
-  trades.forEach(trade => {
-    const timestamp = new Date(trade.timestamp);
-    const dateString = timestamp.toLocaleDateString('en-US', {
+  (trades || []).forEach(trade => {
+    const timestamp = new Date(trade.timestamp || Date.now());
+    const dateString = timestamp.toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -343,11 +306,11 @@ function convertTradesToCSV(trades) {
       minute: '2-digit',
     });
 
-    const pnl = Number(trade.pnl) || 0;
+    const pnl = toSafeNumber(trade.pnl, 0);
     const pnlText = pnl >= 0 ? `$${pnl.toFixed(4)}` : `-$${Math.abs(pnl).toFixed(4)}`;
 
-    const quantity = Number(trade.quantity || trade.qty) || 0;
-    const entryPrice = Number(trade.entry_price ?? trade.price ?? trade.fill_price) || 0;
+    const quantity = toSafeNumber(trade.quantity ?? trade.qty, 0);
+    const entryPrice = toSafeNumber(trade.entry_price ?? trade.price ?? trade.fill_price, 0);
     const status = trade.status || trade.state || 'unknown';
     const side = trade.side || trade.position_side || 'N/A';
     const symbol = trade.symbol || trade.ticker || 'N/A';
@@ -359,26 +322,83 @@ function convertTradesToCSV(trades) {
       quantity.toFixed(4),
       entryPrice.toFixed(4),
       `"${pnlText}"`,
-      `"${status}"`
+      `"${status}"`,
     ];
 
-    csv += row.join(',') + '\n';
+    lines.push(row.join(','));
   });
 
-  return csv;
+  return lines.join('\n');
 }
 
-// Initialize trade history page
+async function exportTradesToCSV() {
+  let exportBtn;
+  let originalText;
+
+  try {
+    const user = await fetchJson('/api/current_user');
+    const isAdmin = Boolean(user?.is_admin);
+    const userId = user?.id;
+
+    exportBtn = document.getElementById('export-trades-btn') || document.querySelector('#trade-history .btn-secondary');
+    if (exportBtn) {
+      originalText = exportBtn.textContent;
+      exportBtn.textContent = 'Exporting...';
+      exportBtn.disabled = true;
+    }
+
+    const allTrades = [];
+    let page = 1;
+    let hasMorePages = true;
+
+    while (hasMorePages) {
+      const endpoint = isAdmin
+        ? `/api/trades?mode=${encodeURIComponent(currentMode)}&page=${page}&merge_db=1`
+        : `/api/user/${userId}/trades?page=${page}&mode=${encodeURIComponent(currentMode)}`;
+
+      const data = await fetchJson(endpoint);
+      if (!data || data.error || !Array.isArray(data.trades)) {
+        throw new Error(data?.error || 'Invalid response');
+      }
+
+      allTrades.push(...data.trades);
+      hasMorePages = page < (data.total_pages || 1);
+      page++;
+    }
+
+    if (allTrades.length === 0) {
+      alert('No trades to export');
+      return;
+    }
+
+    const csvContent = convertTradesToCSV(allTrades);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `trades_${currentMode}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error('Error exporting trades:', error);
+    alert('Failed to export trades. Please try again.');
+  } finally {
+    if (exportBtn) {
+      exportBtn.textContent = originalText || 'Export';
+      exportBtn.disabled = false;
+    }
+  }
+}
+
 export function initTradeHistory() {
-  // Load trade history when page becomes visible
   window.addEventListener('dashboard:trade-history-visible', () => {
     loadTradeHistory();
   });
 
-  // Setup filters and pagination
   setupFilters();
 
-// Handle export button
   const exportBtn = document.getElementById('export-trades-btn');
   if (exportBtn) {
     exportBtn.addEventListener('click', async () => {
@@ -391,3 +411,8 @@ export function initTradeHistory() {
     });
   }
 }
+
+// Back-compat hook used by older templates/buttons.
+window.showTradeDetails = function (trade) {
+  showTradeDetail(trade);
+};

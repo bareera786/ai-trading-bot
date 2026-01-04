@@ -7,6 +7,8 @@ from typing import Any, Iterable
 from flask import Blueprint, current_app, jsonify, request, session
 from flask_login import current_user, login_required
 
+from app.auth.decorators import subscription_required
+
 from app.models import User, UserTrade
 from app.runtime import symbols
 
@@ -211,7 +213,7 @@ def _parse_symbol_payload(symbols: Any) -> list[str]:
 
 
 @metrics_bp.route("/api/backtests/run", methods=["POST"])
-@login_required
+@subscription_required
 def api_backtests_run():
     ctx = _ctx()
     dashboard_data = _dashboard_data(ctx)

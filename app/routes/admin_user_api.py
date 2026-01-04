@@ -1,12 +1,46 @@
-from flask import Blueprint, request, jsonify, current_app
-from flask_login import login_required, current_user
-from app.models import User
-from app.extensions import db, limiter
-from flask import request
-from app.services.binance import BinanceCredentialStore, BinanceCredentialService
+from __future__ import annotations
+
+from datetime import datetime, timedelta
 from typing import Optional
 
+from flask import Blueprint, current_app, jsonify, request
+from flask_login import current_user, login_required
+
+from app.extensions import db, limiter
+from app.models import SubscriptionPlan, User
+from app.services.binance import BinanceCredentialService, BinanceCredentialStore
+from app.subscriptions.helpers import assign_subscription_to_user, normalize_plan_code, serialize_subscription
+
 admin_user_api_bp = Blueprint("admin_user_api", __name__, url_prefix="/api/users")
+
+
+def _coerce_int(value, *, default: int | None = None) -> int | None:
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_parse_iso_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        return parsed.replace(tzinfo=None)
+    except Exception:
+        return None
+
+
+def _subscription_end_iso(subscription) -> str | None:
+    if not subscription:
+        return None
+    end = getattr(subscription, "current_period_end", None) or getattr(subscription, "trial_end", None)
+    return end.isoformat() if end else None
 
 
 @admin_user_api_bp.route("", methods=["GET"])
@@ -36,15 +70,13 @@ def list_users():
                         u, "portfolio_value", 0.0
                     ),  # Add if available
                     "trade_count": len(u.trades) if u.trades else 0,
-                    "subscription_expiry": getattr(
-                        u.active_subscription, "expiry", None
-                    ),
+                    "subscription_expiry": _subscription_end_iso(u.active_subscription),
                     "subscription_history": [
                         {
                             "plan": s.plan.code if s.plan else "unknown",
                             "start": s.created_at.isoformat() if s.created_at else None,
-                            "end": s.expiry.isoformat() if s.expiry else None,
-                            "is_active": s.is_active,
+                            "end": _subscription_end_iso(s),
+                            "is_active": bool(getattr(s, "is_active", False)),
                         }
                         for s in u.subscriptions
                     ]
@@ -75,13 +107,13 @@ def get_user(user_id):
             "balance": getattr(user, "balance", 0.0),
             "portfolio_value": getattr(user, "portfolio_value", 0.0),
             "trade_count": len(user.trades) if user.trades else 0,
-            "subscription_expiry": getattr(user.active_subscription, "expiry", None),
+            "subscription_expiry": _subscription_end_iso(user.active_subscription),
             "subscription_history": [
                 {
                     "plan": s.plan.code if s.plan else "unknown",
                     "start": s.created_at.isoformat() if s.created_at else None,
-                    "end": s.expiry.isoformat() if s.expiry else None,
-                    "is_active": s.is_active,
+                    "end": _subscription_end_iso(s),
+                    "is_active": bool(getattr(s, "is_active", False)),
                 }
                 for s in user.subscriptions
             ]
@@ -246,6 +278,89 @@ def edit_user(user_id):
         and hasattr(user, "active_subscription")
         and user.active_subscription
     ):
-        user.active_subscription.expiry = data["subscription_expiry"]
+        requested_end = _safe_parse_iso_datetime(data.get("subscription_expiry"))
+        if requested_end:
+            user.active_subscription.current_period_end = requested_end
     db.session.commit()
     return jsonify({"success": True})
+
+
+@admin_user_api_bp.route("/<int:user_id>/subscription/grant", methods=["POST"])
+@login_required
+@limiter.exempt
+def admin_grant_subscription(user_id: int):
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": "Forbidden"}), 403
+
+    user = User.query.get_or_404(user_id)
+    data = request.get_json(silent=True) or {}
+    plan_code = normalize_plan_code(data.get("plan_code") or "pro-monthly")
+    notes = (data.get("notes") or "").strip() or None
+    days_override = _coerce_int(data.get("days"), default=None)
+
+    plan = SubscriptionPlan.query.filter_by(code=plan_code).first()
+    if not plan:
+        return jsonify({"error": "Subscription plan not found"}), 404
+    if not plan.is_active:
+        return jsonify({"error": "Cannot assign an inactive plan"}), 400
+
+    subscription = assign_subscription_to_user(
+        user,
+        plan,
+        trial_days=0,
+        auto_renew=False,
+        cancel_existing=True,
+        notes=notes or "Admin-granted access",
+    )
+
+    if days_override is not None and days_override > 0:
+        now = datetime.utcnow()
+        subscription.status = "active"
+        subscription.trial_end = None
+        subscription.current_period_start = now
+        subscription.current_period_end = now + timedelta(days=days_override)
+        subscription.next_billing_date = None
+        subscription.auto_renew = False
+        suffix = f"{datetime.utcnow().isoformat()}: Admin override duration_days={days_override}"
+        subscription.notes = (
+            f"{subscription.notes}\n{suffix}" if subscription.notes else suffix
+        )
+        db.session.commit()
+
+    return jsonify({"success": True, "subscription": serialize_subscription(subscription)})
+
+
+@admin_user_api_bp.route("/<int:user_id>/subscription/extend", methods=["POST"])
+@login_required
+@limiter.exempt
+def admin_extend_subscription(user_id: int):
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": "Forbidden"}), 403
+
+    user = User.query.get_or_404(user_id)
+    subscription = user.active_subscription
+    if not subscription or not getattr(subscription, "is_active", False):
+        return jsonify({"error": "User does not have an active subscription"}), 400
+
+    data = request.get_json(silent=True) or {}
+    days = _coerce_int(data.get("days"), default=None)
+    if days is None or days <= 0:
+        return jsonify({"error": "days must be a positive integer"}), 400
+    notes = (data.get("notes") or "").strip() or None
+
+    base_end = getattr(subscription, "current_period_end", None) or datetime.utcnow()
+    if base_end < datetime.utcnow():
+        base_end = datetime.utcnow()
+    subscription.current_period_end = base_end + timedelta(days=days)
+    subscription.status = "active"
+    subscription.cancel_at_period_end = False
+    subscription.auto_renew = False
+
+    if notes:
+        note = f"{datetime.utcnow().isoformat()}: {notes}"
+    else:
+        note = f"{datetime.utcnow().isoformat()}: Admin extended subscription by {days} day(s)"
+    subscription.notes = f"{subscription.notes}\n{note}" if subscription.notes else note
+
+    db.session.commit()
+    return jsonify({"success": True, "subscription": serialize_subscription(subscription)})

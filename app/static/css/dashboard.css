@@ -301,6 +301,10 @@
         .status-danger { border-color: var(--danger); color: var(--danger); }
         .status-neutral { border-color: var(--border-color); color: var(--text-secondary); }
 
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+        .text-muted { color: var(--text-secondary); }
+
         .empty-hint {
             color: var(--text-secondary);
             background: rgba(255, 255, 255, 0.03);
@@ -589,6 +593,11 @@
             letter-spacing: 0.025em;
         }
 
+        .btn-sm {
+            padding: var(--spacing-xs) var(--spacing-md);
+            font-size: var(--font-size-xs);
+        }
+
         .btn-primary {
             background: var(--primary-gradient);
             color: white;
@@ -608,6 +617,61 @@
         .btn-secondary:hover {
             background: var(--bg-hover);
             border-color: var(--primary);
+        }
+
+        /* Modals */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-xl);
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+            width: min(900px, 100%);
+            max-height: 85vh;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-lg) var(--spacing-xl);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: var(--font-size-lg);
+        }
+
+        .modal-body {
+            padding: var(--spacing-xl);
+            overflow: auto;
+            max-height: calc(85vh - 70px);
+        }
+
+        .trade-detail-meta {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            max-height: 320px;
+            overflow: auto;
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
         }
 
         /* Form Elements */
@@ -654,6 +718,32 @@
             border-radius: 50%;
             border-top-color: var(--primary);
             animation: spin 1s ease-in-out infinite;
+        }
+
+        /* User management: keep action buttons tidy */
+        #user-management td.user-col-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        #user-management td.user-col-actions .btn {
+            margin: 0;
+        }
+
+        /* Symbols: keep action buttons tidy */
+        #symbols td.symbols-col-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        #symbols td.symbols-col-actions .btn {
+            margin: 0;
         }
 
         @keyframes spin {
@@ -1244,4 +1334,197 @@
 .pagination-controls #page-info {
     color: var(--text-secondary);
     font-weight: 500;
+}
+
+/* Trade History (readability only) */
+#trade-history .data-table-container {
+    overflow-x: auto;
+}
+
+#trade-history .data-table {
+    min-width: 980px;
+}
+
+#trade-history .data-table th,
+#trade-history .data-table td {
+    vertical-align: middle;
+}
+
+#trade-history .data-table td.trade-col-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+#trade-history .data-table td.trade-col-date,
+#trade-history .data-table td.trade-col-symbol,
+#trade-history .data-table td.trade-col-type,
+#trade-history .data-table td.trade-col-side,
+#trade-history .data-table td.trade-col-status,
+#trade-history .data-table td.trade-col-actions {
+    white-space: nowrap;
+}
+
+#trade-history .data-table td.trade-col-actions {
+    text-align: right;
+}
+
+#trade-history .data-table tbody tr.trade-row-closed {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+#trade-history .data-table tbody tr.trade-row-closed td:first-child {
+    border-left: 3px solid var(--success);
+}
+
+#trade-history .data-table tbody tr.trade-row-open td:first-child {
+    border-left: 3px solid var(--warning);
+}
+
+/* RIBS Dashboard (embedded in main dashboard) */
+.ribs-dashboard-page .ribs-dashboard {
+    margin: 0;
+}
+
+.ribs-dashboard-page .ribs-dashboard h2 {
+    font-size: var(--font-size-2xl);
+    margin-bottom: var(--spacing-xl);
+    text-align: left;
+}
+
+.ribs-dashboard-page .ribs-progress-overview,
+.ribs-dashboard-page .ribs-toolbar,
+.ribs-dashboard-page .ribs-stats,
+.ribs-dashboard-page .performance-metrics-section,
+.ribs-dashboard-page .ribs-visualization,
+.ribs-dashboard-page .elite-strategies,
+.ribs-dashboard-page .ribs-controls,
+.ribs-dashboard-page .ribs-parameters,
+.ribs-dashboard-page .ribs-logs {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+    box-shadow: var(--shadow-sm);
+}
+
+.ribs-dashboard-page .ribs-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-lg);
+    flex-wrap: wrap;
+}
+
+.ribs-dashboard-page .ribs-toolbar-title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.ribs-dashboard-page .ribs-toolbar-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.ribs-dashboard-page .ribs-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.ribs-dashboard-page .stat-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+}
+
+.ribs-dashboard-page .stat-card h4 {
+    font-size: var(--font-size-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-md);
+}
+
+.ribs-dashboard-page .stat-card .big-number {
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+}
+
+.ribs-dashboard-page .stat-card .subtitle {
+    margin-top: var(--spacing-sm);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.ribs-dashboard-page .progress-container {
+    width: 100%;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.ribs-dashboard-page .progress-fill {
+    height: 100%;
+    background: var(--primary-gradient);
+}
+
+.ribs-dashboard-page .indicator {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.ribs-dashboard-page .elite-strategies {
+    overflow-x: auto;
+}
+
+.ribs-dashboard-page .elite-strategies table {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: collapse;
+}
+
+.ribs-dashboard-page .elite-strategies thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: var(--font-size-xs);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ribs-dashboard-page .elite-strategies tbody td {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.ribs-dashboard-page .elite-strategies th:nth-child(2),
+.ribs-dashboard-page .elite-strategies th:nth-child(3),
+.ribs-dashboard-page .elite-strategies th:nth-child(4),
+.ribs-dashboard-page .elite-strategies th:nth-child(5),
+.ribs-dashboard-page .elite-strategies td:nth-child(2),
+.ribs-dashboard-page .elite-strategies td:nth-child(3),
+.ribs-dashboard-page .elite-strategies td:nth-child(4),
+.ribs-dashboard-page .elite-strategies td:nth-child(5) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.ribs-dashboard-page .elite-strategies td:last-child {
+    white-space: nowrap;
+    text-align: right;
 }

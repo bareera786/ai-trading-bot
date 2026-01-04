@@ -63,6 +63,9 @@ export function initNavigation() {
         if (pageId === 'backtest-lab') {
           window.dispatchEvent(new CustomEvent('dashboard:backtest-lab-visible'));
         }
+        if (pageId === 'admin-dashboard') {
+          window.dispatchEvent(new CustomEvent('dashboard:admin-dashboard-visible'));
+        }
         if (pageId === 'crt-signals') {
           window.dispatchEvent(new CustomEvent('dashboard:crt-signals-visible'));
         }
@@ -71,6 +74,9 @@ export function initNavigation() {
         }
         if (pageId === 'trade-history') {
           window.dispatchEvent(new CustomEvent('dashboard:trade-history-visible'));
+        }
+        if (pageId === 'api-keys') {
+          window.dispatchEvent(new CustomEvent('dashboard:api-keys-visible'));
         }
         if (pageId === 'ribs-dashboard') {
           // Support both legacy/admin and new event names so the ribs UI initializes

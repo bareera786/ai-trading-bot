@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable, Mapping, Optional, TYPE_CHECKING
 
@@ -11,6 +13,77 @@ if TYPE_CHECKING:  # pragma: no cover - type-checking helpers only
     from app.runtime.services import ServiceRuntime
 
 ExtensionPayload = dict[str, Any]
+
+
+class UserScopedProxy:
+    """Dispatch attribute access to a per-user instance.
+
+    This wrapper is used to prevent cross-user leakage from global, mutable
+    singletons (e.g., the legacy StrategyManager instance).
+
+    It is intentionally minimal and does not alter underlying business logic.
+    """
+
+    def __init__(
+        self,
+        *,
+        base: Any,
+        factory: Callable[[], Any],
+        user_id_provider: Optional[Callable[[], Any]] = None,
+    ) -> None:
+        object.__setattr__(self, "_base", base)
+        object.__setattr__(self, "_factory", factory)
+        object.__setattr__(self, "_user_id_provider", user_id_provider)
+        object.__setattr__(self, "_lock", threading.Lock())
+        object.__setattr__(self, "_instances", {})
+
+    def _resolve_user_id(self) -> Any:
+        provider = object.__getattribute__(self, "_user_id_provider")
+        if provider is not None:
+            try:
+                return provider()
+            except Exception:
+                return None
+
+        try:
+            from flask_login import current_user
+
+            if getattr(current_user, "is_authenticated", False):
+                return getattr(current_user, "id", None)
+        except Exception:
+            return None
+        return None
+
+    def _instance(self) -> Any:
+        user_id = self._resolve_user_id()
+        if not user_id:
+            return object.__getattribute__(self, "_base")
+
+        instances: dict[str, Any] = object.__getattribute__(self, "_instances")
+        key = str(user_id)
+        existing = instances.get(key)
+        if existing is not None:
+            return existing
+
+        lock: threading.Lock = object.__getattribute__(self, "_lock")
+        with lock:
+            existing = instances.get(key)
+            if existing is not None:
+                return existing
+            factory: Callable[[], Any] = object.__getattribute__(self, "_factory")
+            created = factory()
+            instances[key] = created
+            return created
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._instance(), name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name.startswith("_"):
+            object.__setattr__(self, name, value)
+        else:
+            setattr(self._instance(), name, value)
+
 
 
 @dataclass(frozen=True)

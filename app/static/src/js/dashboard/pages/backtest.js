@@ -17,7 +17,7 @@ async function runBacktest() {
   const resultsEl = document.getElementById(IDS.results);
   if (!resultsEl) return;
 
-  resultsEl.innerHTML = '<p style="color: var(--text-secondary);">Running backtest...</p>';
+  setResultsMessage(resultsEl, 'muted', 'Running backtest...');
 
   try {
     const response = await fetch('/api/backtest/run', {
@@ -33,8 +33,19 @@ async function runBacktest() {
     displayResults(data.results);
   } catch (error) {
     console.error('Backtest error:', error);
-    resultsEl.innerHTML = `<p style="color: #e74c3c;">Error: ${error.message}</p>`;
+    setResultsMessage(resultsEl, 'danger', `Error: ${error?.message || 'Backtest failed'}`);
   }
+}
+
+function setResultsMessage(resultsEl, kind, message) {
+  if (!resultsEl) return;
+  resultsEl.textContent = '';
+  const p = document.createElement('p');
+  if (kind === 'danger') p.className = 'text-danger';
+  else if (kind === 'success') p.className = 'text-success';
+  else p.className = 'text-muted';
+  p.textContent = message;
+  resultsEl.appendChild(p);
 }
 
 function displayResults(results) {
@@ -42,16 +53,43 @@ function displayResults(results) {
   if (!resultsEl) return;
 
   if (!results || !Array.isArray(results)) {
-    resultsEl.innerHTML = '<p style="color: var(--text-secondary);">No results available</p>';
+    setResultsMessage(resultsEl, 'muted', 'No results available');
     return;
   }
 
-  let html = '<table class="data-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>';
-  results.forEach(result => {
-    html += `<tr><td>${result.metric}</td><td>${result.value}</td></tr>`;
+  resultsEl.textContent = '';
+  const container = document.createElement('div');
+  container.className = 'data-table-container';
+
+  const table = document.createElement('table');
+  table.className = 'data-table';
+
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  const thMetric = document.createElement('th');
+  thMetric.textContent = 'Metric';
+  const thValue = document.createElement('th');
+  thValue.textContent = 'Value';
+  headRow.appendChild(thMetric);
+  headRow.appendChild(thValue);
+  thead.appendChild(headRow);
+
+  const tbody = document.createElement('tbody');
+  results.forEach((result) => {
+    const row = document.createElement('tr');
+    const tdMetric = document.createElement('td');
+    const tdValue = document.createElement('td');
+    tdMetric.textContent = result?.metric != null ? String(result.metric) : '';
+    tdValue.textContent = result?.value != null ? String(result.value) : '';
+    row.appendChild(tdMetric);
+    row.appendChild(tdValue);
+    tbody.appendChild(row);
   });
-  html += '</tbody></table>';
-  resultsEl.innerHTML = html;
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  container.appendChild(table);
+  resultsEl.appendChild(container);
 }
 
 async function populateBacktestSymbols() {
@@ -64,11 +102,23 @@ async function populateBacktestSymbols() {
     if (user?.is_premium) {
       const data = await fetchJson('/api/user/custom_symbols');
       if (data?.custom_symbols && Array.isArray(data.custom_symbols)) {
-        options = options.concat(data.custom_symbols.filter(s => !options.includes(s)));
+        const custom = data.custom_symbols
+          .map((s) => (s != null ? String(s).trim() : ''))
+          .filter((s) => s && !options.includes(s));
+        options = options.concat(custom);
       }
     }
   } catch (e) { /* ignore */ }
-  select.innerHTML = options.map(s => `<option value="${s}">${s}</option>`).join('');
+
+  select.textContent = '';
+  const frag = document.createDocumentFragment();
+  options.forEach((sym) => {
+    const opt = document.createElement('option');
+    opt.value = sym;
+    opt.textContent = sym;
+    frag.appendChild(opt);
+  });
+  select.appendChild(frag);
 }
 
 if (typeof window !== 'undefined') {

@@ -1,6 +1,7 @@
 """Trading service orchestration helpers."""
 from __future__ import annotations
 
+import copy
 import logging
 import os
 import threading
@@ -846,6 +847,18 @@ class RealBinanceTrader:
         }
 
     def _record_order_event(self, status, request, response=None, error=None):
+        safe_response = response
+        if response is not None:
+            try:
+                safe_response = copy.deepcopy(response)
+            except Exception:
+                if isinstance(response, dict):
+                    safe_response = dict(response)
+                elif isinstance(response, list):
+                    safe_response = list(response)
+        # Invariant: stored exchange artifacts must not retain shared mutable references.
+        if isinstance(response, (dict, list)) and response is not None:
+            assert safe_response is not response
         event = {
             "timestamp": datetime.utcnow().isoformat(),
             "status": status,
@@ -855,7 +868,7 @@ class RealBinanceTrader:
             "quantity": request.get("quantity"),
             "price": request.get("price"),
             "testnet": self.testnet,
-            "response": response,
+            "response": safe_response,
             "error": error,
         }
         self.order_history.append(event)
@@ -1469,11 +1482,22 @@ def attach_trading_ml_dependencies(
     ultimate_trader = trading_bundle.ultimate_trader
     optimized_trader = trading_bundle.optimized_trader
 
-    # Share QFM engines between ML systems and traders
-    if hasattr(ultimate_trader, "qfm_engine"):
-        ultimate_trader.qfm_engine = getattr(ultimate_ml, "qfm_engine", None)
-    if hasattr(optimized_trader, "qfm_engine"):
-        optimized_trader.qfm_engine = getattr(optimized_ml, "qfm_engine", None)
+    # QFM engines are stateful (rolling history). Do not share a single engine
+    # instance across independent trader objects.
+    if hasattr(ultimate_trader, "qfm_engine") and getattr(ultimate_trader, "qfm_engine", None) is None:
+        try:
+            from app.strategies.qfm import QuantumFusionMomentumEngine
+
+            ultimate_trader.qfm_engine = QuantumFusionMomentumEngine()
+        except Exception:
+            pass
+    if hasattr(optimized_trader, "qfm_engine") and getattr(optimized_trader, "qfm_engine", None) is None:
+        try:
+            from app.strategies.qfm import QuantumFusionMomentumEngine
+
+            optimized_trader.qfm_engine = QuantumFusionMomentumEngine()
+        except Exception:
+            pass
 
     # Wire futures module references (if present)
     futures_module = getattr(futures_ml, "futures_module", None)
@@ -1505,18 +1529,141 @@ def create_user_trader_resolver(
 ):
     """Return a helper that maps profile names to trader instances."""
 
-    aliases = {
-        alias.lower()
-        for alias in (optimized_aliases or ("optimized", "professional", "pro"))
-    }
-    ultimate = trading_bundle.ultimate_trader
-    optimized = trading_bundle.optimized_trader
+    # NOTE: This resolver is used by authenticated dashboard routes to execute
+    # manual spot/futures trades. To avoid cross-user credential leakage,
+    # return a per-user executor that pulls credentials from the credential
+    # store at call-time and keeps isolated Binance client instances per user.
+    #
+    # This is intentionally minimal and does not alter the automated trading
+    # lifecycle.
+
+    class _UserTradeExecutor:
+        def __init__(self, user_id: Any) -> None:
+            self.user_id = user_id
+            self._spot: Any = None
+            self._spot_marker: Any = None
+            self._futures: Any = None
+            self._futures_marker: Any = None
+
+        def _ctx(self) -> dict[str, Any]:
+            from flask import current_app
+
+            ctx = getattr(current_app, "extensions", {}).get("ai_bot_context")
+            if not isinstance(ctx, dict):
+                raise RuntimeError("AI bot context is not initialized")
+            return ctx
+
+        def _get_creds(self, account_type: str) -> dict[str, Any]:
+            ctx = self._ctx()
+            store = ctx.get("binance_credentials_store")
+            if store is None:
+                raise RuntimeError("Binance credential store unavailable")
+
+            try:
+                creds = store.get_credentials(account_type, user_id=self.user_id)
+            except TypeError:
+                # Backward-compat shim (older store signature)
+                creds_map = store.get_credentials(user_id=self.user_id)
+                key = str(account_type or "spot").strip().lower()
+                creds = (creds_map or {}).get(key) if isinstance(creds_map, dict) else {}
+            creds = creds or {}
+            if not (creds.get("api_key") and creds.get("api_secret")):
+                raise RuntimeError(
+                    f"Missing {str(account_type).lower()} Binance credentials for user"
+                )
+            return creds
+
+        @staticmethod
+        def _import_binance_spot_classes() -> tuple[Any, Any]:
+            from binance.client import Client as BinanceClient
+            from binance.exceptions import BinanceAPIException
+
+            return BinanceClient, BinanceAPIException
+
+        @staticmethod
+        def _import_binance_futures_classes() -> tuple[Any, Any]:
+            from binance.client import Client as BinanceClient
+            from binance.um_futures import UMFutures as BinanceFuturesClient
+
+            return BinanceClient, BinanceFuturesClient
+
+        def _spot_client(self):
+            creds = self._get_creds("spot")
+            marker = (creds.get("api_key"), creds.get("testnet"), creds.get("updated_at"))
+            if self._spot is not None and self._spot_marker == marker:
+                return self._spot
+
+            BinanceClient, BinanceAPIException = self._import_binance_spot_classes()
+            client = RealBinanceTrader(
+                api_key=creds.get("api_key"),
+                api_secret=creds.get("api_secret"),
+                testnet=bool(creds.get("testnet", True)),
+                account_type="spot",
+                binance_client_cls=BinanceClient,
+                api_exception_cls=BinanceAPIException,
+            )
+            # Ensure a fresh connect attempt
+            client.connect()
+            self._spot = client
+            self._spot_marker = marker
+            return client
+
+        def _futures_client(self):
+            creds = self._get_creds("futures")
+            marker = (creds.get("api_key"), creds.get("testnet"), creds.get("updated_at"))
+            if self._futures is not None and self._futures_marker == marker:
+                return self._futures
+
+            BinanceClient, BinanceFuturesClient = self._import_binance_futures_classes()
+            client = BinanceFuturesTrader(
+                api_key=creds.get("api_key"),
+                api_secret=creds.get("api_secret"),
+                testnet=bool(creds.get("testnet", True)),
+                binance_um_futures_cls=BinanceFuturesClient,
+                binance_rest_client_cls=BinanceClient,
+                coerce_bool=_coerce_bool,
+            )
+            client.connect()
+            self._futures = client
+            self._futures_marker = marker
+            return client
+
+        def execute_manual_trade(self, symbol, side, quantity, price=None):
+            return self._spot_client().execute_manual_trade(
+                symbol, side, quantity, price
+            )
+
+        def execute_manual_futures_trade(
+            self, symbol, side, quantity, leverage=1, price=None
+        ):
+            return self._futures_client().execute_manual_futures_trade(
+                symbol, side, quantity, leverage, price
+            )
+
+    _lock = threading.Lock()
+    _executors: dict[str, _UserTradeExecutor] = {}
 
     def _resolver(user_id=None, profile="ultimate"):
-        profile_normalized = str(profile or "ultimate").strip().lower()
-        if profile_normalized in aliases:
-            return optimized
-        return ultimate
+        if not user_id:
+            # For legacy callers without a user context, preserve prior behavior.
+            profile_normalized = str(profile or "ultimate").strip().lower()
+            aliases = {
+                alias.lower()
+                for alias in (optimized_aliases or ("optimized", "professional", "pro"))
+            }
+            return (
+                trading_bundle.optimized_trader
+                if profile_normalized in aliases
+                else trading_bundle.ultimate_trader
+            )
+
+        key = str(user_id)
+        with _lock:
+            executor = _executors.get(key)
+            if executor is None:
+                executor = _UserTradeExecutor(user_id)
+                _executors[key] = executor
+            return executor
 
     return _resolver
 

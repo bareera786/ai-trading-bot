@@ -10,6 +10,8 @@ from typing import Any, Iterable
 from flask import Blueprint, current_app, jsonify, request, send_file
 from flask_login import login_required
 
+from app.auth.decorators import admin_required
+
 
 system_ops_bp = Blueprint("system_ops", __name__)
 
@@ -163,6 +165,7 @@ def _update_ml_telemetry(ctx: dict[str, Any]) -> None:
 
 
 @system_ops_bp.route("/api/performance_chart")
+@login_required
 def api_performance_chart():
     ctx = _ctx()
     dashboard_data = _dashboard_data(ctx)
@@ -175,6 +178,7 @@ def api_performance_chart():
 
 
 @system_ops_bp.route("/api/training_logs")
+@admin_required
 def api_training_logs():
     ctx = _ctx()
     mode = request.args.get("mode", "ultimate").lower()
@@ -190,6 +194,7 @@ def api_training_logs():
 
 
 @system_ops_bp.route("/api/training_progress")
+@admin_required
 def api_training_progress():
     ctx = _ctx()
     mode = request.args.get("mode", "ultimate").lower()
@@ -199,17 +204,23 @@ def api_training_progress():
 
 
 @system_ops_bp.route("/api/persistence/status")
+@admin_required
 def api_persistence_status():
     ctx = _ctx()
     manager = _persistence_manager(ctx)
+    profile = request.args.get("profile")
     try:
-        status = manager.get_persistence_status()
+        try:
+            status = manager.get_persistence_status(profile=profile)
+        except TypeError:
+            status = manager.get_persistence_status()
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
     return jsonify(status)
 
 
 @system_ops_bp.route("/api/persistence/save", methods=["POST"])
+@admin_required
 def api_persistence_save():
     ctx = _ctx()
     scheduler = _persistence_scheduler(ctx)
@@ -218,15 +229,26 @@ def api_persistence_save():
     trading_config = ctx.get("trading_config") or {}
     symbols = list(_top_symbols(ctx))
     history = _historical_data(ctx)
+    profile = request.args.get("profile")
 
     try:
-        success = scheduler.manual_save(
-            ultimate,
-            ultimate_ml,
-            trading_config,
-            symbols,
-            history,
-        )
+        try:
+            success = scheduler.manual_save(
+                ultimate,
+                ultimate_ml,
+                trading_config,
+                symbols,
+                history,
+                profile=profile,
+            )
+        except TypeError:
+            success = scheduler.manual_save(
+                ultimate,
+                ultimate_ml,
+                trading_config,
+                symbols,
+                history,
+            )
     except Exception as exc:
         return jsonify({"success": False, "message": str(exc)}), 500
 
@@ -235,10 +257,21 @@ def api_persistence_save():
 
 
 @system_ops_bp.route("/api/persistence/backups")
+@admin_required
 def api_persistence_backups():
     ctx = _ctx()
     manager = _persistence_manager(ctx)
-    backup_dir = getattr(manager, "backup_dir", None)
+    profile = request.args.get("profile")
+    backup_dir = None
+    if profile:
+        try:
+            from app.services.persistence import ensure_persistence_dirs
+
+            backup_dir = str(ensure_persistence_dirs(profile) / "backups")
+        except Exception:
+            backup_dir = None
+    if not backup_dir:
+        backup_dir = getattr(manager, "backup_dir", None)
     backups: list[dict[str, Any]] = []
     if backup_dir and os.path.exists(backup_dir):
         for filename in os.listdir(backup_dir):
@@ -257,7 +290,7 @@ def api_persistence_backups():
 
 
 @system_ops_bp.route("/api/toggle_trading", methods=["POST"])
-@login_required
+@admin_required
 def api_toggle_trading():
     ctx = _ctx()
     ultimate, optimized = _traders(ctx)
@@ -319,7 +352,7 @@ def api_toggle_trading():
 
 
 @system_ops_bp.route("/api/train_models", methods=["POST"])
-@login_required
+@admin_required
 def api_train_models():
     ctx = _ctx()
     ultimate_system = ctx.get("ultimate_ml_system")
@@ -339,6 +372,7 @@ def api_train_models():
 
 
 @system_ops_bp.route("/api/train_single", methods=["POST"])
+@admin_required
 def api_train_single():
     ctx = _ctx()
     ultimate_system = ctx.get("ultimate_ml_system")
@@ -364,7 +398,7 @@ def api_train_single():
 
 
 @system_ops_bp.route("/api/add_symbol", methods=["POST"])
-@login_required
+@admin_required
 def api_add_symbol():
     ctx = _ctx()
     data = request.get_json(silent=True) or {}
@@ -402,7 +436,7 @@ def api_add_symbol():
 
 
 @system_ops_bp.route("/api/symbols/disable", methods=["POST"])
-@login_required
+@admin_required
 def api_disable_symbol():
     ctx = _ctx()
     data = request.get_json(silent=True) or {}
@@ -457,13 +491,13 @@ def api_disable_symbol():
 
 
 @system_ops_bp.route("/api/remove_symbol", methods=["POST"])
-@login_required
+@admin_required
 def api_remove_symbol():
     return api_disable_symbol()
 
 
 @system_ops_bp.route("/api/symbols/enable", methods=["POST"])
-@login_required
+@admin_required
 def api_enable_symbol():
     ctx = _ctx()
     data = request.get_json(silent=True) or {}
@@ -515,6 +549,7 @@ def api_enable_symbol():
 
 
 @system_ops_bp.route("/api/symbols", methods=["GET"])
+@login_required
 def api_list_symbols():
     ctx = _ctx()
     get_universe = _ctx_callable(ctx, "get_active_trading_universe")
@@ -611,7 +646,7 @@ def api_list_symbols():
 
 
 @system_ops_bp.route("/api/start_continuous_training", methods=["POST"])
-@login_required
+@admin_required
 def api_start_continuous_training():
     ctx = _ctx()
     ultimate_system = ctx.get("ultimate_ml_system")
@@ -628,7 +663,7 @@ def api_start_continuous_training():
 
 
 @system_ops_bp.route("/api/stop_continuous_training", methods=["POST"])
-@login_required
+@admin_required
 def api_stop_continuous_training():
     ctx = _ctx()
     ultimate_system = ctx.get("ultimate_ml_system")
@@ -645,7 +680,7 @@ def api_stop_continuous_training():
 
 
 @system_ops_bp.route("/api/clear_history", methods=["POST"])
-@login_required
+@admin_required
 def api_clear_history():
     ctx = _ctx()
     ultimate, _ = _traders(ctx)
@@ -659,6 +694,7 @@ def api_clear_history():
 
 
 @system_ops_bp.route("/api/export_trades")
+@admin_required
 def api_export_trades():
     ctx = _ctx()
     ultimate, _ = _traders(ctx)
@@ -672,6 +708,7 @@ def api_export_trades():
 
 
 @system_ops_bp.route("/api/reload_models")
+@admin_required
 def api_reload_models():
     ctx = _ctx()
     ultimate_system = ctx.get("ultimate_ml_system")

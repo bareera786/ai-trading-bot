@@ -51,6 +51,39 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p><strong>Subscription Expiry:</strong> ${user.subscription_expiry ?? 'N/A'}</p>
                             <p><strong>Subscription History:</strong><br>${user.subscription_history ? user.subscription_history.map(s => `${s.plan} (${s.start} - ${s.end})`).join('<br>') : 'N/A'}</p>
                             <p><strong>Status:</strong> ${user.is_active ? 'Active' : 'Disabled'}</p>
+
+                            <hr>
+                            <h5>Subscription Controls</h5>
+                            <div class='row g-2'>
+                                <div class='col-md-4'>
+                                    <label class='form-label'>Plan Code</label>
+                                    <input id='sub-plan-code' class='form-control' value='pro-monthly' placeholder='pro-monthly'>
+                                </div>
+                                <div class='col-md-4'>
+                                    <label class='form-label'>Grant Days (optional)</label>
+                                    <input id='sub-grant-days' class='form-control' placeholder='e.g. 30'>
+                                </div>
+                                <div class='col-md-4'>
+                                    <label class='form-label'>Grant Notes (optional)</label>
+                                    <input id='sub-grant-notes' class='form-control' placeholder='Admin-granted access'>
+                                </div>
+                            </div>
+                            <div class='mt-2' style='display:flex; gap:8px; flex-wrap:wrap;'>
+                                <button class='btn btn-success' onclick='grantSubscription(${user.id})'>Grant / Replace Subscription</button>
+                            </div>
+                            <div class='row g-2 mt-2'>
+                                <div class='col-md-4'>
+                                    <label class='form-label'>Extend Days</label>
+                                    <input id='sub-extend-days' class='form-control' placeholder='e.g. 7'>
+                                </div>
+                                <div class='col-md-8'>
+                                    <label class='form-label'>Extend Notes (optional)</label>
+                                    <input id='sub-extend-notes' class='form-control' placeholder='Reason for extension'>
+                                </div>
+                            </div>
+                            <div class='mt-2' style='display:flex; gap:8px; flex-wrap:wrap;'>
+                                <button class='btn btn-warning' onclick='extendSubscription(${user.id})'>Extend Active Subscription</button>
+                            </div>
                             <div style="display:flex; gap:8px;">
                                 <button class='btn btn-primary' onclick='editUser(${user.id})'>Edit</button>
                                 <button class='btn btn-secondary' onclick='openManageUserKeys(${user.id})'>Manage API Keys</button>
@@ -59,6 +92,63 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
             });
+    }
+
+    window.grantSubscription = async function(userId) {
+        const plan_code = (document.getElementById('sub-plan-code')?.value || 'pro-monthly').trim();
+        const daysRaw = (document.getElementById('sub-grant-days')?.value || '').trim();
+        const notes = (document.getElementById('sub-grant-notes')?.value || '').trim();
+
+        const payload = { plan_code };
+        if (daysRaw) payload.days = daysRaw;
+        if (notes) payload.notes = notes;
+
+        try {
+            const resp = await fetch(`/api/users/${userId}/subscription/grant`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const json = await resp.json();
+            if (!resp.ok) {
+                alert(json?.error || 'Failed to grant subscription');
+                return;
+            }
+            alert('Subscription granted');
+            fetchUsers(userSearch.value);
+            viewUser(userId);
+        } catch (err) {
+            alert('Failed to grant subscription: ' + err);
+        }
+    }
+
+    window.extendSubscription = async function(userId) {
+        const daysRaw = (document.getElementById('sub-extend-days')?.value || '').trim();
+        const notes = (document.getElementById('sub-extend-notes')?.value || '').trim();
+        if (!daysRaw) {
+            alert('Extend days is required');
+            return;
+        }
+        const payload = { days: daysRaw };
+        if (notes) payload.notes = notes;
+
+        try {
+            const resp = await fetch(`/api/users/${userId}/subscription/extend`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const json = await resp.json();
+            if (!resp.ok) {
+                alert(json?.error || 'Failed to extend subscription');
+                return;
+            }
+            alert('Subscription extended');
+            fetchUsers(userSearch.value);
+            viewUser(userId);
+        } catch (err) {
+            alert('Failed to extend subscription: ' + err);
+        }
     }
 
     // Admin: Manage user API keys

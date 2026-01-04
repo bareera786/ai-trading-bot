@@ -107,9 +107,9 @@ def delete_session(session_key):
 def get_tenant_sessions(tenant):
     """Get all active sessions for a tenant"""
     try:
-        # Get all session keys for the tenant
+        # Get all session keys for the tenant (use SCAN to avoid blocking Redis)
         pattern = f"session:{tenant}:*"
-        keys = cast(List[str], redis_client.keys(pattern))
+        keys = list(cast(List[str], redis_client.scan_iter(match=pattern)))
 
         sessions = []
         for key in keys:
@@ -139,9 +139,8 @@ def health():
 def metrics():
     """Prometheus metrics endpoint"""
     try:
-        # Get session counts
-        session_keys = cast(List[str], redis_client.keys("session:*"))
-        total_sessions = len(session_keys)
+        # Get session counts (use SCAN to avoid blocking Redis)
+        total_sessions = sum(1 for _ in redis_client.scan_iter(match="session:*"))
 
         metrics_output = f"""# HELP session_manager_active_sessions Total number of active sessions
 # TYPE session_manager_active_sessions gauge

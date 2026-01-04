@@ -145,20 +145,20 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="content-header">
-                <div>
+                <div class="header-left">
                     <button id="mobile-menu-toggle-btn" class="mobile-menu-toggle" aria-label="Toggle menu">
                         <span>☰</span>
                     </button>
                 </div>
-                <div>
+                <div class="header-titles">
                     <h1 id="page-title">Dashboard</h1>
                     <p id="page-subtitle">Overview of your trading bot performance</p>
                 </div>
-                <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                <div class="header-actions">
                     <span id="current-user-info" style="color: var(--text-secondary); font-size: var(--font-size-sm);">
                         Logged in as: <span id="current-username">{{ current_user.username if current_user.is_authenticated else '' }}</span>
                     </span>
-                    <button id="logout-btn" class="btn btn-secondary" style="padding: 8px 16px;">
+                    <button id="logout-btn" class="btn btn-secondary">
                         <span style="margin-right: 4px;">🚪</span>
                         Logout
                     </button>

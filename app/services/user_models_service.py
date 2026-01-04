@@ -200,9 +200,8 @@ def health():
 def metrics():
     """Prometheus metrics endpoint"""
     try:
-        # Get model counts
-        model_keys = cast(List[str], redis_client.keys("user_model:*"))
-        total_models = len(model_keys)
+        # Get model counts (use SCAN to avoid blocking Redis)
+        total_models = sum(1 for _ in redis_client.scan_iter(match="user_model:*"))
 
         metrics_output = f"""# HELP user_models_active_models Total number of active user models
 # TYPE user_models_active_models gauge

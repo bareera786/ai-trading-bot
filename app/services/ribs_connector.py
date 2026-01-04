@@ -109,9 +109,8 @@ def health():
 def metrics():
     """Prometheus metrics endpoint"""
     try:
-        # Get cache stats
-        cache_keys = cast(List[str], redis_client.keys("ribs:*"))
-        cache_count = len(cache_keys)
+        # Get cache stats (use SCAN to avoid blocking Redis)
+        cache_count = sum(1 for _ in redis_client.scan_iter(match="ribs:*"))
 
         metrics_output = f"""# HELP ribs_connector_cache_entries Number of cached RIBS responses
 # TYPE ribs_connector_cache_entries gauge
@@ -132,8 +131,8 @@ def cleanup_cache():
         try:
             # Remove expired keys (Redis handles expiration automatically)
             # But we can log cache statistics
-            cache_keys = cast(List[str], redis_client.keys("ribs:*"))
-            logger.info(f"Cache contains {len(cache_keys)} RIBS entries")
+            cache_count = sum(1 for _ in redis_client.scan_iter(match="ribs:*"))
+            logger.info(f"Cache contains {cache_count} RIBS entries")
         except Exception as e:
             logger.error(f"Cache cleanup error: {e}")
 

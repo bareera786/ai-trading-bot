@@ -165,16 +165,24 @@ def bootstrap_runtime(app) -> Optional[BootstrapContext]:
     # Validate startup configuration
     _validate_startup_configuration(app)
 
-    with app.app_context():
-        from app import (
-            models,
-        )  # noqa: F401  # Ensure models are registered before create_all
+    skip_db_bootstrap = os.getenv("SKIP_DB_BOOTSTRAP", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    if skip_db_bootstrap:
+        app.logger.info("bootstrap_runtime: SKIP_DB_BOOTSTRAP enabled; skipping db.create_all/migrate_database")
+    else:
+        with app.app_context():
+            from app import (
+                models,
+            )  # noqa: F401  # Ensure models are registered before create_all
 
-        db.create_all()
-        try:
-            migrate_database()
-        except Exception as exc:  # pragma: no cover - migration is best-effort
-            app.logger.warning("Database migration skipped: %s", exc)
+            db.create_all()
+            try:
+                migrate_database()
+            except Exception as exc:  # pragma: no cover - migration is best-effort
+                app.logger.warning("Database migration skipped: %s", exc)
 
     # Evaluate test mode dynamically so changes to AI_BOT_TEST_MODE during tests
     # (set at runtime) are respected. Previously this used a module-level
@@ -309,24 +317,29 @@ def bootstrap_runtime(app) -> Optional[BootstrapContext]:
 
             _runtime_started = True
 
-    # Register AI bot context for dashboard routes
+    # Register AI bot context for dashboard routes (best-effort, idempotent)
     try:
-        from ai_ml_auto_bot_final import register_ai_bot_context
+        if not getattr(app, "_ai_bot_context_registered", False):
+            from ai_ml_auto_bot_final import register_ai_bot_context
 
-        register_ai_bot_context(app, force=True)
-        app.logger.info("✅ AI bot context registered for Flask app")
+            register_ai_bot_context(app, force=True)
+            setattr(app, "_ai_bot_context_registered", True)
+            app.logger.info("✅ AI bot context registered for Flask app")
     except Exception as exc:
         app.logger.warning("Failed to register AI bot context: %s", exc)
 
-    # Integrate enhanced dashboard monitoring
+    # Integrate enhanced dashboard monitoring (guard against duplicate handler registration)
     try:
-        from config.resource_manager import ResourceManager
-        from integrations.dashboard_integration import integrate_with_existing_dashboard
+        if not getattr(app, "_dashboard_monitoring_integrated", False):
+            from config.resource_manager import ResourceManager
+            from integrations.dashboard_integration import (
+                integrate_with_existing_dashboard,
+            )
 
-        # Create resource manager for monitoring
-        resource_manager = ResourceManager()
-        integrate_with_existing_dashboard(app, resource_manager)
-        app.logger.info("✅ Enhanced dashboard monitoring integrated")
+            resource_manager = ResourceManager()
+            integrate_with_existing_dashboard(app, resource_manager)
+            setattr(app, "_dashboard_monitoring_integrated", True)
+            app.logger.info("✅ Enhanced dashboard monitoring integrated")
     except Exception as exc:
         app.logger.warning("Failed to integrate enhanced dashboard monitoring: %s", exc)
 

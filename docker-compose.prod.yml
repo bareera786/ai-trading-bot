@@ -1,5 +1,4 @@
 # Production Docker Compose for optimized deployment
-version: '3.8'
 
 services:
   ai-trading-bot:

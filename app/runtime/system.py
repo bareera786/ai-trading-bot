@@ -101,6 +101,15 @@ def initialize_runtime_from_context(context: Mapping[str, Any]) -> None:
         print("🔶 Starting with fresh bot state")
 
     if dashboard_data and optimized_trader:
+        # If persistence restored a running configuration, keep the optimized trader
+        # trading flag in sync with the ultimate trader (prevents split-brain UI state).
+        try:
+            if state_loaded and ultimate_trader and hasattr(ultimate_trader, "trading_enabled"):
+                optimized_trader.trading_enabled = bool(
+                    getattr(ultimate_trader, "trading_enabled", False)
+                )
+        except Exception:
+            pass
         dashboard_data.setdefault("optimized_system_status", {})[
             "trading_enabled"
         ] = getattr(optimized_trader, "trading_enabled", False)

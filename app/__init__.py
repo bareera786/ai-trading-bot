@@ -22,6 +22,11 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
     )
     app.config.from_object(config_cls)
 
+    # Allow operational scripts (e.g., create_admin.py) to skip the heavy
+    # runtime bootstrap without forcing an in-memory database.
+    if os.getenv("SKIP_RUNTIME_BOOTSTRAP", "").lower() in ("1", "true", "yes"):
+        app.config["SKIP_RUNTIME_BOOTSTRAP"] = True
+
     # If tests signal to skip runtime behavior via environment variable,
     # ensure SQLAlchemy uses an in-memory database by default so any early
     # engine creation (happens lazily) does not point at the developer's

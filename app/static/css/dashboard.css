@@ -364,6 +364,29 @@
             position: sticky;
             top: 0;
             z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .header-titles {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+            justify-content: flex-end;
         }
 
         .content-header h1 {
@@ -507,7 +530,9 @@
         .data-table-container {
             background: var(--bg-tertiary);
             border-radius: var(--radius-lg);
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
             border: 1px solid var(--border-color);
             box-shadow: var(--shadow-sm);
         }
@@ -817,6 +842,15 @@
                 gap: var(--spacing-md);
             }
 
+            .header-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .content-header .btn {
+                width: auto;
+            }
+
             .content-header h1 {
                 font-size: var(--font-size-xl);
             }
@@ -853,6 +887,13 @@
                 border-radius: var(--radius-md);
                 margin: 0 -var(--spacing-lg);
                 width: calc(100% + 2 * var(--spacing-lg));
+            }
+
+            /* Ensure tables are scrollable even when not wrapped */
+            .data-table {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
             }
 
             .data-table {
@@ -962,6 +1003,27 @@
 
             .mobile-menu-toggle:hover {
                 background: var(--bg-hover);
+            }
+        }
+
+        /* Touch targets (mobile/tablet) */
+        @media (pointer: coarse) {
+            .nav-item {
+                padding-top: calc(var(--spacing-md) + 2px);
+                padding-bottom: calc(var(--spacing-md) + 2px);
+            }
+
+            .btn {
+                min-height: 44px;
+            }
+
+            .form-input {
+                min-height: 44px;
+            }
+
+            canvas {
+                max-width: 100% !important;
+                height: auto !important;
             }
         }
 

@@ -95,11 +95,29 @@ def init_extensions(app):
     async_mode = app.config.get("SOCKETIO_ASYNC_MODE", Config.SOCKETIO_ASYNC_MODE)
     socketio.init_app(app, cors_allowed_origins=cors, async_mode=async_mode)
 
-    # Configure Redis for rate limiting
+    # Configure Redis for rate limiting (fall back to memory if Redis unavailable)
     global redis_client
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
-    redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
-    limiter.storage_uri = redis_url  # type: ignore[attr-defined]
+    try:
+        redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
+        try:
+            redis_client.ping()
+        except Exception as exc:
+            redis_client = None
+            limiter.storage_uri = "memory://"  # type: ignore[attr-defined]
+            app.logger.warning(
+                "Redis unavailable for rate limiting (%s); falling back to in-memory limiter storage",
+                exc,
+            )
+        else:
+            limiter.storage_uri = redis_url  # type: ignore[attr-defined]
+    except Exception as exc:
+        redis_client = None
+        limiter.storage_uri = "memory://"  # type: ignore[attr-defined]
+        app.logger.warning(
+            "Failed to initialize Redis client for rate limiting (%s); using in-memory limiter storage",
+            exc,
+        )
 
     # Flask-Limiter
     limiter.init_app(app)

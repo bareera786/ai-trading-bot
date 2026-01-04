@@ -181,6 +181,75 @@ curl https://your-domain.com/health
 curl https://your-domain.com/metrics
 ```
 
+## Production Sanity Checklist (commands only)
+
+```bash
+# On the VPS
+cd /home/aibot/ai-bot
+
+# 1) Confirm the running compose stack
+docker compose -f docker-compose.prod.yml ps
+docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
+
+# 2) Health + basic app reachability (local)
+curl -fsS http://127.0.0.1:5000/health
+
+# 3) Recent logs
+docker compose -f docker-compose.prod.yml logs --tail=200 ai-trading-bot
+docker compose -f docker-compose.prod.yml logs --tail=200 postgres
+docker compose -f docker-compose.prod.yml logs --tail=200 redis
+
+# 4) DB/Redis readiness
+docker exec trading-bot-postgres pg_isready -U trading_user -d trading_bot
+docker exec trading-bot-redis redis-cli ping
+
+# 5) Resource/disk checks
+docker stats --no-stream
+df -h
+docker system df
+
+# 6) Firewall (if exposing 80/443/5000)
+sudo ufw status verbose
+```
+
+## Orphan Cleanup (safe; containers/networks first)
+
+```bash
+# On the VPS
+cd /home/aibot/ai-bot
+
+# Remove containers that are no longer defined in docker-compose.prod.yml
+# (Does NOT delete volumes)
+docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+# If you still see legacy containers running, remove them explicitly:
+docker rm -f ai-bot-container ai-bot-timescaledb portainer || true
+
+# Remove legacy networks that are now unused
+docker network prune -f
+```
+
+## Volume Cleanup (ONLY after confirming not production data)
+
+```bash
+# Production data volumes to KEEP (currently used by prod postgres/redis on VPS):
+# - ai-bot_postgres_data
+# - ai-bot_redis_data
+
+# Show what volumes a container uses
+docker inspect -f '{{.Name}} {{range .Mounts}}{{.Name}}:{{.Destination}} {{end}}' trading-bot-postgres
+docker inspect -f '{{.Name}} {{range .Mounts}}{{.Name}}:{{.Destination}} {{end}}' trading-bot-redis
+
+# List containers that reference a given volume
+docker ps -a --filter volume=ai-bot_tsdata
+
+# If (and only if) you are sure legacy data is not needed:
+docker volume rm ai-bot_tsdata ai-bot_portainer_data ai-bot_pgdata || true
+
+# Remove any remaining unused volumes
+docker volume prune -f
+```
+
 ---
 
 **Status: Deployment Complete ✅**

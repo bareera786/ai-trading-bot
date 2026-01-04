@@ -218,17 +218,19 @@ def get_all_known_symbols() -> list[str]:
 def get_active_trading_universe() -> list[str]:
     with SYMBOL_STATE_LOCK:
         base_symbols = [sym for sym in TOP_SYMBOLS if sym not in DISABLED_SYMBOLS]
-        # Include custom symbols from premium users
-        try:
-            from app.models import User
-            users = User.query.all()
-            for user in users:
-                if user.is_premium:
-                    custom = user.get_custom_symbols()
-                    base_symbols.extend(custom)
-        except Exception:
-            pass
-        return list(set(base_symbols))  # Remove duplicates
+
+    # Include custom symbols from premium users (do not hold the lock during DB I/O)
+    try:
+        from app.models import User
+
+        users = User.query.all()
+        for user in users:
+            if user.is_premium:
+                custom = user.get_custom_symbols()
+                base_symbols.extend(custom)
+    except Exception:
+        pass
+    return list(set(base_symbols))  # Remove duplicates
 
 
 def get_user_trading_universe(user) -> list[str]:

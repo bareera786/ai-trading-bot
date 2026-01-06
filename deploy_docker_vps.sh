@@ -30,7 +30,8 @@ echo ""
 # Check if required tools are installed
 command -v rsync >/dev/null 2>&1 || { echo "❌ rsync is required but not installed. Aborting."; exit 1; }
 command -v ssh >/dev/null 2>&1 || { echo "❌ ssh is required but not installed. Aborting."; exit 1; }
-command -v docker >/dev/null 2>&1 || { echo "❌ docker is required but not installed. Aborting."; exit 1; }
+
+# NOTE: Docker is only required on the VPS. This script runs Docker commands remotely.
 
 # Check if SSH password is provided
 if [ -z "$SSH_PASSWORD" ]; then
@@ -39,13 +40,28 @@ if [ -z "$SSH_PASSWORD" ]; then
     echo ""
 fi
 
-# Export for use in SSH commands
+# Export for optional use by sshpass
 export SSH_PASSWORD
 
-# Function to run SSH commands with password
+# Function to run SSH commands (supports key auth, interactive password, or sshpass)
 ssh_cmd() {
     local cmd="$1"
-    echo "$SSH_PASSWORD" | ssh -p "$VPS_SSH_PORT" -o StrictHostKeyChecking=no "$VPS_USER@$VPS_HOST" "$cmd"
+    if command -v sshpass >/dev/null 2>&1 && [ -n "$SSH_PASSWORD" ]; then
+        sshpass -p "$SSH_PASSWORD" ssh -p "$VPS_SSH_PORT" -o StrictHostKeyChecking=no "$VPS_USER@$VPS_HOST" "$cmd"
+    else
+        ssh -p "$VPS_SSH_PORT" -o StrictHostKeyChecking=no "$VPS_USER@$VPS_HOST" "$cmd"
+    fi
+}
+
+# Function to run SCP uploads (supports key auth, interactive password, or sshpass)
+scp_cmd() {
+    local src="$1"
+    local dst="$2"
+    if command -v sshpass >/dev/null 2>&1 && [ -n "$SSH_PASSWORD" ]; then
+        sshpass -p "$SSH_PASSWORD" scp -P "$VPS_SSH_PORT" -o StrictHostKeyChecking=no "$src" "$dst"
+    else
+        scp -P "$VPS_SSH_PORT" -o StrictHostKeyChecking=no "$src" "$dst"
+    fi
 }
 
 # Step 1: Sync files to VPS
@@ -91,6 +107,9 @@ REDIS_URL=redis://redis:6379/0
 
 # Flask
 FLASK_ENV=production
+AI_BOT_TEST_MODE=0
+SKIP_DB_BOOTSTRAP=1
+SKIP_RUNTIME_BOOTSTRAP=0
 FLASK_APP=wsgi.py
 SECRET_KEY=l5rQc4-0AogmUdTZlktQFbeq1W2rpigv04dN1tjTY2GjM3lTqt6_8taZVde2u7hQ
 
@@ -130,7 +149,9 @@ VPS_SSH_PORT=22
 EOF
 
 # Upload config to VPS
-scp -P "$VPS_SSH_PORT" -o StrictHostKeyChecking=no /tmp/deploy.env.production "$VPS_USER@$VPS_HOST:$VPS_PATH/config/deploy.env.production"
+scp_cmd /tmp/deploy.env.production "$VPS_USER@$VPS_HOST:$VPS_PATH/config/deploy.env.production"
+# docker-compose.prod.yml consumes config/deploy.env; keep it in sync.
+scp_cmd /tmp/deploy.env.production "$VPS_USER@$VPS_HOST:$VPS_PATH/config/deploy.env"
 
 echo "✅ Production config created on VPS"
 echo ""

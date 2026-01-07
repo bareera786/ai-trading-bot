@@ -410,6 +410,52 @@ export function initTradeHistory() {
       }
     });
   }
+
+  const clearBtn = document.getElementById('clear-trades-btn');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', async () => {
+      try {
+        const user = await fetchJson('/api/current_user');
+        const userId = user?.id;
+        if (!userId) {
+          alert('Unable to determine current user.');
+          return;
+        }
+
+        const confirmed = window.confirm(
+          'This will permanently delete YOUR trade history. This cannot be undone. Continue?'
+        );
+        if (!confirmed) return;
+
+        clearBtn.disabled = true;
+        const originalText = clearBtn.textContent;
+        clearBtn.textContent = 'Clearing...';
+
+        const resp = await fetchJson(`/api/user/${userId}/trades/clear`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!resp || resp.success !== true) {
+          alert(resp?.error || 'Failed to clear trade history');
+          return;
+        }
+
+        availableSymbols.clear();
+        currentPage = 1;
+        await loadTradeHistory();
+        alert(`Cleared ${resp.deleted || 0} trade(s).`);
+      } catch (error) {
+        console.error('Error clearing trades:', error);
+        alert('Failed to clear trade history. Please try again.');
+      } finally {
+        clearBtn.disabled = false;
+        if (clearBtn.textContent === 'Clearing...') {
+          clearBtn.textContent = 'Clear My History';
+        }
+      }
+    });
+  }
 }
 
 // Back-compat hook used by older templates/buttons.

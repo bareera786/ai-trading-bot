@@ -384,25 +384,27 @@ def api_user_trades(user_id: int):
         per_page = 20
         trades = query.offset((page - 1) * per_page).limit(per_page).all()
 
-        trades_data = [
-            {
-                "id": trade.id,
-                "user_id": trade.user_id,
-                "symbol": trade.symbol,
-                "side": trade.side,
-                "quantity": trade.quantity,
-                "entry_price": trade.entry_price,
-                "exit_price": trade.exit_price,
-                "pnl": trade.pnl,
-                "status": trade.status,
-                "trade_type": trade.trade_type,
-                "execution_mode": trade.execution_mode,
-                "tax_amount": trade.tax_amount,
-                "fees": trade.fees,
-                "timestamp": trade.timestamp.isoformat() if trade.timestamp else None,
-            }
-            for trade in trades
-        ]
+        trades_data = []
+        for trade in trades:
+            trades_data.append(
+                {
+                    "id": trade.id,
+                    "user_id": trade.user_id,
+                    "symbol": trade.symbol,
+                    "side": trade.side,
+                    "quantity": trade.quantity,
+                    "entry_price": trade.entry_price,
+                    "exit_price": trade.exit_price,
+                    "pnl": trade.pnl,
+                    "status": trade.status,
+                    "trade_type": trade.trade_type,
+                    # Optional columns may not exist in all deployments.
+                    "execution_mode": getattr(trade, "execution_mode", None),
+                    "tax_amount": getattr(trade, "tax_amount", None),
+                    "fees": getattr(trade, "fees", None),
+                    "timestamp": trade.timestamp.isoformat() if trade.timestamp else None,
+                }
+            )
 
         return jsonify(
             {
@@ -424,6 +426,29 @@ def api_user_trades(user_id: int):
     except Exception as exc:  # pragma: no cover - defensive logging
         print(f"Error in /api/user/{user_id}/trades: {exc}")
         return jsonify({"error": str(exc)}), 500
+
+
+@user_api_bp.route("/api/user/<int:user_id>/trades/clear", methods=["POST"])
+@login_required
+def api_user_trades_clear(user_id: int):
+    """Clear trade history for a single user.
+
+    This intentionally only deletes rows scoped to the user_id.
+    """
+
+    if current_user.id != user_id and not current_user.is_admin:
+        return jsonify({"error": "Access denied"}), 403
+
+    try:
+        deleted = (
+            UserTrade.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        )
+        db.session.commit()
+        return jsonify({"success": True, "deleted": int(deleted or 0), "user_id": user_id})
+    except Exception as exc:  # pragma: no cover - defensive logging
+        db.session.rollback()
+        print(f"Error in /api/user/{user_id}/trades/clear: {exc}")
+        return jsonify({"success": False, "error": str(exc)}), 500
 
 
 @user_api_bp.route("/api/user/<int:user_id>/risk-settings", methods=["GET", "PUT"])

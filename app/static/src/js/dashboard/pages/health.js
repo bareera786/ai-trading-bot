@@ -47,20 +47,23 @@ class HealthPage {
         try {
             // Load system metrics
             const metricsResponse = await apiRequest('/api/system-metrics');
-            if (metricsResponse.success) {
-                this.updateMetrics(metricsResponse.data);
+            const metricsPayload = metricsResponse?.data || metricsResponse;
+            if (metricsResponse?.success || metricsPayload?.system) {
+                this.updateMetrics(metricsPayload);
             }
 
             // Load alerts
             const alertsResponse = await apiRequest('/api/alerts');
-            if (alertsResponse.success) {
-                this.updateAlerts(alertsResponse.data);
+            const alertsPayload = alertsResponse?.data || alertsResponse?.alerts || alertsResponse;
+            if (alertsResponse?.success || Array.isArray(alertsPayload)) {
+                this.updateAlerts(Array.isArray(alertsPayload) ? alertsPayload : []);
             }
 
             // Load resource recommendations
             const recommendationsResponse = await apiRequest('/api/resource-recommendations');
-            if (recommendationsResponse.success) {
-                this.updateRecommendations(recommendationsResponse.data);
+            const recPayload = recommendationsResponse?.data || recommendationsResponse?.recommendations || recommendationsResponse;
+            if (recommendationsResponse?.success || Array.isArray(recPayload)) {
+                this.updateRecommendations(Array.isArray(recPayload) ? recPayload : []);
             }
 
         } catch (error) {
@@ -72,26 +75,45 @@ class HealthPage {
     updateMetrics(data) {
         this.metrics = data;
 
+        const root = document.getElementById('health') || document;
+        const findCardValueByTitle = (titleText) => {
+            const cards = Array.from(root.querySelectorAll('.dashboard-card'));
+            const card = cards.find(c => {
+                const titleEl = c.querySelector('.card-title');
+                return titleEl && titleEl.textContent.trim().toLowerCase() === String(titleText).trim().toLowerCase();
+            });
+            return card ? card.querySelector('.card-value') : null;
+        };
+
+        const findStatusByTitle = (titleText) => {
+            const cards = Array.from(root.querySelectorAll('.dashboard-card'));
+            const card = cards.find(c => {
+                const titleEl = c.querySelector('.card-title');
+                return titleEl && titleEl.textContent.trim().toLowerCase() === String(titleText).trim().toLowerCase();
+            });
+            return card ? card.querySelector('.status-indicator') : null;
+        };
+
         // Update CPU usage
-        const cpuEl = document.querySelector('#health .card-title:contains("CPU Usage")').closest('.dashboard-card').querySelector('.card-value');
+        const cpuEl = findCardValueByTitle('CPU Usage');
         if (cpuEl && data.system?.cpu_percent !== undefined) {
             cpuEl.textContent = `${data.system.cpu_percent.toFixed(1)}%`;
         }
 
         // Update Memory usage
-        const memoryEl = document.querySelector('#health .card-title:contains("Memory Usage")').closest('.dashboard-card').querySelector('.card-value');
+        const memoryEl = findCardValueByTitle('Memory Usage');
         if (memoryEl && data.system?.memory_used_gb !== undefined) {
             memoryEl.textContent = `${data.system.memory_used_gb.toFixed(1)}GB`;
         }
 
         // Update Disk space
-        const diskEl = document.querySelector('#health .card-title:contains("Disk Space")').closest('.dashboard-card').querySelector('.card-value');
+        const diskEl = findCardValueByTitle('Disk Space');
         if (diskEl && data.system?.disk_usage_percent !== undefined) {
             diskEl.textContent = `${data.system.disk_usage_percent.toFixed(1)}%`;
         }
 
         // Update API status
-        const apiEl = document.querySelector('#health .card-title:contains("API Status")').closest('.dashboard-card').querySelector('.status-indicator');
+        const apiEl = findStatusByTitle('API Status');
         if (apiEl && data.bot?.api_connected !== undefined) {
             apiEl.textContent = data.bot.api_connected ? 'CONNECTED' : 'DISCONNECTED';
             apiEl.className = `status-indicator ${data.bot.api_connected ? 'status-success' : 'status-error'}`;

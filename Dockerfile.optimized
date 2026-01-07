@@ -21,13 +21,15 @@ RUN pip install --user --no-cache-dir -r requirements.txt
 # Stage 2: Runtime - Create minimal production image
 FROM python:3.10-slim
 
-    # Install only runtime system dependencies
-    RUN apt-get update && apt-get install -y \
-        # Required for some Python packages (numpy, scipy)
-        libgomp1 \
-        # SSL certificates for HTTPS requests
-        ca-certificates \
-        && rm -rf /var/lib/apt/lists/*# Create non-root user for security
+# Install only runtime system dependencies
+RUN apt-get update && apt-get install -y \
+    # Required for some Python packages (numpy, scipy)
+    libgomp1 \
+    # SSL certificates for HTTPS requests
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 # Set working directory
@@ -51,6 +53,7 @@ COPY create_admin.py .
 COPY wsgi.py .
 COPY pyproject.toml .
 COPY ai_ml_auto_bot_final.py .
+COPY scripts/clear_trade_history.py ./scripts/clear_trade_history.py
 
 # Create necessary directories with proper permissions
 RUN mkdir -p bot_persistence/logs && \

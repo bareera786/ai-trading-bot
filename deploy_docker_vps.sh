@@ -242,10 +242,29 @@ echo ""
 # Step 5: Setup monitoring (optional)
 echo "📊 Step 5: Setting up monitoring services..."
 
-# Ask if user wants monitoring
-read -p "Do you want to enable monitoring with Prometheus and Grafana? (y/N): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+get_yes_no_choice() {
+    local prompt="$1"
+    local env_override="$2"
+    local default_choice="$3"  # "y" or "n"
+    local reply=""
+
+    if [ -n "$env_override" ]; then
+        reply="$env_override"
+    elif [ -t 0 ]; then
+        read -p "$prompt" -n 1 -r
+        echo
+        reply="$REPLY"
+    else
+        reply="$default_choice"
+    fi
+
+    if [[ "$reply" =~ ^[Yy]$ ]]; then
+        return 0
+    fi
+    return 1
+}
+
+if get_yes_no_choice "Do you want to enable monitoring with Prometheus and Grafana? (y/N): " "${ENABLE_MONITORING:-}" "n"; then
     ssh_cmd "cd $VPS_PATH && docker compose -f docker-compose.prod.yml --profile with-monitoring up -d"
     echo "✅ Monitoring services enabled"
     MONITORING_ENABLED=true
@@ -259,9 +278,7 @@ echo ""
 # Step 6: Setup reverse proxy (optional)
 echo "🌐 Step 6: Setting up Nginx reverse proxy..."
 
-read -p "Do you want to enable Nginx reverse proxy? (y/N): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+if get_yes_no_choice "Do you want to enable Nginx reverse proxy? (y/N): " "${ENABLE_NGINX:-}" "n"; then
     ssh_cmd "cd $VPS_PATH && docker compose -f docker-compose.prod.yml --profile with-nginx up -d"
     echo "✅ Nginx reverse proxy enabled"
     NGINX_ENABLED=true

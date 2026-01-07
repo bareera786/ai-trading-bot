@@ -154,10 +154,11 @@ class HealthPage {
     updateAlerts(alerts) {
         this.alerts = alerts || [];
 
+        const activeAlerts = this.alerts.filter(alert => !alert.acknowledged);
+
         // Update alerts summary
         const alertsSummaryEl = document.getElementById('alerts-summary');
         if (alertsSummaryEl) {
-            const activeAlerts = this.alerts.filter(alert => !alert.acknowledged);
             alertsSummaryEl.innerHTML = `
                 <div class="alerts-count">
                     <span class="alerts-critical">${activeAlerts.filter(a => a.severity === 'critical').length}</span> Critical

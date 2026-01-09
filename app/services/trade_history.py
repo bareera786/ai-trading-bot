@@ -384,7 +384,12 @@ class ComprehensiveTradeHistory:
                         all_trades = [t for t in all_trades if t.get("execution_mode") == desired_mode]
                     # For "all", include all trades
 
-            all_trades.sort(key=lambda x: (x.get("timestamp") or ""), reverse=True)
+            # Sort using parsed datetimes when available so mixed timestamp
+            # formats (ISO strings, numeric epochs) order correctly.
+            all_trades.sort(
+                key=lambda x: (safe_parse_datetime(x.get("timestamp")) or datetime.min),
+                reverse=True,
+            )
             return all_trades
         except Exception as exc:
             logging.getLogger(__name__).error("Error getting trade history: %s", exc)

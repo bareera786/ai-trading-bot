@@ -24,6 +24,19 @@ async function ensureDistDir() {
   await fs.mkdir(distDir, { recursive: true });
 }
 
+async function deleteOldDashboardBundles() {
+  try {
+    const entries = await fs.readdir(distDir, { withFileTypes: true });
+    await Promise.all(
+      entries
+        .filter((ent) => ent.isFile() && ent.name.startsWith('dashboard-'))
+        .map((ent) => fs.unlink(path.join(distDir, ent.name)))
+    );
+  } catch (error) {
+    // If dist doesn't exist yet or cleanup fails, proceed with build.
+  }
+}
+
 function createPathLookup() {
   return new Map(entryDefinitions.map((entry) => [path.resolve(entry.source), entry.logical]));
 }
@@ -38,6 +51,13 @@ function relativizeOutput(outputPath) {
 
 async function buildAssets() {
   await ensureDistDir();
+  // Prevent stale dashboard bundles from accumulating. Keep only the newest
+  // dashboard hash per build by removing any existing dashboard-* files first.
+  await deleteOldDashboardBundles();
+
+  const buildId = new Date().toISOString();
+  process.env.BUILD_ID = buildId;
+
   const result = await build({
     entryPoints,
     bundle: true,
@@ -52,6 +72,9 @@ async function buildAssets() {
     platform: 'browser',
     format: 'esm',
     splitting: false,
+    define: {
+      BUILD_ID: JSON.stringify(buildId),
+    },
     loader: {
       '.css': 'css'
     }
@@ -72,6 +95,28 @@ async function buildAssets() {
   }
 
   await writeManifest(manifest);
+  // Validate generated manifest files are usable (non-zero size).
+  const zeroFiles = [];
+  for (const [logical, relPath] of Object.entries(manifest)) {
+    const abs = path.join(staticDir, relPath);
+    try {
+      const st = await fs.stat(abs);
+      if (!st.size) {
+        zeroFiles.push({ logical, path: abs });
+      }
+    } catch (err) {
+      zeroFiles.push({ logical, path: abs });
+    }
+  }
+  if (zeroFiles.length) {
+    console.error('Build validation failed: some generated assets are zero-length or missing:');
+    for (const f of zeroFiles) {
+      console.error(` - ${f.logical} -> ${f.path}`);
+    }
+    // Exit with non-zero to fail CI / build processes.
+    process.exitCode = 2;
+    throw new Error('One or more generated assets are zero-length or missing');
+  }
   console.log('Built assets:', JSON.stringify(manifest, null, 2));
 }
 

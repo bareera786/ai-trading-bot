@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:assets": "node ./scripts/build-assets.mjs"
+    "build:assets": "node ./scripts/build-assets.mjs",
+    "test:js": "node ./scripts/test-csv.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.21.5"

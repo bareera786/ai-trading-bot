@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import time
+from datetime import datetime
 from typing import Any, Iterable
 
 from flask import Blueprint, current_app, jsonify, request, session
@@ -11,6 +12,8 @@ from app.auth.decorators import subscription_required
 
 from app.models import User, UserTrade
 from app.runtime import symbols
+from app.services.pathing import resolve_profile_path, safe_parse_datetime
+from pathlib import Path
 
 
 metrics_bp = Blueprint("metrics", __name__)
@@ -369,7 +372,9 @@ def api_trades():
         print(f"❌ Error fetching trade history: {exc}")
         return jsonify({"error": str(exc)}), 500
 
-    trades.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+    # Ensure consistent ordering using parsed datetimes (service also sorts,
+    # but apply here defensively in case merged logic altered ordering).
+    trades.sort(key=lambda x: (safe_parse_datetime(x.get("timestamp")) or datetime.min), reverse=True)
 
     per_page = 20
     start_idx = (page - 1) * per_page
@@ -453,7 +458,7 @@ def api_trades():
 
         # Combine and re-paginate
         combined = trades + db_trades
-        combined.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+        combined.sort(key=lambda x: (safe_parse_datetime(x.get("timestamp")) or datetime.min), reverse=True)
         start_idx = (page - 1) * per_page
         paginated = combined[start_idx : start_idx + per_page]
 
@@ -498,7 +503,62 @@ def api_debug_merged_auth():
         current_app.logger.exception("Failed to collect merged auth debug state")
         return jsonify({"error": str(exc)}), 500
 
+
     return jsonify({"debug": auth_state}), 200
+
+
+@metrics_bp.route("/api/debug/trade_files")
+def api_debug_trade_files():
+    """Local-only diagnostic endpoint to inspect trade data files on disk.
+
+    Returns file paths and counts for `comprehensive_trades.json` and
+    `trading_journal.json`. Restricted to localhost for safety.
+    """
+    # Restrict to localhost
+    if request.remote_addr not in ("127.0.0.1", "::1", "localhost"):
+        return jsonify({"error": "Forbidden"}), 403
+
+    try:
+        data_dir = resolve_profile_path("trade_data")
+        p = Path(data_dir)
+        trades_file = p / "comprehensive_trades.json"
+        journal_file = p / "trading_journal.json"
+
+        def _count_json_array(fpath: Path) -> int:
+            if not fpath.exists():
+                return 0
+            try:
+                import json
+
+                with fpath.open("r", encoding="utf-8") as fh:
+                    data = json.load(fh)
+                    if isinstance(data, list):
+                        return len(data)
+            except Exception:
+                return -1
+            return 0
+
+        trades_count = _count_json_array(trades_file)
+        journal_count = _count_json_array(journal_file)
+
+        return jsonify(
+            {
+                "data_dir": data_dir,
+                "comprehensive_trades": {
+                    "path": str(trades_file),
+                    "exists": trades_file.exists(),
+                    "count": trades_count,
+                },
+                "trading_journal": {
+                    "path": str(journal_file),
+                    "exists": journal_file.exists(),
+                    "count": journal_count,
+                },
+            }
+        )
+    except Exception as exc:
+        current_app.logger.exception("Failed to inspect trade files")
+        return jsonify({"error": str(exc)}), 500
 
 
 @metrics_bp.route("/api/signal_source_performance")

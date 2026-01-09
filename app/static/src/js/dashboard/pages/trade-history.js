@@ -15,6 +15,32 @@ const toSafeNumber = (value, fallback = 0) => {
   return Number.isFinite(n) ? n : fallback;
 };
 
+// Parse a timestamp value (string or number) into milliseconds since epoch.
+// Handles ISO strings, integer/float epoch (seconds or milliseconds), and
+// digit-only strings. Returns a numeric ms timestamp.
+const parseTimestampToMs = (ts) => {
+  if (ts === null || ts === undefined || ts === '') return Date.now();
+  if (typeof ts === 'number') {
+    const n = ts;
+    if (n > 1e12) return n; // probably milliseconds
+    if (n > 1e9) return n * 1000; // seconds -> ms
+    return n * 1000;
+  }
+  if (typeof ts === 'string') {
+    const s = ts.trim();
+    if (/^\d+$/.test(s)) {
+      const n = Number(s);
+      if (n > 1e12) return n;
+      if (n > 1e9) return n * 1000;
+      return n * 1000;
+    }
+    const parsed = Date.parse(s);
+    if (!Number.isNaN(parsed)) return parsed;
+    return Date.now();
+  }
+  return Date.now();
+};
+
 export async function loadTradeHistory() {
   try {
     const user = await fetchJson('/api/current_user');
@@ -58,8 +84,8 @@ export async function loadTradeHistory() {
 
     const trades = Array.isArray(data.trades) ? [...data.trades] : [];
     trades.sort((a, b) => {
-      const ta = new Date(a?.timestamp || 0).getTime();
-      const tb = new Date(b?.timestamp || 0).getTime();
+      const ta = parseTimestampToMs(a?.timestamp);
+      const tb = parseTimestampToMs(b?.timestamp);
       return tb - ta;
     });
 
@@ -78,7 +104,8 @@ function populateTradeHistoryTable(trades) {
 
   if (!trades || trades.length === 0) {
     const row = document.createElement('tr');
-    row.innerHTML = '<td colspan="10" style="text-align: center; padding: 2rem;">No trades found</td>';
+    // Updated colspan to match expanded column count (16)
+    row.innerHTML = '<td colspan="16" style="text-align: center; padding: 2rem;">No trades found</td>';
     tbody.appendChild(row);
     return;
   }
@@ -86,7 +113,7 @@ function populateTradeHistoryTable(trades) {
   trades.forEach(trade => {
     const row = document.createElement('tr');
 
-    const timestamp = new Date(trade.timestamp || Date.now());
+    const timestamp = new Date(parseTimestampToMs(trade.timestamp));
     const dateString = timestamp.toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -139,6 +166,12 @@ function populateTradeHistoryTable(trades) {
       <td class="trade-col-num">${quantity.toFixed(4)}</td>
       <td class="trade-col-num">$${entryPrice.toFixed(4)}</td>
       <td class="trade-col-num">${leverage}</td>
+      <td class="trade-col-execmode">${trade.execution_mode || ''}</td>
+      <td class="trade-col-market">${marketType || ''}</td>
+      <td class="trade-col-exchange">${exchange || ''}</td>
+      <td class="trade-col-margin">${trade.margin_type || ''}</td>
+      <td class="trade-col-reduce">${trade.reduce_only ? String(trade.reduce_only) : ''}</td>
+      <td class="trade-col-order">${trade.real_order_id || trade.order_id || ''}</td>
       <td class="trade-col-num ${pnlClass}">${pnlText}</td>
       <td class="trade-col-status"><span class="status-indicator status-${getStatusClass(status)}">${status}</span></td>
       <td class="trade-col-actions"><button class="btn btn-secondary btn-sm trade-detail-btn">Details</button></td>
@@ -148,12 +181,12 @@ function populateTradeHistoryTable(trades) {
     row.addEventListener('click', () => showTradeDetail(trade));
 
     const detailBtn = row.querySelector('.trade-detail-btn');
-    if (detailBtn) {
-      detailBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        showTradeDetail(trade);
-      });
-    }
+      if (detailBtn) {
+        detailBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          showTradeDetail(trade);
+        });
+      }
 
     tbody.appendChild(row);
   });
@@ -167,7 +200,7 @@ function showTradeDetail(trade) {
   }
 
   let el = modal.querySelector('.trade-detail-timestamp');
-  if (el) el.textContent = new Date(trade.timestamp || Date.now()).toLocaleString();
+  if (el) el.textContent = new Date(parseTimestampToMs(trade.timestamp)).toLocaleString();
 
   el = modal.querySelector('.trade-detail-symbol');
   if (el) el.textContent = trade.symbol || trade.ticker || 'N/A';
@@ -202,6 +235,25 @@ function showTradeDetail(trade) {
   el = modal.querySelector('.trade-detail-status');
   if (el) el.textContent = trade.status || trade.state || 'N/A';
 
+  // Structured metadata fields for clarity
+  el = modal.querySelector('.trade-detail-execmode');
+  if (el) el.textContent = trade.execution_mode || trade.mode || '';
+
+  el = modal.querySelector('.trade-detail-market');
+  if (el) el.textContent = trade.market_type || '';
+
+  el = modal.querySelector('.trade-detail-exchange');
+  if (el) el.textContent = trade.exchange || '';
+
+  el = modal.querySelector('.trade-detail-margin');
+  if (el) el.textContent = trade.margin_type || '';
+
+  el = modal.querySelector('.trade-detail-reduce');
+  if (el) el.textContent = trade.reduce_only ? String(trade.reduce_only) : '';
+
+  el = modal.querySelector('.trade-detail-order');
+  if (el) el.textContent = trade.real_order_id || trade.order_id || '';
+
   el = modal.querySelector('.trade-detail-meta');
   if (el) el.textContent = JSON.stringify(trade, null, 2);
 
@@ -211,7 +263,7 @@ function showTradeDetail(trade) {
 function renderEmptyState(message) {
   const tbody = document.getElementById('trade-history-table');
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 2rem;">${message}</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="16" style="text-align:center; padding: 2rem;">${message}</td></tr>`;
 }
 
 function getStatusClass(status) {
@@ -319,11 +371,27 @@ function setupFilters() {
 }
 
 export function convertTradesToCSV(trades) {
-  const headers = ['Date', 'Symbol', 'Side', 'Quantity', 'Entry Price', 'P&L', 'Status'];
+  const headers = [
+    'Date',
+    'Symbol',
+    'Type',
+    'Side',
+    'Quantity',
+    'Entry Price',
+    'Leverage',
+    'Execution Mode',
+    'Market Type',
+    'Exchange',
+    'Margin Type',
+    'Reduce Only',
+    'Order ID',
+    'P&L',
+    'Status',
+  ];
   const lines = [headers.join(',')];
 
   (trades || []).forEach(trade => {
-    const timestamp = new Date(trade.timestamp || Date.now());
+    const timestamp = new Date(parseTimestampToMs(trade.timestamp));
     const dateString = timestamp.toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -333,21 +401,30 @@ export function convertTradesToCSV(trades) {
     });
 
     const hasPnl = typeof trade?.pnl === 'number' && Number.isFinite(trade.pnl);
-    const pnl = hasPnl ? trade.pnl : 0;
-    const pnlText = hasPnl ? (pnl >= 0 ? `$${pnl.toFixed(4)}` : `-$${Math.abs(pnl).toFixed(4)}`) : '';
+    const pnlText = hasPnl ? (trade.pnl >= 0 ? `$${trade.pnl.toFixed(4)}` : `-$${Math.abs(trade.pnl).toFixed(4)}`) : '';
 
     const quantity = toSafeNumber(trade.quantity ?? trade.qty, 0);
     const entryPrice = toSafeNumber(trade.entry_price ?? trade.price ?? trade.fill_price, 0);
     const status = trade.status || trade.state || 'unknown';
     const side = trade.side || trade.position_side || 'N/A';
     const symbol = trade.symbol || trade.ticker || 'N/A';
+    const typeLabel = (trade.market_type || trade.execution_mode || '').toString();
+    const leverage = trade.leverage ? `${trade.leverage}x` : '';
 
     const row = [
       `"${dateString}"`,
       `"${symbol}"`,
+      `"${typeLabel}"`,
       `"${side}"`,
       quantity.toFixed(4),
       entryPrice.toFixed(4),
+      `"${leverage}"`,
+      `"${trade.execution_mode || ''}"`,
+      `"${trade.market_type || ''}"`,
+      `"${trade.exchange || ''}"`,
+      `"${trade.margin_type || ''}"`,
+      `"${trade.reduce_only ? String(trade.reduce_only) : ''}"`,
+      `"${trade.real_order_id || trade.order_id || ''}"`,
       `"${pnlText}"`,
       `"${status}"`,
     ];

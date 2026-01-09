@@ -57,3 +57,38 @@ def test_asset_url_falls_back_when_manifest_asset_empty(tmp_path):
             expected = url_for("static", filename="css/dashboard.css")
 
     assert resolved == expected
+
+
+def test_asset_url_resolves_hashed_file_minimal(tmp_path):
+    """Minimal test that asset_url resolves a manifest-mapped hashed file."""
+    static_root = Path(tmp_path) / "static"
+    dist = static_root / "dist"
+    dist.mkdir(parents=True)
+    # Create hashed file and manifest
+    (dist / "test-ABC123.js").write_text("// dummy", encoding="utf-8")
+    manifest_data = {"test.js": "dist/test-ABC123.js"}
+    app = _build_test_app(static_root, manifest_data)
+
+    with app.app_context():
+        with app.test_request_context():
+            resolved = asset_url("test.js", manifest=manifest_data)
+            assert resolved == url_for("static", filename="dist/test-ABC123.js")
+
+
+def test_asset_url_discovers_hashed_when_manifest_missing(tmp_path):
+    """When manifest path is missing, discovery in dist should find hashed file."""
+    static_root = Path(tmp_path) / "static"
+    dist = static_root / "dist"
+    dist.mkdir(parents=True)
+    # create hashed file that should be discovered
+    (dist / "missing-XYZ.js").write_text("// dummy", encoding="utf-8")
+
+    app = Flask(__name__, static_folder=str(static_root))
+    app.config["ASSET_MANIFEST_PATH"] = "/nonexistent/path"
+
+    with app.app_context():
+        with app.test_request_context():
+            from app.assets import asset_url as av
+
+            resolved = av("missing.js")
+            assert resolved.startswith("/static/dist/")

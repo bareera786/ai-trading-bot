@@ -24,19 +24,23 @@ export function initEventHandlers() {
         if (resp.redirected) {
           // Server asked to redirect (common behavior) — follow it in the browser
           console.info('[logout] Server redirected to', resp.url);
-          window.location.href = resp.url;
+          // clear any client-side ephemeral state, then redirect to /login
+          try { sessionStorage.clear(); localStorage.clear(); } catch (e) {}
+          window.location.href = '/login';
           return;
         }
 
         // If server returned OK (200/204/202), navigate to login page
         if (resp.ok) {
           console.info('[logout] Logout successful, navigating to /login');
+          try { sessionStorage.clear(); localStorage.clear(); } catch (e) {}
           window.location.href = '/login';
           return;
         }
 
         // Otherwise, show error and still navigate to login to clear client state
         console.warn('[logout] Unexpected logout response, forcing navigation to /login');
+        try { sessionStorage.clear(); localStorage.clear(); } catch (e) {}
         window.location.href = '/login';
       } catch (err) {
         console.error('[logout] Error during logout fetch', err);

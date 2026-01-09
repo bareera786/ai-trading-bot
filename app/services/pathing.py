@@ -110,10 +110,39 @@ def resolve_profile_path(
     return str(target)
 
 
-def safe_parse_datetime(value: Optional[str]):
-    if not value:
+def safe_parse_datetime(value: Optional[object]):
+    """Try to parse a variety of timestamp formats into a datetime.
+
+    Accepts ISO-8601 strings, numeric epoch seconds or milliseconds
+    (as int/float or digit-only strings). Returns None on failure.
+    """
+    if value is None or value == "":
         return None
+
+    # Numeric types (int/float) -> treat as epoch seconds or milliseconds
     try:
-        return datetime.fromisoformat(value)
+        if isinstance(value, (int, float)):
+            ts = float(value)
+            # Heuristic: values > 1e12 likely milliseconds
+            if ts > 1e12:
+                return datetime.fromtimestamp(ts / 1000.0)
+            # Values around 1e9 are seconds since epoch
+            return datetime.fromtimestamp(ts)
+
+        # Strings: try digit-only epoch first, then ISO parsing
+        if isinstance(value, str):
+            s = value.strip()
+            if s.isdigit():
+                ts = float(s)
+                if ts > 1e12:
+                    return datetime.fromtimestamp(ts / 1000.0)
+                return datetime.fromtimestamp(ts)
+            # Try ISO format
+            try:
+                return datetime.fromisoformat(s)
+            except Exception:
+                # Fall back to Date parsing via timestamp if possible
+                return None
     except Exception:
         return None
+    return None

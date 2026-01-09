@@ -60,7 +60,8 @@ logs/
 # Node.js and build artifacts
 node_modules/
 npm-debug.log*
-app/static/dist/
+# NOTE: `app/static/dist/` is required in production for hashed UI bundles.
+# We ship prebuilt assets, so do not ignore it.
 build/
 dist/
 *.egg-info/

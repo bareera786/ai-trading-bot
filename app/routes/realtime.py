@@ -5,8 +5,8 @@ import random
 import time
 from typing import Any
 
-from flask import Blueprint, current_app, jsonify, session
-from flask_login import login_required
+from flask import Blueprint, current_app, jsonify
+from flask_login import current_user, login_required
 
 
 realtime_bp = Blueprint("realtime", __name__)
@@ -63,13 +63,9 @@ def _top_default_symbols() -> list[str]:
 @login_required
 def realtime_portfolio():
     ctx = _context()
-    dashboard_data = _dashboard_data(ctx)
     try:
-        user_id = session.get("user_id")
-        if user_id:
-            portfolio_data = _get_user_portfolio(ctx, user_id)
-        else:
-            portfolio_data = dashboard_data.get("portfolio", {})
+        user_id = getattr(current_user, "id", None)
+        portfolio_data = _get_user_portfolio(ctx, user_id)
 
         return jsonify(
             {"success": True, "data": portfolio_data, "timestamp": time.time()}
@@ -85,15 +81,34 @@ def realtime_portfolio():
 @login_required
 def realtime_pnl():
     ctx = _context()
-    dashboard_data = _dashboard_data(ctx)
     try:
-        portfolio = dashboard_data.get("portfolio", {})
+        user_id = getattr(current_user, "id", None)
+        portfolio = _get_user_portfolio(ctx, user_id) or {}
+
+        open_positions = portfolio.get("open_positions")
+        if open_positions is None:
+            open_positions = portfolio.get("positions")
+
+        positions_iter: list[Any]
+        if isinstance(open_positions, dict):
+            positions_iter = list(open_positions.values())
+        elif isinstance(open_positions, list):
+            positions_iter = open_positions
+        else:
+            positions_iter = []
+
+        open_positions_pnl = 0.0
+        for pos in positions_iter:
+            if isinstance(pos, dict):
+                try:
+                    open_positions_pnl += float(pos.get("pnl", 0) or 0)
+                except (TypeError, ValueError):
+                    continue
+
         pnl_data = {
             "total_pnl": portfolio.get("total_pnl", 0),
             "daily_pnl": portfolio.get("daily_pnl", 0),
-            "open_positions_pnl": sum(
-                pos.get("pnl", 0) for pos in portfolio.get("positions", [])
-            ),
+            "open_positions_pnl": open_positions_pnl,
             "timestamp": time.time(),
         }
         return jsonify({"success": True, "data": pnl_data, "timestamp": time.time()})
@@ -108,9 +123,16 @@ def realtime_pnl():
 @login_required
 def realtime_performance():
     ctx = _context()
-    dashboard_data = _dashboard_data(ctx)
     try:
-        performance_data = dashboard_data.get("performance", {})
+        user_id = getattr(current_user, "id", None)
+        portfolio = _get_user_portfolio(ctx, user_id) or {}
+
+        performance_data = {
+            "total_balance": portfolio.get("total_balance"),
+            "available_balance": portfolio.get("available_balance"),
+            "total_pnl": portfolio.get("total_pnl", 0),
+            "daily_pnl": portfolio.get("daily_pnl", 0),
+        }
         return jsonify(
             {"success": True, "data": performance_data, "timestamp": time.time()}
         )

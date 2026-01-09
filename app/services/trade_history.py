@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from .pathing import resolve_profile_path, safe_parse_datetime
+from .persistence import _atomic_write_json
 
 
 class ComprehensiveTradeHistory:
@@ -80,13 +81,111 @@ class ComprehensiveTradeHistory:
         except Exception as exc:
             logging.getLogger(__name__).error("Error saving trades: %s", exc)
 
+    def record_exchange_execution(self, execution: Dict[str, Any]) -> Dict[str, Any] | None:
+        """Append a confirmed exchange execution record.
+
+        This is intentionally strict and append-only:
+        - Never overwrites existing rows
+        - Best-effort de-duplicates by (exchange, binance_order_id)
+        - Writes atomically to avoid partial files
+        """
+
+        if not isinstance(execution, dict):
+            return None
+
+        exchange = execution.get("exchange")
+        order_id = execution.get("binance_order_id")
+        if not exchange or order_id in (None, ""):
+            return None
+
+        try:
+            trades = self.load_trades() or []
+            exchange_norm = str(exchange).strip().upper()
+            order_norm = str(order_id).strip()
+
+            for existing in trades:
+                try:
+                    if str(existing.get("exchange") or "").strip().upper() != exchange_norm:
+                        continue
+                    if str(existing.get("binance_order_id") or "").strip() == order_norm:
+                        return existing
+                except Exception:
+                    continue
+
+            trades.append(dict(execution))
+            _atomic_write_json(self.trades_file, trades)
+            return execution
+        except Exception as exc:
+            logging.getLogger(__name__).error("Error recording exchange execution: %s", exc)
+            return None
+
     # ------------------------------------------------------------------
     # Trade lifecycle
     # ------------------------------------------------------------------
+    @staticmethod
+    def _infer_status(trade_data: Dict[str, Any]) -> str:
+        status = trade_data.get("status")
+        if isinstance(status, str):
+            normalized = status.strip().upper()
+            if normalized in {"OPEN", "CLOSED"}:
+                return normalized
+
+        side = str(trade_data.get("side") or "").strip().upper()
+
+        try:
+            exit_price = float(trade_data.get("exit_price") or 0)
+        except Exception:
+            exit_price = 0.0
+
+        # Treat as CLOSED only when an explicit exit price exists.
+        # (pnl/pnl_percent can be unrealized for open positions.)
+        if exit_price != 0.0:
+            return "CLOSED"
+
+        # Legacy heuristic: BUY opens, SELL closes.
+        if side == "SELL":
+            return "CLOSED"
+        return "OPEN"
+
+    @staticmethod
+    def _normalize_exit_price(
+        *,
+        status: str,
+        trade_data: Dict[str, Any],
+    ) -> float | None:
+        if status == "OPEN":
+            return None
+
+        # If exit_price is provided, prefer it.
+        raw_exit = trade_data.get("exit_price")
+        if raw_exit not in (None, ""):
+            try:
+                exit_price = float(raw_exit)
+                if exit_price > 0:
+                    return exit_price
+            except Exception:
+                pass
+
+        # Otherwise, fall back to other known keys. In this codebase, many
+        # CLOSED trade records store the close execution price in `price`.
+        for key in ("close_price", "price", "fill_price", "entry_price"):
+            raw_val = trade_data.get(key)
+            if raw_val in (None, ""):
+                continue
+            try:
+                val = float(raw_val)
+                if val > 0:
+                    return val
+            except Exception:
+                continue
+
+        return None
+
     def add_trade(self, trade_data: Dict[str, Any]) -> dict[str, Any] | None:
         """Add a new trade entry with extended metadata."""
         try:
             trades = self.load_trades()
+            status = self._infer_status(trade_data)
             trade_record = {
                 "trade_id": len(trades) + 1,
                 "timestamp": datetime.now().isoformat(),
@@ -96,7 +195,7 @@ class ComprehensiveTradeHistory:
                 "quantity": float(trade_data.get("quantity", 0)),
                 "entry_price": float(trade_data.get("price", 0)),
                 "total_value": float(trade_data.get("total", 0)),
-                "exit_price": float(trade_data.get("exit_price", 0)),
+                "exit_price": self._normalize_exit_price(status=status, trade_data=trade_data),
                 "pnl": float(trade_data.get("pnl", 0)),
                 "pnl_percent": float(trade_data.get("pnl_percent", 0)),
                 "signal": trade_data.get("signal", "UNKNOWN"),
@@ -112,7 +211,7 @@ class ComprehensiveTradeHistory:
                     trade_data.get("position_size_percent", 0)
                 ),
                 "holding_period_days": 0,
-                "status": "OPEN" if trade_data.get("side") == "BUY" else "CLOSED",
+                "status": status,
                 "execution_mode": trade_data.get("execution_mode", "paper"),
                 "real_order_id": trade_data.get("real_order_id"),
                 "profile": trade_data.get("profile"),
@@ -138,9 +237,18 @@ class ComprehensiveTradeHistory:
             trades = self.load_trades()
             for trade in trades:
                 if trade["trade_id"] == trade_id and trade["status"] == "OPEN":
+                    normalized_exit_price = self._normalize_exit_price(
+                        status="CLOSED",
+                        trade_data={
+                            **exit_data,
+                            # Allow fallback to the original entry_price if
+                            # the close execution price isn't supplied.
+                            "entry_price": trade.get("entry_price"),
+                        },
+                    )
                     trade.update(
                         {
-                            "exit_price": float(exit_data.get("exit_price", 0)),
+                            "exit_price": normalized_exit_price,
                             "pnl": float(exit_data.get("pnl", 0)),
                             "pnl_percent": float(exit_data.get("pnl_percent", 0)),
                             "exit_timestamp": datetime.now().isoformat(),
@@ -185,12 +293,51 @@ class ComprehensiveTradeHistory:
         try:
             trades = self.load_trades()
 
+            persisted_futures_order_ids: set[str] = set()
+            for trade in trades:
+                try:
+                    if str(trade.get("exchange") or "").strip().upper() != "BINANCE_FUTURES":
+                        continue
+                    order_id = trade.get("binance_order_id")
+                    if order_id is not None and str(order_id).strip():
+                        persisted_futures_order_ids.add(str(order_id).strip())
+                except Exception:
+                    continue
+
+            # Normalize legacy values for display/API consumers.
+            for trade in trades:
+                status = str(trade.get("status") or "").upper()
+                try:
+                    exit_price = float(trade.get("exit_price") or 0)
+                except Exception:
+                    exit_price = 0.0
+
+                if status == "OPEN":
+                    if exit_price == 0.0:
+                        trade["exit_price"] = None
+                elif status == "CLOSED":
+                    if exit_price == 0.0:
+                        # In many records, `entry_price` represents the close execution price.
+                        try:
+                            entry_price = float(trade.get("entry_price") or 0)
+                        except Exception:
+                            entry_price = 0.0
+                        if entry_price > 0:
+                            trade["exit_price"] = entry_price
+
             # Also include futures trades from journal
             futures_trades = []
             journal_events = self.get_journal_events(event_type="FUTURES_ORDER")
             for event in journal_events:
                 payload = event.get("payload", {})
                 if payload:
+                    raw_resp = payload.get("raw_response") if isinstance(payload, dict) else None
+                    order_id = None
+                    if isinstance(raw_resp, dict):
+                        order_id = raw_resp.get("orderId")
+                    if order_id is not None and str(order_id).strip() in persisted_futures_order_ids:
+                        continue
+
                     # Convert journal event to trade format
                     trade_record = {
                         "trade_id": f"futures_{event.get('id', len(futures_trades) + 1)}",
@@ -237,7 +384,7 @@ class ComprehensiveTradeHistory:
                         all_trades = [t for t in all_trades if t.get("execution_mode") == desired_mode]
                     # For "all", include all trades
 
-            all_trades.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+            all_trades.sort(key=lambda x: (x.get("timestamp") or ""), reverse=True)
             return all_trades
         except Exception as exc:
             logging.getLogger(__name__).error("Error getting trade history: %s", exc)
@@ -249,8 +396,27 @@ class ComprehensiveTradeHistory:
             if not trades:
                 return self._get_empty_statistics()
 
-            closed_trades = [t for t in trades if t["status"] == "CLOSED"]
-            open_trades = [t for t in trades if t["status"] == "OPEN"]
+            # This file can contain heterogeneous records (legacy lifecycle trades
+            # plus exchange execution confirmations). Only lifecycle trades have
+            # the fields required for statistics.
+            lifecycle_trades: list[dict[str, Any]] = []
+            for trade in trades:
+                try:
+                    status = str(trade.get("status") or "").strip().upper()
+                    if status not in {"OPEN", "CLOSED"}:
+                        continue
+                    pnl = trade.get("pnl")
+                    if not isinstance(pnl, (int, float)):
+                        continue
+                    lifecycle_trades.append(trade)
+                except Exception:
+                    continue
+
+            if not lifecycle_trades:
+                return self._get_empty_statistics()
+
+            closed_trades = [t for t in lifecycle_trades if t.get("status") == "CLOSED"]
+            open_trades = [t for t in lifecycle_trades if t.get("status") == "OPEN"]
 
             total_trades = len(closed_trades)
             winning_trades = len([t for t in closed_trades if t["pnl"] > 0])

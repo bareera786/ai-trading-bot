@@ -4,9 +4,21 @@ import time
 
 import pytest
 
+from flask_login import LoginManager
+
 pytest.importorskip("flask_mail")
 
 from app.routes.status import status_bp
+
+
+class SimpleUser:
+    def __init__(self, user_id: int):
+        self.id = user_id
+        self.is_authenticated = True
+        self.is_active = True
+
+    def get_id(self):
+        return str(self.id)
 
 
 class DummyWorker:
@@ -39,6 +51,16 @@ class DummyRuntime:
 
 def test_ribs_status_and_control_endpoints(monkeypatch):
     app = Flask(__name__)
+    app.config["TESTING"] = True
+    app.config["SECRET_KEY"] = "key"
+
+    login_manager = LoginManager()
+    login_manager.init_app(app)
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return SimpleUser(int(user_id))
+
     app.register_blueprint(status_bp)
 
     # simulate ai_bot_context
@@ -49,6 +71,9 @@ def test_ribs_status_and_control_endpoints(monkeypatch):
     }
 
     with app.test_client() as client:
+        with client.session_transaction() as sess:
+            sess["_user_id"] = "1"
+            sess["_fresh"] = True
         # status
         resp = client.get("/api/ribs/status")
         assert resp.status_code == 200

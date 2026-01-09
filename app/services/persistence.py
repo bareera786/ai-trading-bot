@@ -7,6 +7,7 @@ import os
 import shutil
 import threading
 import time
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict
@@ -14,6 +15,60 @@ from typing import Any, Callable, Dict
 LoggerLike = logging.Logger
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _bot_state_file_lock(state_file: os.PathLike[str] | str):
+    """Best-effort cross-process lock for bot_state.json writers.
+
+    Uses a sidecar lock file + fcntl.flock on POSIX; falls back to a process-local
+    threading lock if flock is unavailable.
+    """
+
+    lock_path = f"{str(state_file)}.lock"
+    os.makedirs(os.path.dirname(str(lock_path)), exist_ok=True)
+
+    # Process-local fallback lock (still helpful when flock isn't available).
+    _local_lock = getattr(_bot_state_file_lock, "_local_lock", None)
+    if _local_lock is None:
+        _local_lock = threading.RLock()
+        setattr(_bot_state_file_lock, "_local_lock", _local_lock)
+
+    try:
+        import fcntl  # type: ignore
+
+        with open(lock_path, "a+") as lock_handle:
+            with _local_lock:
+                try:
+                    fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+                except Exception:
+                    # If flock fails, still proceed under local lock.
+                    pass
+                try:
+                    yield
+                finally:
+                    try:
+                        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+                    except Exception:
+                        pass
+        return
+    except Exception:
+        # No fcntl (or other failure): local-only.
+        with _local_lock:
+            yield
+
+
+def _atomic_write_json(path: os.PathLike[str] | str, payload: Any) -> None:
+    target = str(path)
+    tmp = f"{target}.tmp.{os.getpid()}.{int(time.time()*1000)}"
+    with open(tmp, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, default=str)
+        handle.flush()
+        try:
+            os.fsync(handle.fileno())
+        except Exception:
+            pass
+    os.replace(tmp, target)
 
 
 def _default_noop(*_: Any, **__: Any) -> None:
@@ -196,8 +251,8 @@ class ProfessionalPersistence:
                 except Exception as e:
                     logger.warning(f"Failed to create backup: {e}")
             
-            with open(state_file, "w") as handle:
-                json.dump(state, handle, indent=2, default=str)
+            with _bot_state_file_lock(state_file):
+                _atomic_write_json(state_file, state)
 
             self._save_critical_components(trader, ml_system)
             self._update_save_count(profile)

@@ -1396,6 +1396,72 @@ class BinanceFuturesTrader:
             )
             return None
 
+    def get_realized_pnl_income(self, *, symbol: str, start_time, end_time):
+        """Fetch realized PnL income entries for a symbol over a time range.
+
+        Best-effort wrapper over the underlying Binance futures client.
+        Returns a list of dict entries.
+        """
+
+        if not self.is_ready() or not symbol:
+            return []
+
+        def _to_ms(dt):
+            try:
+                return int(dt.timestamp() * 1000)
+            except Exception:
+                return None
+
+        start_ms = _to_ms(start_time)
+        end_ms = _to_ms(end_time)
+        if start_ms is None or end_ms is None:
+            return []
+
+        client = self.client
+        if client is None:
+            return []
+
+        method_names = [
+            "futures_income_history",
+            "income_history",
+            "futures_incomeHistory",
+        ]
+        kwargs_candidates = [
+            {
+                "symbol": str(symbol).upper(),
+                "incomeType": "REALIZED_PNL",
+                "startTime": start_ms,
+                "endTime": end_ms,
+                "limit": 1000,
+            },
+            {
+                "symbol": str(symbol).upper(),
+                "incomeType": "REALIZED_PNL",
+                "start_time": start_ms,
+                "end_time": end_ms,
+                "limit": 1000,
+            },
+        ]
+
+        with self._client_lock:
+            for name in method_names:
+                fn = getattr(client, name, None)
+                if not callable(fn):
+                    continue
+                for kwargs in kwargs_candidates:
+                    try:
+                        result = fn(**kwargs)
+                        if isinstance(result, list):
+                            return result
+                        if isinstance(result, dict) and isinstance(
+                            result.get("data"), list
+                        ):
+                            return result["data"]
+                    except Exception:
+                        continue
+
+        return []
+
     def get_status(self):
         return {
             "connected": self.connected,
@@ -1636,9 +1702,119 @@ def create_user_trader_resolver(
         def execute_manual_futures_trade(
             self, symbol, side, quantity, leverage=1, price=None
         ):
-            return self._futures_client().execute_manual_futures_trade(
+            # Prefer the in-process per-user trader so manual futures trades go
+            # through the legacy futures choke-point (and thus the safety gate).
+            try:
+                ctx = self._ctx()
+                market_service = ctx.get("market_data_service")
+                if market_service is not None and hasattr(
+                    market_service, "_get_or_create_user_traders"
+                ):
+                    user_ultimate, _ = market_service._get_or_create_user_traders(
+                        int(self.user_id)
+                    )
+                    if user_ultimate is not None:
+                        store = ctx.get("binance_credentials_store")
+                        if store is not None:
+                            try:
+                                futures_creds = store.get_credentials(
+                                    "futures", user_id=self.user_id
+                                )
+                            except Exception:
+                                futures_creds = {}
+                            futures_creds = futures_creds or {}
+                            if futures_creds.get("api_key") and futures_creds.get(
+                                "api_secret"
+                            ):
+                                try:
+                                    user_ultimate.enable_futures_trading(
+                                        api_key=futures_creds.get("api_key"),
+                                        api_secret=futures_creds.get("api_secret"),
+                                        testnet=bool(futures_creds.get("testnet", True)),
+                                        force=True,
+                                    )
+                                except TypeError:
+                                    user_ultimate.enable_futures_trading(
+                                        futures_creds.get("api_key"),
+                                        futures_creds.get("api_secret"),
+                                        futures_creds.get("testnet", True),
+                                    )
+                                except Exception:
+                                    pass
+
+                        # Ensure the futures-trading gate is enabled for this order.
+                        try:
+                            setattr(user_ultimate, "futures_trading_enabled", True)
+                        except Exception:
+                            pass
+
+                        response = user_ultimate._submit_futures_order(
+                            symbol,
+                            str(side).upper(),
+                            quantity,
+                            leverage=leverage,
+                            reduce_only=False,
+                        )
+                        return {
+                            "success": bool(response),
+                            "order": response or {},
+                            "price": (response or {}).get("price") if isinstance(response, dict) else price,
+                            "error": None if response else "Order failed",
+                        }
+            except Exception:
+                # Fall back to the legacy direct futures client implementation.
+                pass
+
+            # Safety gate must apply even when we fall back to a direct futures client.
+            try:
+                ctx = self._ctx()
+                safety_service = None
+                market_service = ctx.get("market_data_service")
+                if market_service is not None:
+                    safety_service = getattr(market_service, "futures_safety_service", None)
+                if safety_service is None:
+                    service_runtime = ctx.get("service_runtime")
+                    safety_service = getattr(service_runtime, "futures_safety_service", None)
+
+                if safety_service is not None and hasattr(safety_service, "should_allow_order"):
+                    trader_ctx = None
+                    try:
+                        if market_service is not None and hasattr(
+                            market_service, "_get_or_create_user_traders"
+                        ):
+                            trader_ctx, _ = market_service._get_or_create_user_traders(
+                                int(self.user_id)
+                            )
+                    except Exception:
+                        trader_ctx = None
+
+                    allowed, reason, _details = safety_service.should_allow_order(
+                        symbol=str(symbol).upper(),
+                        side=str(side).upper(),
+                        quantity=float(quantity),
+                        leverage=int(leverage or 1),
+                        reduce_only=False,
+                        trader=trader_ctx,
+                    )
+                    if not allowed:
+                        return {
+                            "success": False,
+                            "order": {},
+                            "price": price,
+                            "error": f"TRADE_BLOCKED: {reason}",
+                        }
+            except Exception:
+                return {
+                    "success": False,
+                    "order": {},
+                    "price": price,
+                    "error": "TRADE_BLOCKED: SAFETY_SERVICE_ERROR",
+                }
+
+            result = self._futures_client().execute_manual_futures_trade(
                 symbol, side, quantity, leverage, price
             )
+            return result
 
     _lock = threading.Lock()
     _executors: dict[str, _UserTradeExecutor] = {}

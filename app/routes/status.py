@@ -14,9 +14,32 @@ import json
 from prometheus_client import generate_latest
 
 from app.extensions import db
+from app.services.pathing import resolve_profile_path
 
 
 status_bp = Blueprint("status", __name__)
+
+
+def _ribs_checkpoint_dir() -> str:
+    # Prefer an explicit override (useful for tests and multi-process deployments).
+    override = os.getenv("RIBS_CHECKPOINT_DIR")
+    if override:
+        return override
+
+    # Test-friendly fallback: if the process cwd contains a bot_persistence dir,
+    # read status from there.
+    cwd_dir = os.path.join(os.getcwd(), "bot_persistence", "ribs_checkpoints")
+    if os.path.isdir(cwd_dir):
+        return cwd_dir
+
+    return os.path.join(resolve_profile_path("bot_persistence"), "ribs_checkpoints")
+
+
+def _ribs_status_path() -> str:
+    override = os.getenv("RIBS_STATUS_PATH")
+    if override:
+        return override
+    return os.path.join(_ribs_checkpoint_dir(), "ribs_status.json")
 
 
 def _ctx() -> dict:
@@ -275,7 +298,7 @@ def ribs_archive_status():
             cp_dir = getattr(
                 optimizer,
                 "checkpoints_dir",
-                os.path.join("bot_persistence", "ribs_checkpoints"),
+                _ribs_checkpoint_dir(),
             )
             latest = None
             try:
@@ -301,9 +324,7 @@ def ribs_archive_status():
             return jsonify(response)
 
         # Fallback: try reading a cross-process status file (useful when the worker lives in another process)
-        status_path = os.path.join(
-            "bot_persistence", "ribs_checkpoints", "ribs_status.json"
-        )
+        status_path = _ribs_status_path()
         if os.path.exists(status_path):
             try:
                 with open(status_path, "r") as sf:
@@ -330,9 +351,7 @@ def ribs_archive_status():
 @status_bp.route("/api/health/ribs", methods=["GET"])
 def api_health_ribs():
     """Return a lightweight health status for RIBS based on ribs_status.json"""
-    status_path = os.path.join(
-        "bot_persistence", "ribs_checkpoints", "ribs_status.json"
-    )
+    status_path = _ribs_status_path()
     if not os.path.exists(status_path):
         return (
             jsonify({"status": "missing", "message": "RIBS status file not found"}),
@@ -363,9 +382,7 @@ def api_health_ribs():
 @status_bp.route("/api/ribs/progress", methods=["GET"])
 def api_ribs_progress():
     """Return lightweight RIBS progress information read from ribs_status.json"""
-    status_path = os.path.join(
-        "bot_persistence", "ribs_checkpoints", "ribs_status.json"
-    )
+    status_path = _ribs_status_path()
     if not os.path.exists(status_path):
         return (
             jsonify({"status": "missing", "message": "RIBS status file not found"}),
@@ -403,6 +420,7 @@ def api_ribs_progress():
 
 
 @status_bp.route("/api/ribs/start", methods=["POST"])
+@login_required
 def start_ribs_optimization():
     """Start RIBS optimization"""
     ctx = _ctx()
@@ -444,6 +462,7 @@ def start_ribs_optimization():
 
 
 @status_bp.route("/api/ribs/pause", methods=["POST"])
+@login_required
 def pause_ribs_optimization():
     """Pause/stop the running RIBS optimization loop."""
     ctx = _ctx()
@@ -508,9 +527,7 @@ def ribs_analyze(strategy_id):
 
     # Fallback: check status file for archived elite strategies
     if not strategy:
-        status_path = os.path.join(
-            "bot_persistence", "ribs_checkpoints", "ribs_status.json"
-        )
+        status_path = _ribs_status_path()
         try:
             if os.path.exists(status_path):
                 with open(status_path, "r") as sf:
@@ -538,6 +555,7 @@ def ribs_analyze(strategy_id):
 
 
 @status_bp.route("/api/ribs/reset", methods=["POST"])
+@login_required
 def reset_ribs_archive():
     """Reset RIBS archive"""
     ctx = _ctx()
@@ -563,6 +581,7 @@ def reset_ribs_archive():
 
 
 @status_bp.route("/api/ribs/deploy/<strategy_id>", methods=["POST"])
+@login_required
 def deploy_ribs_strategy(strategy_id):
     """Deploy a RIBS-generated strategy"""
     ctx = _ctx()
@@ -597,6 +616,7 @@ def deploy_ribs_strategy(strategy_id):
 
 
 @status_bp.route("/api/ribs/export/<strategy_id>", methods=["GET"])
+@login_required
 def export_ribs_strategy(strategy_id):
     """Export RIBS strategy parameters"""
     ctx = _ctx()
@@ -640,6 +660,7 @@ def export_ribs_strategy(strategy_id):
 
 
 @status_bp.route("/api/ribs/export", methods=["GET"])
+@login_required
 def export_ribs_archive():
     """Export entire RIBS archive data"""
     ctx = _ctx()

@@ -6,6 +6,7 @@ from .binance import BinanceCredentialService, BinanceCredentialStore, BinanceLo
 from .binance_market import BinanceMarketDataHelper
 from .futures import FuturesManualService
 from .futures_market import FuturesMarketDataService
+from .futures_safety import FuturesSafetyService
 from .health import HealthReportService, evaluate_health_payload
 from .live_portfolio import LivePortfolioScheduler
 from .market_data import MarketDataService

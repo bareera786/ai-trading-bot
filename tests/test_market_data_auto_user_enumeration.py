@@ -176,6 +176,7 @@ def test_auto_user_id_provider_takes_precedence_over_store():
         auto_user_id_provider=lambda: [1, 2],
         persistence_manager=None,
         symbols_for_persistence=["BTCUSDT"],
+        futures_safety_service=None,
         sleep_interval=5.0,
     )
 

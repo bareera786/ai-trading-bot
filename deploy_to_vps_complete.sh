@@ -41,12 +41,23 @@ RSYNC_OPTS=(
     --no-group
     --no-times
     --progress
+    --exclude ".DS_Store"
+    --exclude ".coverage"
+    --exclude ".pytest_cache/"
     --exclude ".git/"
     --exclude ".venv/"
     --exclude "__pycache__/"
     --exclude "*.pyc"
     --exclude "logs/"
-    --exclude "bot_persistence/backups/"
+    --exclude "bot_persistence/"  # never overwrite production state
+    --exclude "trade_data/"       # never overwrite production trade logs
+    --exclude "optimized_trade_data/"
+    --exclude "ultimate_models/"  # models can be large and are prod-owned
+    --exclude "optimized_models/"
+    --exclude "futures_models/"
+    --exclude "reports/"          # health reports generated on server
+    --exclude "config/deploy.env" # never overwrite VPS secrets/config
+    --exclude "config/deploy.env.production"
     --exclude "*.pkl"  # Skip large model files initially
     --exclude "*.joblib"
     --exclude "htmlcov/"  # Skip coverage reports
@@ -114,15 +125,16 @@ echo "✅ Production config created on VPS"
 # Ensure persistence directory ownership is correct (run inside a short-lived container)
 echo "🔧 Adjusting ownership of persistence dir on VPS (if needed)"
 echo "🔧 Adjusting ownership of persistence and writable data dirs on VPS (if needed)"
-# First, chown the entire project directory to the SSH user (aibot)
-$SSH_CMD "echo 'tahir' | sudo -S chown -R aibot: $VPS_PATH" || true
+# First, best-effort chown the project directory to the SSH user (aibot)
+# Use non-interactive sudo so deployments never hang on password prompts.
+$SSH_CMD "sudo -n chown -R aibot: $VPS_PATH" || true
 # chown common data directories so the image user (appuser, UID/GID ${CONTAINER_UID}) can write
-# $SSH_CMD "set -a && . $VPS_PATH/config/deploy.env.production && for p in bot_persistence futures_models optimized_models ultimate_models trade_data app/static app/templates api_routes; do if [ -d $VPS_PATH/\$p ]; then echo 'tahir' | sudo -S chown -R aibot: $VPS_PATH/\$p && echo 'tahir' | sudo -S chmod -R u+rwX,g+rwX $VPS_PATH/\$p; fi; done" || true"
+# $SSH_CMD "set -a && . $VPS_PATH/config/deploy.env.production && for p in bot_persistence futures_models optimized_models ultimate_models trade_data app/static app/templates api_routes reports; do if [ -d $VPS_PATH/\$p ]; then sudo -n chown -R aibot: $VPS_PATH/\$p && sudo -n chmod -R u+rwX,g+rwX $VPS_PATH/\$p; fi; done" || true
 
 # Ensure reports directory and default health report exist so admin can load system health data
 echo "🔧 Ensuring default health report exists on VPS"
 # Create reports dir and default report file and ensure correct ownership for the container user
-$SSH_CMD "mkdir -p $VPS_PATH/reports && if [ ! -f $VPS_PATH/reports/backtest_top10.json ]; then echo '{\"generated_at\": null, \"aggregate_summary\": {}, \"symbol_summaries\": {}}' > $VPS_PATH/reports/backtest_top10.json; fi && echo 'tahir' | sudo -S chown -R aibot: $VPS_PATH/reports && echo 'tahir' | sudo -S chmod -R u+rwX,g+rwX $VPS_PATH/reports" || true
+$SSH_CMD "mkdir -p $VPS_PATH/reports && if [ ! -f $VPS_PATH/reports/backtest_top10.json ]; then echo '{\"generated_at\": null, \"aggregate_summary\": {}, \"symbol_summaries\": {}}' > $VPS_PATH/reports/backtest_top10.json; fi && sudo -n chown -R aibot: $VPS_PATH/reports && sudo -n chmod -R u+rwX,g+rwX $VPS_PATH/reports" || true
 echo ""
 
 # Step 3: Deploy Docker service on VPS

@@ -43,6 +43,7 @@ def _make_market_data_service():
         auto_user_id_provider=None,
         persistence_manager=None,
         symbols_for_persistence=[],
+        futures_safety_service=None,
         sleep_interval=5.0,
     )
 

@@ -224,7 +224,12 @@ class BinanceCredentialStore:
                 user_id_key = str(user_key)
                 acct_map: dict[str, Any] = {}
                 for acct_key, entry in user_map.items():
-                    acct = self._normalize_account_type(acct_key)
+                    acct_key_str = str(acct_key).strip().lower()
+                    if acct_key_str not in self.SUPPORTED_ACCOUNT_TYPES:
+                        # Allow extra keys (e.g., legacy convenience fields like
+                        # api_key_encrypted at the user level).
+                        continue
+                    acct = self._normalize_account_type(acct_key_str)
                     acct_map[acct] = self._sanitize_entry(entry, acct)
                 users_map[user_id_key] = acct_map
             normalized["users"] = users_map
@@ -344,11 +349,27 @@ class BinanceCredentialStore:
             for user_id_key, user_map in users.items():
                 if not isinstance(user_map, dict):
                     continue
-                users_out[str(user_id_key)] = {
+                serialized_user: dict[str, Any] = {
                     self._normalize_account_type(acct_key): self._serialize_entry(entry)
                     for acct_key, entry in user_map.items()
                     if isinstance(entry, dict)
                 }
+
+                # Backward-compatible convenience fields (some tests/legacy tooling
+                # expect encryption markers at the user root).
+                spot_entry = serialized_user.get("spot")
+                if isinstance(spot_entry, dict) and spot_entry.get("encrypted"):
+                    serialized_user["encrypted"] = True
+                    if spot_entry.get("api_key_encrypted"):
+                        serialized_user["api_key_encrypted"] = spot_entry.get(
+                            "api_key_encrypted"
+                        )
+                    if spot_entry.get("api_secret_encrypted"):
+                        serialized_user["api_secret_encrypted"] = spot_entry.get(
+                            "api_secret_encrypted"
+                        )
+
+                users_out[str(user_id_key)] = serialized_user
             to_write["users"] = users_out
 
         # Preserve global (legacy) credentials if present.

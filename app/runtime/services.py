@@ -6,6 +6,7 @@ from typing import Any, Callable, Dict, Iterable, Mapping, MutableMapping, Seque
 
 from app.services import (
     FuturesMarketDataService,
+    FuturesSafetyService,
     MarketDataService,
     RealtimeUpdateService,
 )
@@ -26,6 +27,7 @@ class ServiceRuntime:
     refresh_indicator_dashboard_state: Callable[[], Dict[str, list[str]]]
     market_data_service: MarketDataService
     futures_market_data_service: FuturesMarketDataService | None
+    futures_safety_service: FuturesSafetyService | None
     realtime_update_service: RealtimeUpdateService
     model_training_worker: ModelTrainingWorker
     self_improvement_worker: SelfImprovementWorker
@@ -81,6 +83,19 @@ def build_service_runtime(
         bot_logger=bot_logger,
     )
 
+    futures_safety_service = FuturesSafetyService(
+        ultimate_trader=ultimate_trader,
+        trading_config=trading_config,
+        futures_symbols=list(futures_symbols or []),
+        bot_logger=bot_logger,
+        backtest_function=getattr(ultimate_ml_system, "comprehensive_backtest", None),
+    )
+    # Attach to trader so the legacy choke-point can consult it.
+    try:  # pragma: no cover - best-effort attach
+        setattr(ultimate_trader, "futures_safety_service", futures_safety_service)
+    except Exception:
+        pass
+
     realtime_update_service = RealtimeUpdateService(
         socketio, dashboard_data, get_active_trading_universe
     )
@@ -106,6 +121,7 @@ def build_service_runtime(
         auto_user_id_provider=auto_user_id_provider,
         persistence_manager=persistence_manager,
         symbols_for_persistence=symbols_for_persistence,
+        futures_safety_service=futures_safety_service,
         sleep_interval=trading_config.get("market_data_interval_seconds", 30),
     )
 
@@ -137,6 +153,7 @@ def build_service_runtime(
         refresh_indicator_dashboard_state=refresh_indicator_dashboard_state,
         market_data_service=market_data_service,
         futures_market_data_service=futures_market_data_service,
+        futures_safety_service=futures_safety_service,
         realtime_update_service=realtime_update_service,
         model_training_worker=model_training_worker,
         self_improvement_worker=self_improvement_worker,

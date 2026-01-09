@@ -10,6 +10,7 @@ import os
 import pandas as pd
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 
 class TradingRIBSOptimizer:
@@ -42,6 +43,10 @@ class TradingRIBSOptimizer:
 
         self.logger.info("RIBS Trading Optimizer initialized")
 
+    def _atomic_tmp_path(self, final_path: str) -> str:
+        """Use a unique tmp file to avoid cross-thread/process clobbering."""
+        return f"{final_path}.{os.getpid()}.{threading.get_ident()}.tmp"
+
     def load_config(self, config_path: str) -> Dict:
         """Load RIBS configuration from YAML file"""
         try:
@@ -57,10 +62,27 @@ class TradingRIBSOptimizer:
         """Create RIBS archive for quality-diversity optimization"""
         try:
             threshold = float(self.config.get("threshold_min", -10.0))
+
+            dims = list(self.config["archive_dimensions"])
+            ranges = list(self.config["archive_ranges"])
+            if len(ranges) != len(dims):
+                # Common misconfiguration: ranges provided per-solution dimension.
+                # GridArchive expects ranges per-measure dimension (same length as dims).
+                if len(ranges) > len(dims):
+                    ranges = ranges[: len(dims)]
+                elif len(ranges) == 1 and len(dims) > 1:
+                    ranges = ranges * len(dims)
+                else:
+                    pad = ranges[-1] if ranges else [0, 1]
+                    ranges = ranges + [pad] * (len(dims) - len(ranges))
+                self.logger.warning(
+                    "RIBS config mismatch: adjusted archive_ranges to match archive_dimensions"
+                )
+
             archive = ribs.archives.GridArchive(
                 solution_dim=self.config["solution_dim"],
-                dims=self.config["archive_dimensions"],
-                ranges=self.config["archive_ranges"],
+                dims=dims,
+                ranges=ranges,
                 learning_rate=0.01,
                 threshold_min=threshold,
                 qd_score_offset=0.0,
@@ -92,18 +114,38 @@ class TradingRIBSOptimizer:
 
     def decode_solution(self, solution: np.ndarray) -> Dict:
         """Decode RIBS solution vector into trading parameters"""
+        def _unit(val: Any) -> float:
+            try:
+                num = float(val)
+            except Exception:
+                num = 0.0
+            if not np.isfinite(num):
+                num = 0.0
+            # Solutions are expected to be normalized to [0, 1]. Clamp to be safe.
+            return max(0.0, min(1.0, num))
+
+        try:
+            # Coerce to a sequence we can index.
+            sol = np.asarray(solution, dtype=object).tolist()
+        except Exception:
+            sol = list(solution) if isinstance(solution, (list, tuple)) else [0.0] * 10
+
+        # Ensure minimum length.
+        if len(sol) < 10:
+            sol = sol + [0.0] * (10 - len(sol))
+
         try:
             params = {
-                "rsi_period": int(10 + solution[0] * 20),  # 10-30
-                "macd_fast": int(8 + solution[1] * 4),  # 8-12
-                "macd_slow": int(21 + solution[2] * 10),  # 21-31
-                "bbands_period": int(14 + solution[3] * 10),  # 14-24
-                "atr_period": int(7 + solution[4] * 7),  # 7-14
-                "risk_multiplier": 0.5 + solution[5] * 1.5,  # 0.5-2.0
-                "take_profit": 1.5 + solution[6] * 3.5,  # 1.5-5.0%
-                "stop_loss": 0.5 + solution[7] * 2.0,  # 0.5-2.5%
-                "position_size": 0.01 + solution[8] * 0.09,  # 1-10%
-                "max_positions": int(1 + solution[9] * 4),  # 1-5
+                "rsi_period": int(10 + _unit(sol[0]) * 20),  # 10-30
+                "macd_fast": int(8 + _unit(sol[1]) * 4),  # 8-12
+                "macd_slow": int(21 + _unit(sol[2]) * 10),  # 21-31
+                "bbands_period": int(14 + _unit(sol[3]) * 10),  # 14-24
+                "atr_period": int(7 + _unit(sol[4]) * 7),  # 7-14
+                "risk_multiplier": 0.5 + _unit(sol[5]) * 1.5,  # 0.5-2.0
+                "take_profit": 1.5 + _unit(sol[6]) * 3.5,  # 1.5-5.0%
+                "stop_loss": 0.5 + _unit(sol[7]) * 2.0,  # 0.5-2.5%
+                "position_size": 0.01 + _unit(sol[8]) * 0.09,  # 1-10%
+                "max_positions": int(1 + _unit(sol[9]) * 4),  # 1-5
             }
             # Sanitize / clamp parameter ranges to avoid pathological values
             # (e.g., negative take_profit or zero position size can lead to
@@ -149,7 +191,19 @@ class TradingRIBSOptimizer:
             return params
         except Exception as e:
             self.logger.error(f"Failed to decode solution: {e}")
-            return {}
+            # Return a safe default parameter set.
+            return {
+                "rsi_period": 14,
+                "macd_fast": 8,
+                "macd_slow": 21,
+                "bbands_period": 14,
+                "atr_period": 7,
+                "risk_multiplier": 1.0,
+                "take_profit": 1.5,
+                "stop_loss": 0.5,
+                "position_size": 0.01,
+                "max_positions": 1,
+            }
 
     def evaluate_solution(
         self, solution: np.ndarray, market_data: Dict
@@ -328,7 +382,7 @@ class TradingRIBSOptimizer:
         # cross-process status: write a status file indicating cycle start
         try:
             status_path = os.path.join(self.checkpoints_dir, "ribs_status.json")
-            status_tmp = status_path + ".tmp"
+            status_tmp = self._atomic_tmp_path(status_path)
             status = {
                 "running": True,
                 "start_time": datetime.now().isoformat(),
@@ -477,7 +531,7 @@ class TradingRIBSOptimizer:
             # update cross-process status file to indicate completion (best-effort)
             try:
                 status_path = os.path.join(self.checkpoints_dir, "ribs_status.json")
-                status_tmp = status_path + ".tmp"
+                status_tmp = self._atomic_tmp_path(status_path)
                 status = {
                     "running": False,
                     "last_completed": datetime.now().isoformat(),
@@ -550,7 +604,7 @@ class TradingRIBSOptimizer:
             try:
                 # Always write a fresh status file rather than relying on reading it first.
                 status_path = os.path.join(self.checkpoints_dir, "ribs_status.json")
-                status_tmp = status_path + ".tmp"
+                status_tmp = self._atomic_tmp_path(status_path)
 
                 # Guard total against zero
                 total_safe = int(total) if int(total) > 0 else 1
@@ -642,7 +696,7 @@ class TradingRIBSOptimizer:
             checkpoint_path = os.path.join(
                 self.checkpoints_dir, f"ribs_checkpoint_{timestamp}.pkl"
             )
-            tmp_path = checkpoint_path + ".tmp"
+            tmp_path = self._atomic_tmp_path(checkpoint_path)
 
             checkpoint = {
                 "archive": self.archive,
@@ -714,7 +768,7 @@ class TradingRIBSOptimizer:
             # update status file with latest checkpoint info (cross-process)
             try:
                 status_path = os.path.join(self.checkpoints_dir, "ribs_status.json")
-                status_tmp = status_path + ".tmp"
+                status_tmp = self._atomic_tmp_path(status_path)
                 status = {}
                 # load existing status if available
                 try:

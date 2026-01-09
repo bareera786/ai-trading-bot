@@ -1153,6 +1153,9 @@
                             <button id="refresh-trades-btn" class="btn btn-secondary">Refresh</button>
                             <button id="export-trades-btn" class="btn btn-secondary">Export CSV</button>
                             <button id="clear-trades-btn" class="btn btn-secondary">Clear My History</button>
+                            {% if current_user.is_authenticated and current_user.is_admin %}
+                            <button id="clear-system-history-btn" class="btn btn-secondary">Clear System History</button>
+                            {% endif %}
                         </div>
                     </div>
 

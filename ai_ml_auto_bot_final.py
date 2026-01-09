@@ -2301,6 +2301,26 @@ OPTIMIZED_TRADING_CONFIG = {
     "futures_manual_auto_trade": False,
     "futures_manual_leverage": 3,
     "futures_manual_default_notional": 50.0,
+
+    # -----------------------------------------------------------------
+    # Futures safety defaults (conservative; designed for unattended VPS)
+    # -----------------------------------------------------------------
+    # Regime gate (5m): require enough volatility AND trend strength.
+    # - ATR%: filters out low-vol chop where fees/slippage dominate.
+    # - ADX: filters out weak/no-trend conditions that whipsaw.
+    "futures_safety_min_atr_pct": 0.40,  # 0.40% ATR on 5m candles is a conservative floor
+    "futures_safety_min_adx": 22.0,  # ADX>=22 avoids weak regimes (20 is borderline)
+
+    # Rolling 24h backtest gate (5m): must show edge after fees.
+    "futures_safety_backtest_refresh_minutes": 5,  # run backtest every 5min for fast feedback (production: 45)
+    "futures_safety_min_win_rate_pct": 55.0,  # >=55% to compensate for futures fees + noise
+    "futures_safety_min_profit_factor": 1.15,  # PF>=1.15 targets net-positive expectancy
+    "futures_safety_min_backtest_trades": 8,  # avoid overfitting/insufficient sample
+
+    # Symbol hard-stops (UTC day): stop trading when conditions degrade.
+    "futures_safety_max_trades_per_day": 4,  # prevents overtrading + churn fees
+    "futures_safety_max_daily_loss_usdt": 20.0,  # hard kill-switch per symbol/day
+    "futures_safety_max_consecutive_losses": 2,  # disable until UTC reset after 2 losses
     "dynamic_threshold_floor": 0.4,
     "dynamic_threshold_ceiling": 0.6,
     "default_min_notional": 10.0,
@@ -4110,6 +4130,14 @@ class ParallelPredictionEngine:
         state = self.__dict__.copy()
         state.pop("logger", None)
         return state
+
+    def __reduce__(self):
+        # When this module is reloaded in-process (e.g., across a large test run),
+        # instances created from an older class object can fail default pickling.
+        # Reconstruct via the current module-level class.
+        from ai_ml_auto_bot_final import ParallelPredictionEngine as Current
+
+        return (Current, (), self.__getstate__())
 
     def __setstate__(self, state):
         self.__dict__.update(state)
@@ -9454,11 +9482,132 @@ class UltimateAIAutoTrader:
             return None
 
         leverage_to_use = leverage or TRADING_CONFIG.get("futures_manual_leverage", 3)
+
+        # Futures safety gate (VPS-only): blocks unsafe entries without changing
+        # strategy logic.
+        safety_service = getattr(self, "futures_safety_service", None)
+        if safety_service and hasattr(safety_service, "should_allow_order"):
+            try:
+                allowed, reason, details = safety_service.should_allow_order(
+                    symbol=str(symbol).upper(),
+                    side=str(side).upper(),
+                    quantity=qty,
+                    leverage=int(leverage_to_use),
+                    reduce_only=bool(reduce_only),
+                    trader=self,
+                )
+            except Exception as exc:
+                allowed = False
+                reason = "TRADE_BLOCKED: SAFETY_SERVICE_ERROR"
+                details = {"symbol": str(symbol).upper(), "error": str(exc)}
+
+            if not allowed:
+                journal_payload = {
+                    "symbol": str(symbol).upper(),
+                    "side": str(side).upper(),
+                    "quantity": qty,
+                    "leverage": leverage_to_use,
+                    "reduce_only": reduce_only,
+                    "status": "BLOCKED",
+                    "block_reason": reason,
+                    "details": details or {},
+                    "testnet": getattr(self.futures_trader, "testnet", None),
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+                try:
+                    if hasattr(self.trade_history, "log_journal_event"):
+                        self.trade_history.log_journal_event(
+                            "FUTURES_TRADE_BLOCKED", journal_payload
+                        )
+                except Exception:
+                    pass
+                try:
+                    bot_logger.warning(
+                        f"{reason} | symbol={journal_payload['symbol']} | details={details}"
+                    )
+                except Exception:
+                    pass
+                self.last_futures_order = journal_payload
+                return None
+
         self.futures_trader.ensure_leverage(symbol, leverage_to_use)
 
         response = self.futures_trader.place_market_order(
             symbol, side, qty, reduce_only=reduce_only
         )
+
+        # After Binance confirms order acceptance, persist an explicit futures execution.
+        if response and isinstance(response, dict):
+            try:
+                order_id = response.get("orderId")
+                client_order_id = response.get("clientOrderId")
+
+                order_details = None
+                if hasattr(self.futures_trader, "get_order") and (order_id or client_order_id):
+                    try:
+                        order_details = self.futures_trader.get_order(
+                            symbol,
+                            order_id=order_id,
+                            client_order_id=client_order_id,
+                        )
+                    except Exception:
+                        order_details = None
+
+                position_snapshot = None
+                if hasattr(self.futures_trader, "get_position"):
+                    try:
+                        position_snapshot = self.futures_trader.get_position(symbol)
+                    except Exception:
+                        position_snapshot = None
+
+                merged = dict(response)
+                if isinstance(order_details, dict):
+                    merged.update(order_details)
+
+                ts_ms = None
+                for key in ("updateTime", "transactTime", "time"):
+                    raw_ts = merged.get(key)
+                    if raw_ts in (None, ""):
+                        continue
+                    try:
+                        ts_ms = int(float(raw_ts))
+                        break
+                    except Exception:
+                        continue
+
+                timestamp_iso = None
+                if ts_ms:
+                    try:
+                        timestamp_iso = datetime.utcfromtimestamp(ts_ms / 1000.0).isoformat() + "Z"
+                    except Exception:
+                        timestamp_iso = None
+
+                execution = {
+                    "market_type": "FUTURES",
+                    "exchange": "BINANCE_FUTURES",
+                    "execution_mode": "futures",
+                    "symbol": merged.get("symbol"),
+                    "side": merged.get("side"),
+                    "quantity": merged.get("origQty") if merged.get("origQty") is not None else merged.get("executedQty"),
+                    "price": merged.get("avgPrice") if merged.get("avgPrice") not in (None, "", 0, "0", "0.0") else merged.get("price"),
+                    "timestamp": timestamp_iso,
+                    "status": merged.get("status"),
+                    "binance_order_id": order_id,
+                    "client_order_id": client_order_id,
+                    "binance_timestamp_ms": ts_ms,
+                    "margin_type": position_snapshot.get("marginType") if isinstance(position_snapshot, dict) else None,
+                    "leverage": (position_snapshot.get("leverage") if isinstance(position_snapshot, dict) else None) or merged.get("leverage"),
+                    "position_side": merged.get("positionSide") or (position_snapshot.get("positionSide") if isinstance(position_snapshot, dict) else None),
+                    "reduce_only": merged.get("reduceOnly"),
+                    "close_position": merged.get("closePosition"),
+                    "working_type": merged.get("workingType"),
+                    "price_protect": merged.get("priceProtect"),
+                }
+
+                if hasattr(self.trade_history, "record_exchange_execution"):
+                    self.trade_history.record_exchange_execution(execution)
+            except Exception:
+                pass
         safe_response = response
         if response is not None:
             try:
@@ -9482,6 +9631,15 @@ class UltimateAIAutoTrader:
         if hasattr(self.trade_history, "log_journal_event"):
             self.trade_history.log_journal_event("FUTURES_ORDER", journal_payload)
         self.last_futures_order = journal_payload
+
+        # Track successful entry for daily trade limits.
+        if response and not reduce_only and safety_service and hasattr(
+            safety_service, "record_successful_entry"
+        ):
+            try:
+                safety_service.record_successful_entry(str(symbol).upper())
+            except Exception:
+                pass
         return response
 
     def _submit_real_order(
@@ -9543,6 +9701,73 @@ class UltimateAIAutoTrader:
         response = self.real_trader.place_real_order(
             symbol, normalized_side, qty, price=price, order_type=order_type
         )
+
+        # After Binance confirms order acceptance, persist an explicit spot execution.
+        if response and isinstance(response, dict):
+            try:
+                order_id = response.get("orderId")
+                client_order_id = response.get("clientOrderId")
+
+                order_details = None
+                if hasattr(self.real_trader, "get_order") and (order_id or client_order_id):
+                    try:
+                        order_details = self.real_trader.get_order(
+                            symbol,
+                            order_id=order_id,
+                            client_order_id=client_order_id,
+                        )
+                    except Exception:
+                        order_details = None
+
+                merged = dict(response)
+                if isinstance(order_details, dict):
+                    merged.update(order_details)
+
+                ts_ms = None
+                for key in ("transactTime", "updateTime", "time"):
+                    raw_ts = merged.get(key)
+                    if raw_ts in (None, ""):
+                        continue
+                    try:
+                        ts_ms = int(float(raw_ts))
+                        break
+                    except Exception:
+                        continue
+
+                timestamp_iso = None
+                if ts_ms:
+                    try:
+                        timestamp_iso = datetime.utcfromtimestamp(ts_ms / 1000.0).isoformat() + "Z"
+                    except Exception:
+                        timestamp_iso = None
+
+                execution = {
+                    "market_type": "SPOT",
+                    "exchange": "BINANCE_SPOT",
+                    "execution_mode": "real",
+                    "symbol": merged.get("symbol"),
+                    "side": merged.get("side"),
+                    "quantity": merged.get("origQty") if merged.get("origQty") is not None else merged.get("executedQty"),
+                    "price": merged.get("price"),
+                    "timestamp": timestamp_iso,
+                    "status": merged.get("status"),
+                    "binance_order_id": order_id,
+                    "client_order_id": client_order_id,
+                    "binance_timestamp_ms": ts_ms,
+                    # Futures-only fields must never be inferred for spot.
+                    "margin_type": None,
+                    "leverage": None,
+                    "position_side": None,
+                    "reduce_only": False,
+                    "close_position": False,
+                    "working_type": None,
+                    "price_protect": None,
+                }
+
+                if hasattr(self.trade_history, "record_exchange_execution"):
+                    self.trade_history.record_exchange_execution(execution)
+            except Exception:
+                pass
         safe_response = response
         if response is not None:
             try:
@@ -13186,6 +13411,7 @@ historical_data = service_runtime.historical_data
 refresh_indicator_dashboard_state = service_runtime.refresh_indicator_dashboard_state
 market_data_service = service_runtime.market_data_service
 futures_market_data_service = service_runtime.futures_market_data_service
+futures_safety_service = getattr(service_runtime, "futures_safety_service", None)
 realtime_update_service = service_runtime.realtime_update_service
 model_training_worker = service_runtime.model_training_worker
 self_improvement_worker = service_runtime.self_improvement_worker
@@ -13581,6 +13807,7 @@ background_runtime = build_background_runtime(
     bot_logger=bot_logger,
     market_data_service=market_data_service,
     futures_market_data_service=futures_market_data_service,
+    futures_safety_service=futures_safety_service,
     realtime_update_service=realtime_update_service,
     persistence_scheduler=persistence_scheduler,
     self_improvement_worker=self_improvement_worker,

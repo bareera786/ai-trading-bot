@@ -95,9 +95,12 @@ function populateTradeHistoryTable(trades) {
       minute: '2-digit',
     });
 
-    const pnl = toSafeNumber(trade.pnl, 0);
-    const pnlClass = pnl >= 0 ? 'text-success' : 'text-danger';
-    const pnlText = pnl >= 0 ? `+$${pnl.toFixed(4)}` : `-$${Math.abs(pnl).toFixed(4)}`;
+    const hasPnl = typeof trade?.pnl === 'number' && Number.isFinite(trade.pnl);
+    const pnl = hasPnl ? trade.pnl : 0;
+    const pnlClass = hasPnl ? (pnl >= 0 ? 'text-success' : 'text-danger') : 'text-muted';
+    const pnlText = hasPnl
+      ? (pnl >= 0 ? `+$${pnl.toFixed(4)}` : `-$${Math.abs(pnl).toFixed(4)}`)
+      : '—';
 
     const quantity = toSafeNumber(trade.quantity ?? trade.qty, 0);
     const entryPrice = toSafeNumber(trade.entry_price ?? trade.price ?? trade.fill_price, 0);
@@ -107,20 +110,31 @@ function populateTradeHistoryTable(trades) {
     const side = trade.side || trade.position_side || 'N/A';
     const symbol = trade.symbol || trade.ticker || 'N/A';
 
-    const tradeType = trade.execution_mode === 'futures'
-      ? 'Futures'
-      : trade.execution_mode === 'real'
-        ? 'Spot'
-        : 'Paper';
+    const marketType = String(trade?.market_type || '').toUpperCase();
+    const exchange = String(trade?.exchange || '').toUpperCase();
 
-    const leverage = trade.leverage ? `${trade.leverage}x` : '-';
+    let tradeTypeLabel = '—';
+    let tradeTypeClass = 'unknown';
+
+    if (marketType === 'FUTURES' || marketType === 'SPOT') {
+      tradeTypeLabel = exchange ? `${marketType} / ${exchange}` : marketType;
+      tradeTypeClass = marketType.toLowerCase();
+    } else if (trade?.execution_mode) {
+      const mode = String(trade.execution_mode).toUpperCase();
+      tradeTypeLabel = mode;
+      tradeTypeClass = mode === 'PAPER' ? 'paper' : mode === 'FUTURES' ? 'futures' : 'unknown';
+    }
+
+    const leverage = (marketType === 'FUTURES' || String(trade?.execution_mode || '').toLowerCase() === 'futures') && trade.leverage
+      ? `${trade.leverage}x`
+      : '-';
 
     row.classList.add('trade-row', isClosed ? 'trade-row-closed' : 'trade-row-open');
 
     row.innerHTML = `
       <td class="trade-col-date">${dateString}</td>
       <td class="trade-col-symbol">${symbol}</td>
-      <td class="trade-col-type"><span class="trade-type-${tradeType.toLowerCase()}">${tradeType}</span></td>
+      <td class="trade-col-type"><span class="trade-type-${tradeTypeClass}">${tradeTypeLabel}</span></td>
       <td class="trade-col-side">${side}</td>
       <td class="trade-col-num">${quantity.toFixed(4)}</td>
       <td class="trade-col-num">$${entryPrice.toFixed(4)}</td>
@@ -168,10 +182,22 @@ function showTradeDetail(trade) {
   if (el) el.textContent = toSafeNumber(trade.entry_price ?? trade.price ?? trade.fill_price, 0).toFixed(8);
 
   el = modal.querySelector('.trade-detail-exit');
-  if (el) el.textContent = toSafeNumber(trade.exit_price ?? trade.close_price, 0).toFixed(8);
+  if (el) {
+    const status = String(trade.status || trade.state || '').toUpperCase();
+    const rawExit = trade.exit_price ?? trade.close_price;
+    const exit = toSafeNumber(rawExit, 0);
+    if (status === 'OPEN' && exit === 0) {
+      el.textContent = '—';
+    } else {
+      el.textContent = exit.toFixed(8);
+    }
+  }
 
   el = modal.querySelector('.trade-detail-pnl');
-  if (el) el.textContent = toSafeNumber(trade.pnl, 0).toFixed(8);
+  if (el) {
+    const hasPnl = typeof trade?.pnl === 'number' && Number.isFinite(trade.pnl);
+    el.textContent = hasPnl ? trade.pnl.toFixed(8) : '—';
+  }
 
   el = modal.querySelector('.trade-detail-status');
   if (el) el.textContent = trade.status || trade.state || 'N/A';
@@ -306,8 +332,9 @@ export function convertTradesToCSV(trades) {
       minute: '2-digit',
     });
 
-    const pnl = toSafeNumber(trade.pnl, 0);
-    const pnlText = pnl >= 0 ? `$${pnl.toFixed(4)}` : `-$${Math.abs(pnl).toFixed(4)}`;
+    const hasPnl = typeof trade?.pnl === 'number' && Number.isFinite(trade.pnl);
+    const pnl = hasPnl ? trade.pnl : 0;
+    const pnlText = hasPnl ? (pnl >= 0 ? `$${pnl.toFixed(4)}` : `-$${Math.abs(pnl).toFixed(4)}`) : '';
 
     const quantity = toSafeNumber(trade.quantity ?? trade.qty, 0);
     const entryPrice = toSafeNumber(trade.entry_price ?? trade.price ?? trade.fill_price, 0);
@@ -416,9 +443,10 @@ export function initTradeHistory() {
     clearBtn.addEventListener('click', async () => {
       try {
         const user = await fetchJson('/api/current_user');
+        const isAdmin = Boolean(user?.is_admin);
         const userId = user?.id;
         if (!userId) {
-          alert('Unable to determine current user.');
+          alert('Unable to determine current user. Please log in again.');
           return;
         }
 
@@ -444,14 +472,76 @@ export function initTradeHistory() {
         availableSymbols.clear();
         currentPage = 1;
         await loadTradeHistory();
-        alert(`Cleared ${resp.deleted || 0} trade(s).`);
+        if (isAdmin) {
+          alert(
+            `Cleared ${resp.deleted || 0} personal trade(s). Admin Trade History includes the system trade log and is not cleared by this action.`
+          );
+        } else {
+          alert(`Cleared ${resp.deleted || 0} trade(s).`);
+        }
       } catch (error) {
         console.error('Error clearing trades:', error);
-        alert('Failed to clear trade history. Please try again.');
+        const msg = String(error?.message || '');
+        if (/auth|login|401|403/i.test(msg)) {
+          alert('Session expired or access denied. Please log in again.');
+        } else {
+          alert('Failed to clear trade history. Please try again.');
+        }
       } finally {
         clearBtn.disabled = false;
         if (clearBtn.textContent === 'Clearing...') {
           clearBtn.textContent = 'Clear My History';
+        }
+      }
+    });
+  }
+
+  const clearSystemBtn = document.getElementById('clear-system-history-btn');
+  if (clearSystemBtn) {
+    clearSystemBtn.addEventListener('click', async () => {
+      try {
+        const user = await fetchJson('/api/current_user');
+        const isAdmin = Boolean(user?.is_admin);
+        if (!isAdmin) {
+          alert('Access denied.');
+          return;
+        }
+
+        const confirmed = window.confirm(
+          'This will permanently delete the SYSTEM trade log (bot history). This affects the admin merged view. Continue?'
+        );
+        if (!confirmed) return;
+
+        clearSystemBtn.disabled = true;
+        const originalText = clearSystemBtn.textContent;
+        clearSystemBtn.textContent = 'Clearing...';
+
+        const resp = await fetchJson('/api/clear_history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (resp?.error) {
+          alert(resp.error);
+          return;
+        }
+
+        // System history cleared; refresh table.
+        currentPage = 1;
+        await loadTradeHistory();
+        alert(resp?.message || 'System trade history cleared.');
+      } catch (error) {
+        console.error('Error clearing system history:', error);
+        const msg = String(error?.message || '');
+        if (/auth|login|401|403/i.test(msg)) {
+          alert('Session expired or access denied. Please log in again.');
+        } else {
+          alert('Failed to clear system history. Please try again.');
+        }
+      } finally {
+        clearSystemBtn.disabled = false;
+        if (clearSystemBtn.textContent === 'Clearing...') {
+          clearSystemBtn.textContent = 'Clear System History';
         }
       }
     });

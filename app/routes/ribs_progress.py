@@ -5,6 +5,8 @@ import os
 import json
 import time
 import asyncio
+
+from app.services.pathing import resolve_profile_path
 try:
     from app.integrations.ribs_connector import RIBSConnector
 except Exception:
@@ -38,7 +40,7 @@ ribs_progress_bp = Blueprint("ribs_progress", __name__)
 def api_ribs_progress():
     """Return lightweight RIBS progress information read from ribs_status.json"""
     status_path = os.path.join(
-        "bot_persistence", "ribs_checkpoints", "ribs_status.json"
+        resolve_profile_path("bot_persistence"), "ribs_checkpoints", "ribs_status.json"
     )
     if not os.path.exists(status_path):
         return (
@@ -125,7 +127,7 @@ def api_ribs_progress():
 def api_ribs_logs():
     """Return recent RIBS-related logs from bot.log"""
     try:
-        log_path = os.path.join("logs", "default", "bot.log")
+        log_path = os.path.join(resolve_profile_path("logs"), "bot.log")
         if not os.path.exists(log_path):
             return jsonify({"logs": [], "message": "Log file not found"}), 404
 

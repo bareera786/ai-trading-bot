@@ -37,6 +37,7 @@ class MarketDataService:
         auto_user_id_provider: Callable[[], Iterable[int]] | None = None,
         persistence_manager: Any | None = None,
         symbols_for_persistence: Iterable[str] | None = None,
+        futures_safety_service: Any | None = None,
         sleep_interval: float = 30.0,
     ) -> None:
         self.dashboard_data = dashboard_data
@@ -84,6 +85,7 @@ class MarketDataService:
         self.auto_user_id_provider = auto_user_id_provider
         self.persistence_manager = persistence_manager
         self.symbols_for_persistence = list(symbols_for_persistence or [])
+        self.futures_safety_service = futures_safety_service
         self.sleep_interval = max(
             5.0, float(sleep_interval) if sleep_interval else 30.0
         )
@@ -186,6 +188,24 @@ class MarketDataService:
             assert getattr(cached_optimized, "user_id", None) == int(user_id)
             assert getattr(cached_ultimate, "persistence_profile", None) == expected_profile
             assert getattr(cached_optimized, "persistence_profile", None) == expected_profile
+
+            if self.futures_safety_service is not None:
+                try:
+                    setattr(
+                        cached_ultimate,
+                        "futures_safety_service",
+                        self.futures_safety_service,
+                    )
+                except Exception:
+                    pass
+                try:
+                    setattr(
+                        cached_optimized,
+                        "futures_safety_service",
+                        self.futures_safety_service,
+                    )
+                except Exception:
+                    pass
             return cached
 
         base_ultimate = self.ultimate_trader
@@ -211,6 +231,17 @@ class MarketDataService:
         assert getattr(optimized, "user_id", None) == int(user_id)
         assert getattr(ultimate, "persistence_profile", None) == profile
         assert getattr(optimized, "persistence_profile", None) == profile
+
+        # Ensure futures safety is enforced for user-scoped traders as well.
+        if self.futures_safety_service is not None:
+            try:
+                setattr(ultimate, "futures_safety_service", self.futures_safety_service)
+            except Exception:
+                pass
+            try:
+                setattr(optimized, "futures_safety_service", self.futures_safety_service)
+            except Exception:
+                pass
 
         # Apply user credentials (spot) to the user-scoped trader instances.
         store = getattr(self.binance_credential_service, "credentials_store", None)
@@ -539,6 +570,7 @@ class MarketDataService:
                 # Multi-user auto-trading: execute the same shared signals across
                 # isolated per-user trader instances.
                 if user_ids:
+                    multi_user_mode = len(user_ids) > 1
                     for uid in user_ids:
                         user_ultimate, user_optimized = self._get_or_create_user_traders(uid)
 
@@ -626,12 +658,13 @@ class MarketDataService:
                                 detail=str(opt_message or "")[:200] or None,
                             )
 
-                        # Execute futures trades if futures trading is enabled (per-user)
-                        if (
-                            self.trading_config.get("futures_enabled")
-                            and getattr(user_ultimate, "futures_trading_enabled", False)
-                            and getattr(user_ultimate, "futures_trader", None)
-                        ):
+                        # Execute futures trades.
+                        # Legacy single-user behavior: gated by TRADING_CONFIG.futures_enabled.
+                        # Multi-user behavior: gated per-user by the trader flag.
+                        futures_globally_enabled = bool(self.trading_config.get("futures_enabled"))
+                        futures_user_enabled = bool(getattr(user_ultimate, "futures_trading_enabled", False))
+                        futures_ready = bool(getattr(user_ultimate, "futures_trader", None))
+                        if ((not multi_user_mode and futures_globally_enabled) or multi_user_mode) and futures_user_enabled and futures_ready:
                             if primary_user_id is not None and uid == primary_user_id:
                                 self._set_symbol_phase(symbol, "futures_check", status="ok", progress=93)
                             if success and message and "BUY" in str(message).upper():

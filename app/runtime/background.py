@@ -30,6 +30,7 @@ def build_background_runtime(
     bot_logger: Any | None,
     market_data_service: Any,
     futures_market_data_service: Any | None,
+    futures_safety_service: Any | None,
     realtime_update_service: Any | None,
     persistence_scheduler: Any | None,
     self_improvement_worker: Any | None,
@@ -52,6 +53,7 @@ def build_background_runtime(
     manager = BackgroundTaskManager(
         market_data_service=market_data_service,
         futures_market_data_service=futures_market_data_service,
+        futures_safety_service=futures_safety_service,
         realtime_update_service=realtime_update_service,
         persistence_scheduler=persistence_scheduler,
         self_improvement_worker=self_improvement_worker,

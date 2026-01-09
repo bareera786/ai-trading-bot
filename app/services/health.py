@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 from typing import Any, Callable, Dict, Mapping, Tuple
 
-from prometheus_client import Counter, Gauge, Histogram
+from prometheus_client import Counter, Gauge, Histogram, CollectorRegistry, REGISTRY
 
 
 class HealthReportService:
@@ -26,6 +26,7 @@ class HealthReportService:
             [Mapping[str, Any], Mapping[str, Any]], Dict[str, Any]
         ],
         lock: threading.Lock | None = None,
+        registry: CollectorRegistry | None = None,
     ) -> None:
         self._config = dict(config)
         self._project_root = project_root
@@ -33,14 +34,42 @@ class HealthReportService:
         self._summary_evaluator = summary_evaluator
         self._lock = lock or threading.Lock()
 
+        if registry is None:
+            # Tests often construct multiple app/service instances in one process.
+            # Using a fresh registry avoids "Duplicated timeseries" failures.
+            if os.getenv("AI_BOT_TEST_MODE") == "1" or os.getenv("PYTEST_CURRENT_TEST"):
+                registry = CollectorRegistry()
+            else:
+                registry = REGISTRY
+
         # Prometheus metrics
-        self.health_check_counter = Counter('health_checks_total', 'Total number of health checks')
-        self.health_check_duration = Histogram('health_check_duration_seconds', 'Time spent on health checks')
-        self.system_health_gauge = Gauge('system_health_status', 'Current system health status (1=healthy, 0=unhealthy)')
-        
+        self.health_check_counter = Counter(
+            "health_checks_total",
+            "Total number of health checks",
+            registry=registry,
+        )
+        self.health_check_duration = Histogram(
+            "health_check_duration_seconds",
+            "Time spent on health checks",
+            registry=registry,
+        )
+        self.system_health_gauge = Gauge(
+            "system_health_status",
+            "Current system health status (1=healthy, 0=unhealthy)",
+            registry=registry,
+        )
+
         # Circuit breaker metrics
-        self.circuit_breaker_state = Gauge('circuit_breaker_state', 'Circuit breaker state (0=closed, 1=open, 2=half_open)')
-        self.circuit_breaker_failures = Gauge('circuit_breaker_failures_total', 'Total circuit breaker failures')
+        self.circuit_breaker_state = Gauge(
+            "circuit_breaker_state",
+            "Circuit breaker state (0=closed, 1=open, 2=half_open)",
+            registry=registry,
+        )
+        self.circuit_breaker_failures = Gauge(
+            "circuit_breaker_failures_total",
+            "Total circuit breaker failures",
+            registry=registry,
+        )
 
     def refresh(self, *, run_backtest: bool) -> Dict[str, Any]:
         with self.health_check_duration.time():
@@ -52,37 +81,40 @@ class HealthReportService:
                 if backtest_error:
                     errors.append(backtest_error)
 
-            payload, load_error = self._load_health_report_payload(
-            self._config["report_path"]
-        )
-        if load_error:
-            errors.append(load_error)
+            payload, load_error = self._load_health_report_payload(self._config["report_path"])
+            if load_error:
+                errors.append(load_error)
 
-        if payload:
-            health_summary = self._summary_evaluator(payload, self._config)
-            health_summary["generated_at"] = payload.get("generated_at")
-            health_summary["source"] = self._config["report_path"]
-        else:
-            health_summary = self._empty_summary()
+            if payload:
+                health_summary = self._summary_evaluator(payload, self._config)
+                health_summary["generated_at"] = payload.get("generated_at")
+                health_summary["source"] = self._config["report_path"]
+            else:
+                health_summary = self._empty_summary()
 
-        health_summary["errors"] = errors
-        health_summary["last_refresh"] = datetime.utcnow().isoformat()
+            health_summary["errors"] = errors
+            health_summary["last_refresh"] = datetime.utcnow().isoformat()
 
-        # Update Prometheus metrics
-        self.health_check_counter.inc()
-        self.system_health_gauge.set(1 if not errors else 0)
-        
-        # Update circuit breaker metrics
-        circuit_breaker_data = self._dashboard_data.get("system_status", {}).get("circuit_breaker", {})
-        if circuit_breaker_data:
-            state_value = {"CLOSED": 0, "OPEN": 1, "HALF_OPEN": 2}.get(circuit_breaker_data.get("state", "CLOSED"), 0)
-            self.circuit_breaker_state.set(state_value)
-            self.circuit_breaker_failures.set(circuit_breaker_data.get("failure_count", 0))
+            # Update Prometheus metrics
+            self.health_check_counter.inc()
+            self.system_health_gauge.set(1 if not errors else 0)
 
-        with self._lock:
-            self._dashboard_data.setdefault("health_report", {})
-            self._dashboard_data["health_report"] = health_summary
-            return health_summary
+            # Update circuit breaker metrics
+            circuit_breaker_data = self._dashboard_data.get("system_status", {}).get(
+                "circuit_breaker", {}
+            )
+            if circuit_breaker_data:
+                state_value = {"CLOSED": 0, "OPEN": 1, "HALF_OPEN": 2}.get(
+                    circuit_breaker_data.get("state", "CLOSED"),
+                    0,
+                )
+                self.circuit_breaker_state.set(state_value)
+                self.circuit_breaker_failures.set(circuit_breaker_data.get("failure_count", 0))
+
+            with self._lock:
+                self._dashboard_data.setdefault("health_report", {})
+                self._dashboard_data["health_report"] = health_summary
+                return health_summary
 
     def start_periodic_refresh(self) -> threading.Thread:
         interval = max(300, int(self._config.get("refresh_seconds", 3600)))

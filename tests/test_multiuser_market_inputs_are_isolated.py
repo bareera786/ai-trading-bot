@@ -226,6 +226,7 @@ def test_multiuser_auto_trade_inputs_are_isolated_per_user():
         bot_logger=logging.getLogger("test"),
         persistence_manager=None,
         symbols_for_persistence=["BTCUSDT"],
+        futures_safety_service=None,
         sleep_interval=5.0,
     )
 
@@ -279,6 +280,7 @@ def test_multiuser_predictions_and_ensemble_are_isolated_per_user():
         bot_logger=logging.getLogger("test"),
         persistence_manager=None,
         symbols_for_persistence=["BTCUSDT"],
+        futures_safety_service=None,
         sleep_interval=5.0,
     )
 
@@ -365,6 +367,7 @@ def test_multiuser_nested_prediction_payloads_are_isolated_per_user():
         bot_logger=logging.getLogger("test"),
         persistence_manager=None,
         symbols_for_persistence=["BTCUSDT"],
+        futures_safety_service=None,
         sleep_interval=5.0,
     )
 

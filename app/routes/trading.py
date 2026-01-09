@@ -97,7 +97,7 @@ def _state_file_path() -> str:
 
 def _update_state_file(field: str, value: Any, *, profile: str | None = None) -> None:
     try:
-        from app.services.persistence import ensure_persistence_dirs
+        from app.services.persistence import ensure_persistence_dirs, _atomic_write_json, _bot_state_file_lock
 
         persist_dir = ensure_persistence_dirs(profile)
         state_file = str(persist_dir / "bot_state.json")
@@ -106,8 +106,9 @@ def _update_state_file(field: str, value: Any, *, profile: str | None = None) ->
     if not os.path.exists(state_file):
         return
     try:
-        with open(state_file, "r") as handle:
-            state = json.load(handle)
+        with _bot_state_file_lock(state_file):
+            with open(state_file, "r", encoding="utf-8") as handle:
+                state = json.load(handle)
     except Exception:
         return
 
@@ -117,11 +118,46 @@ def _update_state_file(field: str, value: Any, *, profile: str | None = None) ->
     state["timestamp"] = datetime.now().isoformat()
 
     try:
-        with open(state_file, "w") as handle:
-            json.dump(state, handle, indent=2, default=str)
+        with _bot_state_file_lock(state_file):
+            _atomic_write_json(state_file, state)
         print(f"💾 Directly updated state file: {field} = {value}")
     except Exception as exc:  # pragma: no cover - best effort logging
         print(f"⚠️ Failed to directly update state file: {exc}")
+
+
+def _update_trading_config_state_file(
+    field: str, value: Any, *, profile: str | None = None
+) -> None:
+    """Best-effort update of persisted TRADING_CONFIG in bot_state.json."""
+    try:
+        from app.services.persistence import ensure_persistence_dirs, _atomic_write_json, _bot_state_file_lock
+
+        persist_dir = ensure_persistence_dirs(profile)
+        state_file = str(persist_dir / "bot_state.json")
+    except Exception:
+        state_file = _state_file_path()
+    if not os.path.exists(state_file):
+        return
+    try:
+        with _bot_state_file_lock(state_file):
+            with open(state_file, "r", encoding="utf-8") as handle:
+                state = json.load(handle)
+    except Exception:
+        return
+
+    configuration = state.get("configuration") or {}
+    trading_config = configuration.get("TRADING_CONFIG") or {}
+    trading_config[field] = value
+    configuration["TRADING_CONFIG"] = trading_config
+    state["configuration"] = configuration
+    state["timestamp"] = datetime.now().isoformat()
+
+    try:
+        with _bot_state_file_lock(state_file):
+            _atomic_write_json(state_file, state)
+        print(f"💾 Directly updated state file: TRADING_CONFIG.{field} = {value}")
+    except Exception as exc:  # pragma: no cover - best effort logging
+        print(f"⚠️ Failed to directly update trading config in state file: {exc}")
 
 
 @trading_bp.route(
@@ -678,6 +714,12 @@ def api_futures_manual_toggle_trading():
     dashboard_data["system_status"] = system_status
     dashboard_data["futures_manual"] = ensure_manual_defaults(update_dashboard=False)
 
+    _update_trading_config_state_file("futures_manual_auto_trade", enable)
+    _update_trading_config_state_file("futures_manual_mode", mode)
+    _update_trading_config_state_file(
+        "futures_selected_symbol", futures_manual_settings.get("selected_symbol")
+    )
+
     return jsonify(
         {
             "auto_trade_enabled": enable,
@@ -861,11 +903,43 @@ def api_spot_trade():
 def api_futures_toggle():
     ctx = _get_bot_context()
     dashboard_data = _get_dashboard_data(ctx)
-    ultimate_trader = ctx.get("ultimate_trader")
-    optimized_trader = ctx.get("optimized_trader")
+    market_data_service = ctx.get("market_data_service")
+    ultimate_trader = None
+    optimized_trader = None
+    futures_market_data_service = ctx.get("futures_market_data_service")
+    trading_config = ctx.get("trading_config")
+    if not isinstance(trading_config, dict):
+        trading_config = {}
+
+    user_scoped = False
+    persistence_profile = None
+    if (
+        getattr(current_user, "is_authenticated", False)
+        and market_data_service is not None
+        and hasattr(market_data_service, "_get_or_create_user_traders")
+    ):
+        try:
+            ultimate_trader, optimized_trader = market_data_service._get_or_create_user_traders(
+                int(current_user.id)
+            )
+            user_scoped = True
+            persistence_profile = getattr(ultimate_trader, "persistence_profile", None)
+        except Exception:
+            ultimate_trader = None
+            optimized_trader = None
+            user_scoped = False
+
+    if ultimate_trader is None or optimized_trader is None:
+        ultimate_trader = ctx.get("ultimate_trader")
+        optimized_trader = ctx.get("optimized_trader")
+        user_scoped = False
 
     if not all([ultimate_trader, optimized_trader]):
         return jsonify({"error": "Trading engines unavailable"}), 500
+
+    if dashboard_data is not None:
+        dashboard_data.setdefault("system_status", {})
+        dashboard_data.setdefault("optimized_system_status", {})
 
     try:
         payload = request.get_json(silent=True) or {}
@@ -881,6 +955,11 @@ def api_futures_toggle():
         ultimate_trader.futures_trading_enabled = enable
         optimized_trader.futures_trading_enabled = enable
 
+        # Legacy single-user behavior: futures market-data loop is gated on
+        # TRADING_CONFIG.futures_enabled, so keep it aligned.
+        if not user_scoped and isinstance(trading_config, dict):
+            trading_config["futures_enabled"] = enable
+
         # Diagnostic: log instance ids and flags so we can compare with persistence
         try:
             print(
@@ -894,17 +973,116 @@ def api_futures_toggle():
         dashboard_data["optimized_system_status"]["futures_trading_enabled"] = enable
         dashboard_data["optimized_system_status"]["futures_trading_ready"] = enable
 
-        _update_state_file("futures_trading_enabled", enable)
+        dashboard_data["system_status"]["futures_enabled"] = bool(
+            enable if user_scoped else trading_config.get("futures_enabled", False)
+        )
+
+        _update_state_file("futures_trading_enabled", enable, profile=persistence_profile)
+        if not user_scoped:
+            _update_trading_config_state_file("futures_enabled", enable)
+
+        # Keep the background futures loop aligned with config only in legacy
+        # single-user mode. In multi-user mode, a single user's toggle must not
+        # start/stop a shared background service.
+        if not user_scoped:
+            try:
+                if futures_market_data_service is not None:
+                    if enable:
+                        futures_market_data_service.start()
+                    else:
+                        futures_market_data_service.stop()
+            except Exception as exc:  # pragma: no cover - defensive
+                current_app.logger.warning(
+                    "Failed to start/stop futures market data service: %s", exc
+                )
 
         return jsonify(
             {
                 "futures_trading_enabled": enable,
-                "message": f"Futures trading {'enabled' if enable else 'disabled'} for both profiles",
+                "futures_enabled": enable
+                if user_scoped
+                else (
+                    bool(trading_config.get("futures_enabled", False))
+                    if isinstance(trading_config, dict)
+                    else None
+                ),
+                "message": f"Futures trading {'enabled' if enable else 'disabled'}{' for current user' if user_scoped else ' for both profiles'}",
             }
         )
     except Exception as exc:
         print(f"Error in /api/futures/toggle: {exc}")
         return jsonify({"error": str(exc)}), 500
+
+
+@trading_bp.route(
+    "/api/futures/diagnostics",
+    methods=["GET"],
+    endpoint="api_futures_diagnostics",
+)
+@subscription_required
+def api_futures_diagnostics():
+    if not getattr(current_user, "is_admin", False):
+        return jsonify({"error": "Admin access required"}), 403
+
+    ctx = _get_bot_context()
+    ultimate_trader = ctx.get("ultimate_trader")
+    optimized_trader = ctx.get("optimized_trader")
+    trading_config = ctx.get("trading_config") or {}
+    futures_market_data_service = ctx.get("futures_market_data_service")
+    futures_dashboard_state = ctx.get("futures_dashboard_state") or {}
+    futures_manual_settings = ctx.get("futures_manual_settings") or {}
+
+    futures_trader = getattr(ultimate_trader, "futures_trader", None)
+    futures_ready = bool(getattr(futures_trader, "is_ready", lambda: False)()) if futures_trader else False
+
+    thread = getattr(futures_market_data_service, "_thread", None)
+    service_alive = bool(thread.is_alive()) if thread else False
+
+    config_futures_enabled = bool(trading_config.get("futures_enabled", False))
+    trader_futures_enabled = bool(
+        getattr(ultimate_trader, "futures_trading_enabled", False)
+    )
+    manual_auto_trade = bool(trading_config.get("futures_manual_auto_trade", False))
+
+    blockers: list[str] = []
+    if not config_futures_enabled:
+        blockers.append("TRADING_CONFIG.futures_enabled is false (loop will not run)")
+    if not trader_futures_enabled:
+        blockers.append("ultimate_trader.futures_trading_enabled is false")
+    if manual_auto_trade and not futures_ready:
+        blockers.append("Manual auto-trade enabled but futures trader not ready")
+    if manual_auto_trade and not futures_manual_settings.get("selected_symbol"):
+        blockers.append("Manual auto-trade enabled but no selected_symbol")
+
+    return jsonify(
+        {
+            "config": {
+                "futures_enabled": config_futures_enabled,
+                "futures_manual_auto_trade": manual_auto_trade,
+                "futures_manual_mode": trading_config.get("futures_manual_mode"),
+                "futures_selected_symbol": trading_config.get("futures_selected_symbol"),
+            },
+            "trader": {
+                "ultimate_futures_trading_enabled": trader_futures_enabled,
+                "optimized_futures_trading_enabled": bool(
+                    getattr(optimized_trader, "futures_trading_enabled", False)
+                ),
+                "futures_trader_ready": futures_ready,
+            },
+            "service": {
+                "futures_market_data_service_alive": service_alive,
+                "last_futures_update": futures_dashboard_state.get("last_update"),
+            },
+            "manual": {
+                "selected_symbol": futures_manual_settings.get("selected_symbol"),
+                "auto_trade_enabled": futures_manual_settings.get("auto_trade_enabled"),
+                "mode": futures_manual_settings.get("mode"),
+                "last_error": futures_manual_settings.get("last_error"),
+                "updated_at": futures_manual_settings.get("updated_at"),
+            },
+            "blockers": blockers,
+        }
+    )
 
 
 @trading_bp.route("/api/futures/trade", methods=["POST"], endpoint="api_futures_trade")

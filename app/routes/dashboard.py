@@ -24,6 +24,147 @@ from flask_login import current_user, login_required
 dashboard_bp = Blueprint("dashboard_bp", __name__)
 
 
+def _extract_price(market_payload: Any) -> float | None:
+    if not isinstance(market_payload, dict):
+        return None
+    for key in ("price", "last_price", "lastPrice", "current_price", "close"):
+        value = market_payload.get(key)
+        try:
+            if value is None:
+                continue
+            return float(value)
+        except Exception:
+            continue
+    return None
+
+
+def _get_user_traders_from_market_service(
+    ctx: dict[str, Any], user_id: int
+) -> tuple[Any | None, Any | None]:
+    market_service = ctx.get("market_data_service")
+    getter = getattr(market_service, "_get_or_create_user_traders", None)
+    if callable(getter):
+        try:
+            ultimate, optimized = getter(int(user_id))
+            return ultimate, optimized
+        except Exception:
+            return None, None
+    return None, None
+
+
+def _build_user_portfolio(
+    trader: Any,
+    *,
+    ctx: dict[str, Any],
+    dashboard_data: dict[str, Any],
+) -> dict[str, Any]:
+    get_portfolio = getattr(trader, "get_portfolio_summary", None)
+    if not callable(get_portfolio):
+        return {}
+
+    symbols: set[str] = set()
+    try:
+        positions = getattr(trader, "positions", {}) or {}
+        if isinstance(positions, dict):
+            symbols.update(str(s).upper() for s in positions.keys())
+    except Exception:
+        pass
+
+    market_service = ctx.get("market_data_service")
+    market_fn = getattr(market_service, "get_real_market_data", None)
+    if not callable(market_fn):
+        market_fn = ctx.get("get_real_market_data")
+
+    prices: dict[str, float] = {}
+    if callable(market_fn):
+        for symbol in sorted(symbols):
+            try:
+                payload = market_fn(symbol)
+                price = _extract_price(payload)
+                if price is not None:
+                    prices[symbol] = price
+            except Exception:
+                continue
+
+    try:
+        return get_portfolio(prices) or {}
+    except Exception:
+        return {}
+
+
+def _build_user_performance(trader: Any) -> dict[str, Any]:
+    get_perf = getattr(trader, "get_performance_summary", None)
+    if callable(get_perf):
+        try:
+            return get_perf() or {}
+        except Exception:
+            return {}
+    try:
+        metrics = getattr(trader, "performance_metrics", None)
+        return dict(metrics) if isinstance(metrics, dict) else {}
+    except Exception:
+        return {}
+
+
+def _build_user_system_status(
+    trader: Any,
+    *,
+    base_status: dict[str, Any],
+) -> dict[str, Any]:
+    # Start from existing status shape (keeps UI compatibility), but overwrite
+    # sensitive/user-specific fields with values from the current user's trader.
+    status = dict(base_status or {})
+    try:
+        status["trading_enabled"] = bool(getattr(trader, "trading_enabled", False))
+    except Exception:
+        pass
+    try:
+        status["paper_trading"] = bool(getattr(trader, "paper_trading", True))
+    except Exception:
+        pass
+    try:
+        status["real_trading_ready"] = bool(
+            getattr(trader, "real_trading_enabled", False)
+        )
+    except Exception:
+        pass
+    try:
+        status["futures_trading_ready"] = bool(
+            getattr(trader, "futures_trading_enabled", False)
+            and getattr(trader, "futures_trader", None)
+        )
+        status["futures_trading_enabled"] = bool(
+            getattr(trader, "futures_trading_enabled", False)
+        )
+        status["futures_enabled"] = bool(
+            getattr(trader, "futures_trading_enabled", False)
+        )
+    except Exception:
+        pass
+    try:
+        trades = getattr(trader, "trade_history", None)
+        get_history = getattr(trades, "get_trade_history", None)
+        if callable(get_history):
+            history = get_history() or []
+            if history:
+                status["last_trade"] = history[-1]
+    except Exception:
+        pass
+    return status
+
+
+def _build_user_journal_events(trader: Any, limit: int = 10) -> list[dict[str, Any]]:
+    try:
+        trade_history = getattr(trader, "trade_history", None)
+        getter = getattr(trade_history, "get_journal_events", None)
+        if callable(getter):
+            events = getter(limit=limit) or []
+            return events if isinstance(events, list) else []
+    except Exception:
+        pass
+    return []
+
+
 def _get_ai_bot_context() -> dict[str, Any]:
     """Get AI bot context, with fallback for when it's not fully initialized."""
     ctx = current_app.extensions.get("ai_bot_context")
@@ -348,6 +489,7 @@ def api_status():
 
 
 @dashboard_bp.route("/api/safety_status", endpoint="api_safety_status")
+@login_required
 def api_safety_status():
     ctx = _get_ai_bot_context()
     dashboard_data = _get_dashboard_data(ctx)
@@ -361,6 +503,7 @@ def api_safety_status():
 
 
 @dashboard_bp.route("/api/real_trading_status", endpoint="api_real_trading_status")
+@login_required
 def api_real_trading_status():
     ctx = _get_ai_bot_context()
     dashboard_data = _get_dashboard_data(ctx)
@@ -408,21 +551,61 @@ def api_dashboard_overview():
             binance_logs = []
             binance_credentials = {}
 
+    # Multi-user isolation hardening:
+    # Never return shared dashboard_data fields that reflect another user's
+    # state. When the MarketDataService supports per-user traders, derive the
+    # sensitive dashboard sections from the current user's trader instances.
+    ultimate_trader = None
+    optimized_trader = None
+    try:
+        user_id = int(getattr(current_user, "id", 0) or 0)
+    except Exception:
+        user_id = 0
+    if user_id:
+        ultimate_trader, optimized_trader = _get_user_traders_from_market_service(
+            ctx, user_id
+        )
+
+    system_status = dashboard_data.get("system_status", {})
+    performance = dashboard_data.get("performance", {})
+    portfolio = dashboard_data.get("portfolio", {})
+    optimized_system_status = dashboard_data.get("optimized_system_status", {})
+    optimized_performance = dashboard_data.get("optimized_performance", {})
+    optimized_portfolio = dashboard_data.get("optimized_portfolio", {})
+    journal_events = dashboard_data.get("journal_events", [])[:10]
+
+    if ultimate_trader is not None:
+        system_status = _build_user_system_status(
+            ultimate_trader, base_status=system_status
+        )
+        performance = _build_user_performance(ultimate_trader)
+        portfolio = _build_user_portfolio(
+            ultimate_trader, ctx=ctx, dashboard_data=dashboard_data
+        )
+        journal_events = _build_user_journal_events(ultimate_trader, limit=10)
+
+    if optimized_trader is not None:
+        optimized_system_status = _build_user_system_status(
+            optimized_trader, base_status=optimized_system_status
+        )
+        optimized_performance = _build_user_performance(optimized_trader)
+        optimized_portfolio = _build_user_portfolio(
+            optimized_trader, ctx=ctx, dashboard_data=dashboard_data
+        )
+
     return jsonify(
         {
             "user": {
                 "username": getattr(current_user, "username", "unknown"),
                 "is_admin": getattr(current_user, "is_admin", False),
             },
-            "system_status": dashboard_data.get("system_status", {}),
-            "performance": dashboard_data.get("performance", {}),
-            "portfolio": dashboard_data.get("portfolio", {}),
+            "system_status": system_status,
+            "performance": performance,
+            "portfolio": portfolio,
             "last_update": dashboard_data.get("last_update"),
-            "optimized_system_status": dashboard_data.get(
-                "optimized_system_status", {}
-            ),
-            "optimized_performance": dashboard_data.get("optimized_performance", {}),
-            "optimized_portfolio": dashboard_data.get("optimized_portfolio", {}),
+            "optimized_system_status": optimized_system_status,
+            "optimized_performance": optimized_performance,
+            "optimized_portfolio": optimized_portfolio,
             "safety_status": dashboard_data.get("safety_status", {}),
             "optimized_safety_status": dashboard_data.get(
                 "optimized_safety_status", {}
@@ -432,7 +615,7 @@ def api_dashboard_overview():
                 "optimized_real_trading_status", {}
             ),
             "backtest_results": dashboard_data.get("backtest_results", {}),
-            "journal_events": dashboard_data.get("journal_events", [])[:10],
+            "journal_events": journal_events,
             "futures_dashboard": dashboard_data.get("futures_dashboard", {}),
             "futures_manual": dashboard_data.get("futures_manual", {}),
             "indicator_options": indicator_options,

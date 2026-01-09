@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import redis
 from typing import Any, cast, TYPE_CHECKING
+from flask import jsonify, redirect, request, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_login import LoginManager
@@ -87,6 +88,21 @@ def init_extensions(app):
     # Flask-Login
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"  # type: ignore[assignment]
+
+    @login_manager.unauthorized_handler
+    def _unauthorized():
+        """Return JSON 401 for API calls; redirect to login for page requests."""
+
+        wants_json = (
+            request.path.startswith("/api/")
+            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            or request.accept_mimetypes.best == "application/json"
+        )
+        if wants_json:
+            return jsonify({"success": False, "error": "Authentication required"}), 401
+
+        next_url = request.full_path if request.query_string else request.path
+        return redirect(url_for(login_manager.login_view, next=next_url))
 
     # Socket.IO (reuse config defaults)
     cors = app.config.get(

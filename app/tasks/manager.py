@@ -36,6 +36,7 @@ class BackgroundTaskManager:
         *,
         market_data_service: Any,
         futures_market_data_service: Any | None,
+        futures_safety_service: Any | None,
         realtime_update_service: Any | None,
         persistence_scheduler: Any | None,
         self_improvement_worker: Any | None,
@@ -46,6 +47,7 @@ class BackgroundTaskManager:
     ) -> None:
         self.market_data_service = market_data_service
         self.futures_market_data_service = futures_market_data_service
+        self.futures_safety_service = futures_safety_service
         self.realtime_update_service = realtime_update_service
         self.persistence_scheduler = persistence_scheduler
         self.self_improvement_worker = self_improvement_worker
@@ -79,6 +81,11 @@ class BackgroundTaskManager:
             self._log(
                 "ℹ️ Futures module ready. Enable futures trading from the dashboard when prepared."
             )
+
+        # Safety gates can run even before futures are enabled; they are VPS-only
+        # and are used to block unsafe entries when futures are toggled on.
+        if self.futures_safety_service:
+            self._start_service(self.futures_safety_service, "Futures safety service")
 
         if self.self_improvement_worker:
             # Allow tests/CI to opt-out of starting the self-improvement worker
@@ -152,6 +159,7 @@ class BackgroundTaskManager:
         self._stop_service(
             self.futures_market_data_service, "Futures market data service"
         )
+        self._stop_service(self.futures_safety_service, "Futures safety service")
         if self.self_improvement_worker:
             try:
                 self.self_improvement_worker.stop()

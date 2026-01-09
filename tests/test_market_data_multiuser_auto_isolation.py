@@ -201,6 +201,7 @@ def test_multiuser_auto_cycle_isolated_traders_and_persistence():
         bot_logger=logging.getLogger("test"),
         persistence_manager=persistence,
         symbols_for_persistence=["BTCUSDT"],
+        futures_safety_service=None,
         sleep_interval=5.0,
     )
 

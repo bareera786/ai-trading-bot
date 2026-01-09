@@ -209,6 +209,11 @@ def assemble_runtime_context(
                 bot_logger=getattr(module, "logger", None),
                 market_data_service=payload.get("market_data_service"),
                 futures_market_data_service=payload.get("futures_market_data_service"),
+                futures_safety_service=getattr(
+                    payload.get("service_runtime"), "futures_safety_service", None
+                )
+                if payload.get("service_runtime")
+                else None,
                 realtime_update_service=payload.get("realtime_update_service"),
                 persistence_scheduler=payload.get("persistence_scheduler"),
                 self_improvement_worker=getattr(

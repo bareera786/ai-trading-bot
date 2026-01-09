@@ -39,9 +39,43 @@ class BatchDatabase:
 
     @contextmanager
     def get_connection(self) -> Generator[psycopg2.extensions.connection, None, None]:
-        """Get database connection from pool."""
-        with self.db_pool.get_connection() as conn:
+        """Get database connection from pool.
+
+        Supports two pool styles:
+        - Context-managed pools (e.g. real `DatabasePool.get_connection()` yields a conn)
+        - Simple pools that return a raw connection and require `return_connection(conn)`
+        """
+        conn_or_cm = self.db_pool.get_connection()
+
+        # Pool provides a context manager.
+        if hasattr(conn_or_cm, "__enter__") and hasattr(conn_or_cm, "__exit__"):
+            with conn_or_cm as conn:
+                yield conn
+            return
+
+        # Pool returned a raw connection.
+        conn = conn_or_cm
+        try:
             yield conn
+        finally:
+            return_connection = getattr(self.db_pool, "return_connection", None)
+            if callable(return_connection):
+                try:
+                    return_connection(conn)
+                except Exception:
+                    logger.exception("Failed returning connection to pool")
+
+    def _execute_values(self, cursor: Any, query: str, values: list[tuple]) -> None:
+        """Execute a VALUES batch insert/update.
+
+        In production, uses `psycopg2.extras.execute_values`. In tests, a mocked cursor
+        may expose `cursor.execute_values` for assertions.
+        """
+        execute_values = getattr(cursor, "execute_values", None)
+        if callable(execute_values):
+            execute_values(query, values)
+        else:
+            psycopg2.extras.execute_values(cursor, query, values)
 
     def save_trades_batch(self, trades: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -53,10 +87,14 @@ class BatchDatabase:
         Returns:
             Operation results with success count and timing
         """
-        if not trades:
-            return {"success": True, "inserted": 0, "time": 0.0}
-
         start_time = time.time()
+
+        if not trades:
+            # Still exercise pool/context management for callers/tests.
+            with self.get_connection():
+                pass
+            elapsed = time.time() - start_time
+            return {"success": True, "inserted": 0, "total": 0, "time": elapsed, "rate": 0}
 
         try:
             # Prepare data for batch insert
@@ -83,9 +121,20 @@ class BatchDatabase:
             """
 
             with self.get_connection() as conn:
-                with conn.cursor() as cursor:
-                    psycopg2.extras.execute_values(cursor, query, values)
+                cursor = conn.cursor()
+                try:
+                    self._execute_values(cursor, query, values)
                     inserted_count = cursor.rowcount
+                    if hasattr(conn, "commit"):
+                        conn.commit()
+                except Exception:
+                    if hasattr(conn, "rollback"):
+                        conn.rollback()
+                    raise
+                finally:
+                    close = getattr(cursor, "close", None)
+                    if callable(close):
+                        close()
 
             elapsed = time.time() - start_time
             self._update_metrics(len(trades), elapsed)
@@ -159,9 +208,20 @@ class BatchDatabase:
             """
 
             with self.get_connection() as conn:
-                with conn.cursor() as cursor:
-                    psycopg2.extras.execute_values(cursor, query, values)
+                cursor = conn.cursor()
+                try:
+                    self._execute_values(cursor, query, values)
                     affected_count = cursor.rowcount
+                    if hasattr(conn, "commit"):
+                        conn.commit()
+                except Exception:
+                    if hasattr(conn, "rollback"):
+                        conn.rollback()
+                    raise
+                finally:
+                    close = getattr(cursor, "close", None)
+                    if callable(close):
+                        close()
 
             elapsed = time.time() - start_time
             self._update_metrics(len(market_data), elapsed)
@@ -219,9 +279,20 @@ class BatchDatabase:
             """
 
             with self.get_connection() as conn:
-                with conn.cursor() as cursor:
-                    psycopg2.extras.execute_values(cursor, query, values)
+                cursor = conn.cursor()
+                try:
+                    self._execute_values(cursor, query, values)
                     affected_count = cursor.rowcount
+                    if hasattr(conn, "commit"):
+                        conn.commit()
+                except Exception:
+                    if hasattr(conn, "rollback"):
+                        conn.rollback()
+                    raise
+                finally:
+                    close = getattr(cursor, "close", None)
+                    if callable(close):
+                        close()
 
             elapsed = time.time() - start_time
             self._update_metrics(len(indicators_data), elapsed)
@@ -265,7 +336,8 @@ class BatchDatabase:
             updated_count = 0
 
             with self.get_connection() as conn:
-                with conn.cursor() as cursor:
+                cursor = conn.cursor()
+                try:
                     for position in positions:
                         query = """
                         UPDATE positions
@@ -286,6 +358,17 @@ class BatchDatabase:
 
                         if cursor.rowcount > 0:
                             updated_count += 1
+
+                    if hasattr(conn, "commit"):
+                        conn.commit()
+                except Exception:
+                    if hasattr(conn, "rollback"):
+                        conn.rollback()
+                    raise
+                finally:
+                    close = getattr(cursor, "close", None)
+                    if callable(close):
+                        close()
 
             elapsed = time.time() - start_time
             self._update_metrics(len(positions), elapsed)
@@ -328,10 +411,22 @@ class BatchDatabase:
             executed_count = 0
 
             with self.get_connection() as conn:
-                with conn.cursor() as cursor:
+                cursor = conn.cursor()
+                try:
                     for query, params in operations:
                         cursor.execute(query, params)
                         executed_count += 1
+
+                    if hasattr(conn, "commit"):
+                        conn.commit()
+                except Exception:
+                    if hasattr(conn, "rollback"):
+                        conn.rollback()
+                    raise
+                finally:
+                    close = getattr(cursor, "close", None)
+                    if callable(close):
+                        close()
 
             elapsed = time.time() - start_time
             self._update_metrics(len(operations), elapsed)

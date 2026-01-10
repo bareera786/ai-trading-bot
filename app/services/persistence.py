@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict
 
+from utils.compression import get_compressor
+
 LoggerLike = logging.Logger
 
 logger = logging.getLogger(__name__)
@@ -161,6 +163,7 @@ class ProfessionalPersistence:
         market_cap_weights_provider: Callable[[], Dict[str, Any]] | None = None,
         futures_settings_getter: Callable[[], Dict[str, Any]] | None = None,
         futures_settings_setter: Callable[[Dict[str, Any]], None] | None = None,
+        compression_level: int = 3,
     ) -> None:
         self.persistence_dir = persistence_dir
         persist_dir = ensure_persistence_dirs()
@@ -173,6 +176,9 @@ class ProfessionalPersistence:
         self._market_cap_weights_provider = market_cap_weights_provider or (lambda: {})
         self._futures_settings_getter = futures_settings_getter or (lambda: {})
         self._futures_settings_setter = futures_settings_setter or (lambda data: None)
+
+        # Initialize Zstandard compressor
+        self.compressor = get_compressor(level=compression_level)
 
     def save_complete_state(
         self,
@@ -187,11 +193,11 @@ class ProfessionalPersistence:
         """Persist the full bot state to disk."""
         # Ensure directories exist first
         persist_dir = ensure_persistence_dirs(profile)
-        
+
         # Update file paths to use the ensured directory
         state_file = persist_dir / "bot_state.json"
         backup_dir = persist_dir / "backups"
-        
+
         # Lightweight debug logging to help diagnose state mismatches
         try:
             # Print to stdout so container logs always show this regardless
@@ -242,15 +248,11 @@ class ProfessionalPersistence:
 
             # Create backup directory if it doesn't exist
             backup_dir.mkdir(exist_ok=True)
-            
-            # Create backup of current state if it exists
-            if state_file.exists():
-                backup_file = backup_dir / f"state_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-                try:
-                    shutil.copy2(state_file, backup_file)
-                except Exception as e:
-                    logger.warning(f"Failed to create backup: {e}")
-            
+
+            # Compress and save the state
+            backup_file = backup_dir / f"state_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json.zst"
+            self.compressor.compress_json(state, backup_file)
+
             with _bot_state_file_lock(state_file):
                 _atomic_write_json(state_file, state)
 

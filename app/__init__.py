@@ -66,4 +66,35 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
 
     bootstrap_runtime(app)
 
+    # Add a lightweight response header for observability so clients
+    # can verify whether data came from the backend (helps debugging
+    # proxy / cache issues). Only attach to JSON responses and keep
+    # the hook intentionally minimal and non-intrusive.
+    @app.after_request
+    def add_x_data_source_header(response):
+        try:
+            # Ensure the asset manifest is never cached by browsers/proxies.
+            # This prevents stale bundle URLs after deploy.
+            if (getattr(response, "direct_passthrough", False) is False):
+                try:
+                    from flask import request as flask_request
+
+                    if (flask_request.path or "").endswith("/static/dist/manifest.json"):
+                        response.headers["Cache-Control"] = (
+                            "no-store, no-cache, must-revalidate, max-age=0"
+                        )
+                        response.headers["Pragma"] = "no-cache"
+                        response.headers["Expires"] = "0"
+                except Exception:
+                    pass
+
+            ctype = response.headers.get("Content-Type", "")
+            if ctype and "application/json" in ctype.lower():
+                # set default header; allow existing header to remain if present
+                response.headers.setdefault("X-Data-Source", "backend")
+        except Exception:
+            # guard against any unexpected errors in the hook
+            pass
+        return response
+
     return app

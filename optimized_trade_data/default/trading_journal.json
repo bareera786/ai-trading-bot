@@ -1,929 +1,5 @@
 [
   {
-    "timestamp": "2026-01-02T13:09:26.288972",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "SOLUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.010030753704677164,
-      "volatility": 0.0002626095959142463
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:09:26.302014",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "ETHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.00966016734407466,
-      "volatility": 0.0003688137204288823
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:09:26.313124",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "DOGEUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.018533710850141803,
-      "volatility": 0.0005134463444799399
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:09:26.326178",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BNBUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.016956999110005613,
-      "volatility": 0.0004459374831148103
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:09:26.341129",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BCHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.0,
-      "volatility": 0.0
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:09:26.352230",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "XRPUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.012499670854972103,
-      "volatility": 0.0002801634289918808
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:09:26.363348",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "ADAUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.0324212587325633,
-      "volatility": 0.0007039957424528554
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:09:26.375947",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "LINKUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.030168827807018652,
-      "volatility": 0.0010040524265923284
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:09:26.387112",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BTCUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.00855350346217317,
-      "volatility": 0.00028900169434693145
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:03.871462",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "SOLUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.00853331589459414,
-      "volatility": 0.00025139257525657157
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:03.884814",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "ETHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.008914894343027936,
-      "volatility": 0.0003658589948359229
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:03.896121",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "DOGEUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.018533710850141803,
-      "volatility": 0.0005144881731097535
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:03.909373",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BNBUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.016813290285019922,
-      "volatility": 0.00044916206976027836
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:03.924588",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BCHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.0,
-      "volatility": 0.0
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:03.936003",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "XRPUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.012361188006498042,
-      "volatility": 0.00028162116043071685
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:03.947380",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "ADAUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.033851950571139634,
-      "volatility": 0.0007234992072779818
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:03.960265",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "LINKUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.030168827807018652,
-      "volatility": 0.0010040524265923284
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:03.971680",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BTCUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.00843272759534175,
-      "volatility": 0.00028847402399210663
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:42.099441",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "SOLUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.008103885833572704,
-      "volatility": 0.00025408372225929794
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:42.113138",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "ETHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.009243916547484833,
-      "volatility": 0.0003614803633716148
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:42.124796",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "DOGEUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.02084673290849012,
-      "volatility": 0.000587810015096782
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:42.138528",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BNBUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.018037685699125422,
-      "volatility": 0.0004641839703195726
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:42.154181",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BCHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.0,
-      "volatility": 0.0
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:42.165958",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "XRPUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.012623131120096802,
-      "volatility": 0.000291514026951172
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:42.181170",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "LINKUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.03014118341057444,
-      "volatility": 0.0010413186102827313
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:10:42.192985",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BTCUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.008378892066240677,
-      "volatility": 0.000288305006574025
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:19.494147",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "SOLUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.009132864778510169,
-      "volatility": 0.00026531970121517417
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:19.507604",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "ETHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.00973608226797832,
-      "volatility": 0.00036281085780674553
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:19.519064",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "DOGEUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.02112710678785981,
-      "volatility": 0.000587810015096782
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:19.532572",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BNBUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.020557923077072587,
-      "volatility": 0.0005001133821519668
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:19.547935",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BCHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.0,
-      "volatility": 0.0
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:19.559468",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "XRPUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.012623131120096798,
-      "volatility": 0.000291514026951172
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:19.574353",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "LINKUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.02725660360365526,
-      "volatility": 0.0010413186102827313
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:19.585890",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BTCUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.008580002715831642,
-      "volatility": 0.00028675893334412586
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:57.202363",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "SOLUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.009947984281601553,
-      "volatility": 0.00025914304740589077
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:57.215999",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "ETHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.011362959033418047,
-      "volatility": 0.00036389513479675447
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:57.227503",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "DOGEUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.02112710678785981,
-      "volatility": 0.0005389227383324705
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:57.240976",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BNBUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.022856251084981457,
-      "volatility": 0.0005330458107138221
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:57.257834",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BCHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.0,
-      "volatility": 0.0
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:57.270293",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "XRPUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.012623131120096802,
-      "volatility": 0.000291514026951172
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:57.285728",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "LINKUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.027555504730135395,
-      "volatility": 0.0009539389956671328
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:11:57.297335",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BTCUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.00869722363861188,
-      "volatility": 0.00026716748838094193
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:12:36.229356",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "SOLUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.009566196064350859,
-      "volatility": 0.00025594212852990796
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:12:36.243482",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "ETHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.00939085344305782,
-      "volatility": 0.00036369398554291963
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:12:36.255393",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "DOGEUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.02046699719623089,
-      "volatility": 0.0005621342298838265
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:12:36.269213",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BNBUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.022878043586948834,
-      "volatility": 0.0005390604339702298
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:12:36.285069",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BCHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.0,
-      "volatility": 0.0
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:12:36.297001",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "XRPUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.012623131120096802,
-      "volatility": 0.00029219031164249356
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:12:36.312406",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "LINKUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.027555504730135395,
-      "volatility": 0.0009106866892035646
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:12:36.324348",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BTCUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.004699237000889762,
-      "volatility": 0.0002637898938080964
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:14.371850",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "SOLUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.007191101730763883,
-      "volatility": 0.0002591151761449857
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:14.385449",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "ETHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.010432333703955741,
-      "volatility": 0.00038794469437275107
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:14.397137",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "DOGEUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.020646716796150186,
-      "volatility": 0.0005658212567637429
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:14.410877",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BNBUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.022777240197453124,
-      "volatility": 0.0005395232414648787
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:14.426487",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BCHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.0,
-      "volatility": 0.0
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:14.438317",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "XRPUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.005503320851802974,
-      "volatility": 0.00029219031164249356
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:14.453567",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "LINKUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.027555504730135395,
-      "volatility": 0.0009106866892035645
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:14.465454",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BTCUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.005019741566762752,
-      "volatility": 0.0002712237059462932
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:51.886484",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "SOLUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.0061792431860558834,
-      "volatility": 0.00025591593684063155
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:51.900153",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "ETHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.01134220640159409,
-      "volatility": 0.0003622922827228355
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:51.911841",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "DOGEUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.01840556017667547,
-      "volatility": 0.0005648154537221915
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:51.925460",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BNBUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.022440786535642177,
-      "volatility": 0.0005092919151275563
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:51.940949",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BCHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.0,
-      "volatility": 0.0
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:51.952647",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "XRPUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.005300839612369341,
-      "volatility": 0.00029219031164249356
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:51.967718",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "LINKUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.027555504730135395,
-      "volatility": 0.0008093240421646998
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:13:51.979459",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BTCUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.006145743023888679,
-      "volatility": 0.0002814862611582037
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:14:30.117253",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "SOLUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.0061655454022521835,
-      "volatility": 0.00025591593684063155
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:14:30.131082",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "ETHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.011525389844689935,
-      "volatility": 0.0003640432411931182
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:14:30.142714",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "DOGEUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.02003523244328218,
-      "volatility": 0.0005971226364729289
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:14:30.156302",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BNBUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.022510080594805432,
-      "volatility": 0.0005059978865247191
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:14:30.171854",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BCHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.0,
-      "volatility": 0.0
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:14:30.188850",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "LINKUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.01622874998093343,
-      "volatility": 0.000757862813221457
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:14:30.200664",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BTCUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.006678625748496537,
-      "volatility": 0.0002844192731364672
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:07.425969",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "SOLUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.007271358131988144,
-      "volatility": 0.0002640419176730433
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:07.439950",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "ETHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.011033085695732114,
-      "volatility": 0.000348219712297411
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:07.451964",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "DOGEUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.02152105497641732,
-      "volatility": 0.0006318907332229751
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:07.466009",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BNBUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.012929574145391254,
-      "volatility": 0.000504127653577689
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:07.482037",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BCHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.0,
-      "volatility": 0.0
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:07.494151",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "XRPUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.005299885794997329,
-      "volatility": 0.00029540037355034926
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:07.509752",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "LINKUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.01720986113048428,
-      "volatility": 0.0007643631734861993
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:07.521828",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BTCUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.006582184491743303,
-      "volatility": 0.00025069688700610926
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:45.195987",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "SOLUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.007611678406235695,
-      "volatility": 0.00026991933657017465
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:45.213201",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "ETHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.01196959692374304,
-      "volatility": 0.00032778857003391913
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:45.232987",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BNBUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.012981485671022064,
-      "volatility": 0.0004964220435033826
-    }
-  },
-  {
     "timestamp": "2026-01-02T13:15:45.253517",
     "event_type": "SAFETY_BLOCK",
     "payload": {
@@ -5497,6 +4573,1128 @@
       "position_value": 11.0,
       "market_stress": 0.018470196324272038,
       "volatility": 0.0004482630632199688
+    }
+  },
+  {
+    "timestamp": "2026-01-10T01:37:09.334641",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T01:37:41.817106",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T01:45:06.548936",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T01:48:24.560018",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T01:48:59.823957",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T01:51:22.555356",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:12:59.491008",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:13:03.100960",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:21:55.728715",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:24:44.558937",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.766331,
+      "price": 2.077,
+      "resolved_price": 2.077,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:24:47.556232",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:24:50.133081",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "SELL",
+      "quantity": 5.766331,
+      "price": 2.077,
+      "resolved_price": 2.077,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:24:50.571521",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:25:24.196923",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.766331,
+      "price": 2.077,
+      "resolved_price": 2.077,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:25:26.309679",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:25:28.835148",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "SELL",
+      "quantity": 5.766331,
+      "price": 2.077,
+      "resolved_price": 2.077,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:25:29.883180",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:26:05.595191",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "BCHUSDT",
+      "side": "BUY",
+      "quantity": 0.01823,
+      "price": 629.9,
+      "resolved_price": 629.9,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:26:07.299265",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.2961,
+      "price": 2.077,
+      "resolved_price": 2.077,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:26:09.329489",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:26:11.585682",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "SELL",
+      "quantity": 5.2961,
+      "price": 2.077,
+      "resolved_price": 2.077,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:26:12.028073",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:26:46.063408",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "BCHUSDT",
+      "side": "BUY",
+      "quantity": 0.017463,
+      "price": 629.9,
+      "resolved_price": 629.9,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:26:47.862467",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.2961,
+      "price": 2.077,
+      "resolved_price": 2.077,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:26:49.601245",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:26:51.892307",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "SELL",
+      "quantity": 5.2961,
+      "price": 2.077,
+      "resolved_price": 2.077,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:26:52.328234",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:27:26.192348",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "BCHUSDT",
+      "side": "BUY",
+      "quantity": 0.017463,
+      "price": 629.9,
+      "resolved_price": 629.9,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:27:27.914471",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.2961,
+      "price": 2.077,
+      "resolved_price": 2.077,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:27:29.643547",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:27:32.348538",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "SELL",
+      "quantity": 5.2961,
+      "price": 2.077,
+      "resolved_price": 2.077,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:27:33.191555",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:28:07.115371",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "BCHUSDT",
+      "side": "BUY",
+      "quantity": 0.017463,
+      "price": 629.9,
+      "resolved_price": 629.9,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:28:09.080777",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.2961,
+      "price": 2.077,
+      "resolved_price": 2.077,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:28:10.822082",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:28:13.087227",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "SELL",
+      "quantity": 5.2961,
+      "price": 2.077,
+      "resolved_price": 2.077,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:28:13.832065",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:28:48.285790",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:28:49.803837",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:29:23.912560",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:29:25.799012",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:30:00.092064",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:30:01.924346",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:30:35.617935",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.265677,
+      "price": 2.089,
+      "resolved_price": 2.089,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:30:37.712127",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:30:39.420397",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:31:12.003858",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.265677,
+      "price": 2.089,
+      "resolved_price": 2.089,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:31:13.743545",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:31:15.648324",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:31:48.294653",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.265677,
+      "price": 2.089,
+      "resolved_price": 2.089,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:31:50.026961",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:31:51.564051",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:32:24.550553",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.265677,
+      "price": 2.089,
+      "resolved_price": 2.089,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:32:26.281656",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:32:27.879059",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:33:03.449058",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.265677,
+      "price": 2.089,
+      "resolved_price": 2.089,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:33:05.113403",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:33:06.800502",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:33:41.159421",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.265677,
+      "price": 2.089,
+      "resolved_price": 2.089,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:33:41.896747",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.510495,
+      "price": 2.089,
+      "resolved_price": 2.089,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:33:43.166916",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:33:44.565859",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:33:44.988936",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:33:46.307142",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:34:22.108105",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.265677,
+      "price": 2.089,
+      "resolved_price": 2.089,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:34:22.219308",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "DOTUSDT",
+      "side": "BUY",
+      "quantity": 5.265677,
+      "price": 2.089,
+      "resolved_price": 2.089,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:34:24.108635",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:34:24.218163",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "BUY",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:34:26.020692",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:34:26.366895",
+    "event_type": "REAL_ORDER",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "side": "SELL",
+      "quantity": 0.875796,
+      "price": 12.56,
+      "resolved_price": 12.56,
+      "order_type": "MARKET",
+      "status": "FAILED",
+      "testnet": true,
+      "api_error": null
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:36:13.107591",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:36:36.771344",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:38:26.164438",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:39:53.263262",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:42:27.357575",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:46:58.179097",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:48:22.541549",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T02:52:21.388318",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T03:05:46.826027",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T03:05:51.965948",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T03:18:10.806904",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T03:19:56.152191",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T03:19:59.119862",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-10T03:23:08.720574",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
     }
   }
 ]

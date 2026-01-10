@@ -12,6 +12,8 @@ from flask import (
     render_template,
     request,
     url_for,
+    current_app,
+    session,
 )
 from flask_login import current_user, login_required, login_user, logout_user
 
@@ -149,7 +151,31 @@ def login():
 def logout():
     """Destroy the active session and redirect to login."""
     logout_user()
+
+    # Ensure any server-side session state is cleared and instruct the
+    # client to remove cookies. Being explicit here makes the logout
+    # behavior reliable for fetch() calls that follow redirects.
+    try:
+        session.clear()
+    except Exception:
+        logger.debug("Failed to clear session during logout")
+
     response = redirect(url_for("auth.login"))
+
+    # Delete session and remember cookies if present. Use config keys
+    # with sensible fallbacks to avoid hard-coding names.
+    try:
+        session_cookie_name = current_app.config.get("SESSION_COOKIE_NAME", "session")
+        response.delete_cookie(session_cookie_name)
+    except Exception:
+        logger.debug("Failed to delete session cookie on logout")
+
+    try:
+        remember_cookie_name = current_app.config.get("REMEMBER_COOKIE_NAME", "remember_token")
+        response.delete_cookie(remember_cookie_name)
+    except Exception:
+        logger.debug("Failed to delete remember cookie on logout")
+
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"

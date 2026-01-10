@@ -16,6 +16,9 @@ from models.model_factory import ResourceAwareModelFactory, ModelComplexity
 from data.nvme_optimized_handler import NVMeOptimizedDataHandler
 from integrations.dashboard_integration import DashboardExporter
 from config.dashboard_config import DashboardConfig
+from utils.compression import get_compressor
+from app.services.persistence import ProfessionalPersistence
+from app.tasks.self_improvement import SelfImprovementWorker
 
 class AITradingBot:
     """
@@ -37,6 +40,22 @@ class AITradingBot:
         # Initialize dashboard with configuration
         self.dashboard_config = DashboardConfig()
         self.dashboard_exporter = DashboardExporter(self.resource_manager, self.dashboard_config)
+
+        # Initialize Zstandard compressor and persistence
+        self.compression_level = 3  # Balanced compression
+        self.compressor = get_compressor(level=self.compression_level)
+        self.persistence = ProfessionalPersistence(compression_level=self.compression_level)
+
+        # Initialize self-improvement worker
+        self.self_improvement_worker = SelfImprovementWorker(
+            ultimate_trader=None,  # Replace with actual trader instance
+            optimized_trader=None,  # Replace with actual trader instance
+            ultimate_ml_system=None,  # Replace with actual ML system instance
+            optimized_ml_system=None,  # Replace with actual ML system instance
+            dashboard_data={},
+            trading_config={},
+            compression_level=self.compression_level
+        )
 
         # Bot state
         self.is_running = False
@@ -274,6 +293,31 @@ class AITradingBot:
             self.logger.info("Model state saved")
         except Exception as e:
             self.logger.error(f"Failed to save model state: {e}")
+
+    def save_state(self):
+        """Compressed state persistence"""
+        try:
+            state = self._capture_current_state()  # Your existing method
+
+            backup_path = self.persistence.save_complete_state(
+                trader=None,  # Replace with actual trader instance
+                ml_system=None,  # Replace with actual ML system instance
+                config={},
+                symbols=[],
+                historical_data={},
+            )
+
+            self.logger.info(f"State saved successfully: {backup_path}")
+        except Exception as e:
+            self.logger.error(f"Failed to save state: {e}")
+
+    def create_snapshot(self):
+        """Create a compressed snapshot of the bot's state and models"""
+        try:
+            snapshot_path = self.self_improvement_worker._create_snapshot()
+            self.logger.info(f"Snapshot created successfully: {snapshot_path}")
+        except Exception as e:
+            self.logger.error(f"Failed to create snapshot: {e}")
 
 def main():
     """Application entry point"""

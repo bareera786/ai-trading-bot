@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import statistics
 import json
 import requests
+import tempfile
 
 # Data science imports for RIBS
 try:
@@ -33,6 +34,8 @@ except ImportError:
     RIBS_AVAILABLE = False
     TradingRIBSOptimizer = None
 
+from utils.compression import get_compressor
+
 
 class SelfImprovementWorker:
     """Manage the periodic self-improvement cycle on a background thread."""
@@ -49,6 +52,7 @@ class SelfImprovementWorker:
         cycle_interval_seconds: float = 10800.0,
         logger: Optional[Any] = None,
         project_root: Optional[Path] = None,
+        compression_level: int = 3,
     ) -> None:
         self.ultimate_trader = ultimate_trader
         self.optimized_trader = optimized_trader
@@ -139,6 +143,9 @@ class SelfImprovementWorker:
                 self._log(f"❌ Failed to initialize RIBS optimizer: {e}")
                 self.ribs_optimizer = None
                 self.ribs_enabled = False
+
+        # Initialize Zstandard compressor
+        self.compressor = get_compressor(level=compression_level)
 
     def _fix_model_retraining(self) -> None:
         """Auto-fix: Retrain models when accuracy drops."""
@@ -317,25 +324,33 @@ class SelfImprovementWorker:
             threading.Thread(target=self._run_cycle, daemon=True).start()
 
     def _create_snapshot(self) -> str:
-        """Create a snapshot of key artifacts."""
+        """Create a compressed snapshot of key artifacts."""
         timestamp = int(time.time())
-        snapshot_path = self.snapshot_dir / f"snapshot_{timestamp}"
-        snapshot_path.mkdir(exist_ok=True)
+        snapshot_name = f"snapshot_{timestamp}.tar.zst"
+        snapshot_path = self.snapshot_dir / snapshot_name
 
-        # Snapshot model files (simplified)
-        models_dir = self.project_root / "ultimate_models"
-        if models_dir.exists():
-            shutil.copytree(
-                models_dir, snapshot_path / "ultimate_models", dirs_exist_ok=True
-            )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
 
-        futures_models_dir = self.project_root / "futures_models"
-        if futures_models_dir.exists():
-            shutil.copytree(
-                futures_models_dir, snapshot_path / "futures_models", dirs_exist_ok=True
-            )
+            # Save model metadata
+            metadata = {
+                "timestamp": timestamp,
+                "ultimate_trader": self.ultimate_trader.get_summary(),
+                "optimized_trader": self.optimized_trader.get_summary(),
+            }
+            metadata_path = tmpdir / "metadata.json"
+            metadata_path.write_text(json.dumps(metadata, indent=2))
 
-        self._log(f"📸 Created snapshot: {snapshot_path}")
+            # Save model weights (simplified example)
+            models_dir = tmpdir / "models"
+            models_dir.mkdir()
+            self.ultimate_ml_system.save(models_dir / "ultimate_model.pkl")
+            self.optimized_ml_system.save(models_dir / "optimized_model.pkl")
+
+            # Compress the snapshot directory
+            self.compressor.compress_directory(tmpdir, snapshot_path)
+
+        print(f"📸 Created compressed snapshot: {snapshot_path}")
         return str(snapshot_path)
 
     def _rollback_snapshot(self, snapshot_path: str) -> None:

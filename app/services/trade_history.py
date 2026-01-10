@@ -220,12 +220,61 @@ class ComprehensiveTradeHistory:
                 "holding_period": int(trade_data.get("holding_period", 0)),
                 "tax_lot_id": trade_data.get("tax_lot_id"),
             }
+            # Enforce lifecycle integrity for real executions.
+            # Rules:
+            # - Do NOT compute or backfill P&L here.
+            # - Prevent a trade from being recorded as CLOSED when it comes from
+            #   a real execution but lacks a `real_order_id` (indicating no
+            #   confirmed fill). Instead mark such attempts as CLOSE_FAILED,
+            #   do not fabricate `exit_price`, and leave `pnl`/`pnl_percent` as None.
+            try:
+                exec_mode = str(trade_data.get("execution_mode") or "").lower()
+                real_id = trade_data.get("real_order_id")
+                if trade_record.get("status") == "CLOSED" and exec_mode == "real":
+                    if not real_id:
+                        # Mark the close as failed rather than fabricating values.
+                        trade_record["status"] = "CLOSE_FAILED"
+                        trade_record["exit_price"] = None
+                        trade_record["pnl"] = None
+                        trade_record["pnl_percent"] = None
+                        self._log_event(
+                            "Real execution attempted to close trade without real_order_id; marked CLOSE_FAILED",
+                            level=logging.ERROR,
+                            details={
+                                "symbol": trade_record.get("symbol"),
+                                "trade_id": trade_record.get("trade_id"),
+                            },
+                        )
+            except Exception:
+                # Do not allow invariant checks to break trade recording.
+                pass
             trades.append(trade_record)
             self.save_trades(trades)
             self._log_event(
                 f"Comprehensive trade recorded: {trade_record['symbol']} {trade_record['side']} | Qty: {trade_record['quantity']:.4f} | P&L: {trade_record['pnl_percent']:+.2f}%",
                 level=logging.INFO,
             )
+            # Runtime invariant: detect historical or unexpected records where
+            # a trade is CLOSED for a real execution but lacks a real_order_id.
+            try:
+                # Scan for at least one offending record and log once.
+                for t in trades:
+                    try:
+                        if (
+                            str(t.get("execution_mode") or "").lower() == "real"
+                            and str(t.get("status") or "").upper() == "CLOSED"
+                            and not t.get("real_order_id")
+                        ):
+                            self._log_event(
+                                "Invariant violation: CLOSED trade for real execution missing real_order_id",
+                                level=logging.ERROR,
+                                details={"trade_id": t.get("trade_id"), "symbol": t.get("symbol")},
+                            )
+                            break
+                    except Exception:
+                        continue
+            except Exception:
+                pass
             return trade_record
         except Exception as exc:
             logging.getLogger(__name__).error("Error adding trade: %s", exc)
@@ -237,35 +286,70 @@ class ComprehensiveTradeHistory:
             trades = self.load_trades()
             for trade in trades:
                 if trade["trade_id"] == trade_id and trade["status"] == "OPEN":
-                    normalized_exit_price = self._normalize_exit_price(
-                        status="CLOSED",
-                        trade_data={
-                            **exit_data,
-                            # Allow fallback to the original entry_price if
-                            # the close execution price isn't supplied.
-                            "entry_price": trade.get("entry_price"),
-                        },
-                    )
-                    trade.update(
-                        {
-                            "exit_price": normalized_exit_price,
-                            "pnl": float(exit_data.get("pnl", 0)),
-                            "pnl_percent": float(exit_data.get("pnl_percent", 0)),
-                            "exit_timestamp": datetime.now().isoformat(),
-                            "status": "CLOSED",
-                            "holding_period_days": self.calculate_holding_period(
-                                trade["timestamp"]
-                            ),
-                            "realized_gains": float(
-                                exit_data.get(
-                                    "realized_gains", trade.get("realized_gains", 0.0)
-                                )
-                            ),
-                            "holding_period": self.calculate_holding_period(
-                                trade["timestamp"]
-                            ),
-                        }
-                    )
+                    # If the exit is coming from a real execution, require a
+                    # confirmed `real_order_id` before marking the trade CLOSED.
+                    exec_mode = str(exit_data.get("execution_mode") or trade.get("execution_mode") or "").lower()
+                    real_id = exit_data.get("real_order_id") or trade.get("real_order_id")
+
+                    if exec_mode == "real" and not real_id:
+                        # Mark the close attempt as failed. Do not fabricate an
+                        # exit price or P&L; leave those values null for later
+                        # investigation.
+                        trade.update(
+                            {
+                                "exit_price": None,
+                                "pnl": None,
+                                "pnl_percent": None,
+                                "exit_timestamp": datetime.now().isoformat(),
+                                "status": "CLOSE_FAILED",
+                                "holding_period_days": self.calculate_holding_period(
+                                    trade["timestamp"]
+                                ),
+                                "realized_gains": float(
+                                    exit_data.get(
+                                        "realized_gains", trade.get("realized_gains", 0.0)
+                                    )
+                                ),
+                                "holding_period": self.calculate_holding_period(
+                                    trade["timestamp"]
+                                ),
+                            }
+                        )
+                        self._log_event(
+                            "Real exit attempted without real_order_id; trade marked CLOSE_FAILED",
+                            level=logging.ERROR,
+                            details={"trade_id": trade_id, "symbol": trade.get("symbol")},
+                        )
+                    else:
+                        normalized_exit_price = self._normalize_exit_price(
+                            status="CLOSED",
+                            trade_data={
+                                **exit_data,
+                                # Allow fallback to the original entry_price if
+                                # the close execution price isn't supplied.
+                                "entry_price": trade.get("entry_price"),
+                            },
+                        )
+                        trade.update(
+                            {
+                                "exit_price": normalized_exit_price,
+                                "pnl": float(exit_data.get("pnl", 0)),
+                                "pnl_percent": float(exit_data.get("pnl_percent", 0)),
+                                "exit_timestamp": datetime.now().isoformat(),
+                                "status": "CLOSED",
+                                "holding_period_days": self.calculate_holding_period(
+                                    trade["timestamp"]
+                                ),
+                                "realized_gains": float(
+                                    exit_data.get(
+                                        "realized_gains", trade.get("realized_gains", 0.0)
+                                    )
+                                ),
+                                "holding_period": self.calculate_holding_period(
+                                    trade["timestamp"]
+                                ),
+                            }
+                        )
                     break
             self.save_trades(trades)
             self._log_event(

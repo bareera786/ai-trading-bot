@@ -47,6 +47,7 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Copy only production code (exclude tests, docs, development files)
 COPY app/ ./app/
+COPY utils/ ./utils/
 COPY config/deploy.env.example ./config/deploy.env.example
 COPY start_server.py .
 COPY create_admin.py .

@@ -13,7 +13,20 @@ from pathlib import Path
 from typing import Any, Callable, Dict
 
 from utils.compression import get_compressor
-from scripts.clean_trade_history import _to_float
+try:
+    from scripts.clean_trade_history import _to_float
+except Exception:
+    # In some deployment layouts the top-level `scripts` module may not be
+    # importable at module-import time. Provide a small fallback implementation
+    # to avoid crashing the WSGI process; the behavior mirrors the utility
+    # defined in `scripts/clean_trade_history.py`.
+    def _to_float(value) -> float:
+        try:
+            if value in (None, ""):
+                return 0.0
+            return float(value)
+        except Exception:
+            return 0.0
 
 LoggerLike = logging.Logger
 

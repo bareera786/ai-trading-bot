@@ -97,4 +97,39 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
             pass
         return response
 
+    # Minimal SPA fallback: serve the dashboard entry for deep links that
+    # are not API/static/health/metrics. This allows client-side routing to
+    # handle paths like /dashboard/trade-history when requested directly.
+    # Keep this minimal and conservative so API and static routes remain
+    # unchanged.
+    from flask import render_template, request, abort
+    import time as _time
+
+    @app.route("/<path:requested_path>")
+    def _spa_fallback(requested_path: str):
+        path = f"/{requested_path or ''}"
+
+        # Preserve explicit server-handled routes
+        if path.startswith("/api/") or path.startswith("/static/"):
+            return abort(404)
+        if path == "/health" or path.startswith("/health?"):
+            return abort(404)
+        if path == "/metrics" or path.startswith("/metrics?"):
+            return abort(404)
+
+        # For any other path, render the SPA dashboard entry so the client
+        # router can take over. Keep the template context minimal to avoid
+        # coupling with runtime-only state.
+        try:
+            return render_template(
+                "dashboard.html",
+                version_label="Ultimate AI Bot",
+                ribs_optimization={},
+                current_time=int(_time.time()),
+            )
+        except Exception:
+            # If rendering fails for any unexpected reason, return 404 so
+            # the original error path is visible to callers.
+            return abort(404)
+
     return app

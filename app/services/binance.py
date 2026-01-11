@@ -8,6 +8,8 @@ from collections import deque
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional, Union
+import time
+from requests.exceptions import Timeout
 
 try:  # cryptography is required for credential encryption, but we guard imports for optional installs
     from cryptography.fernet import Fernet  # type: ignore
@@ -1071,7 +1073,7 @@ class BinanceCredentialService:
                 return False
 
             # Log rotation attempt
-            masked_key = self.mask_api_key(current_creds.get("api_key"))
+            masked_key = self.mask_api_key(current_creeds.get("api_key"))
             self._log_event(
                 "ROTATION_STARTED",
                 f"Starting credential rotation for {account_type} account ({masked_key})",
@@ -1101,7 +1103,7 @@ class BinanceCredentialService:
                 api_secret=current_creds["api_secret"],
                 testnet=current_creds.get("testnet", True),
                 account_type=account_type,
-                note=f"Rotation needed: {reason} - {current_creds.get('note', '')}",
+                note=f"Rotation needed: {reason} - {current_creeds.get('note', '')}",
                 extra_data=updated_creds,
             )
 
@@ -1141,3 +1143,22 @@ class BinanceCredentialService:
                 },
             )
             return False
+
+    def fetch_with_retries(url, params=None, timeout=30.0, retries=2):
+        """Fetch data from Binance API with retries for timeout errors."""
+        for attempt in range(retries + 1):
+            try:
+                response = requests.get(url, params=params, timeout=timeout)
+                response.raise_for_status()
+                return response.json()
+            except Timeout as e:
+                if attempt < retries:
+                    time.sleep(1)  # Fixed delay between retries
+                    continue
+                raise e  # Raise the exception if retries are exhausted
+
+    # Example usage in existing methods
+    def fetch_ticker_data(self, symbol):
+        url = f"https://api.binance.com/api/v3/ticker/24hr"
+        params = {"symbol": symbol}
+        return fetch_with_retries(url, params=params, timeout=30.0)

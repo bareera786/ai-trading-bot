@@ -66,7 +66,21 @@ def sanitize_trades(trades: Iterable[Dict]) -> List[Dict]:
     sanitized: List[Dict] = []
     seen: Dict[Tuple, Dict] = {}
 
+    # Ensure CLOSED trades have valid exit_price and pnl
+    def validate_closed_trade(trade):
+        if trade.get("status") == "CLOSED":
+            exit_price = _to_float(trade.get("exit_price", 0))
+            pnl = _to_float(trade.get("pnl", 0))
+            if exit_price <= 0 or pnl == 0:
+                raise ValueError("Invalid CLOSED trade: missing exit_price or pnl")
+
     for trade in trades:
+        try:
+            validate_closed_trade(trade)
+        except ValueError:
+            # logger.warning(f"Skipping invalid trade: {e}")
+            continue
+
         status = str(trade.get("status", "")).upper()
         entry_price = _to_float(trade.get("entry_price", 0))
         exit_price = _to_float(trade.get("exit_price", 0))

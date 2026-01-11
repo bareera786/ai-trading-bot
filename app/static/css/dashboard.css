@@ -93,6 +93,14 @@
             --transition-fast: 0.15s ease;
             --transition-normal: 0.3s ease;
             --transition-slow: 0.5s ease;
+
+            /* Button Styles */
+            --btn-disabled-bg: rgba(255, 255, 255, 0.1);
+            --btn-disabled-text: rgba(255, 255, 255, 0.5);
+
+            /* Tooltip Styles */
+            --tooltip-bg: rgba(0, 0, 0, 0.7);
+            --tooltip-text: #ffffff;
         }
 
         /* Global Styles */
@@ -662,6 +670,27 @@
             border-color: var(--primary);
         }
 
+        /* Style for disabled Details button */
+        .btn[disabled] {
+          background-color: var(--btn-disabled-bg);
+          color: var(--btn-disabled-text);
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        /* Tooltip for disabled Details button */
+        .btn[disabled]:hover::after {
+          content: attr(title);
+          position: absolute;
+          background: var(--tooltip-bg);
+          color: var(--tooltip-text);
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 0.85rem;
+          white-space: nowrap;
+          z-index: 10;
+        }
+
         /* Modals */
         .modal {
             position: fixed;
@@ -950,49 +979,26 @@
         }
 
         @media (max-width: 768px) {
-            .sidebar {
-                display: none;
-            }
+          .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
 
-            .app {
-                display: flex;
-                flex-direction: column;
-            }
+          .dashboard-grid {
+            display: block;
+            overflow-x: auto;
+          }
 
-            .nav-item {
-                padding: 10px;
-                font-size: 14px;
-            }
+          .dashboard-card {
+            width: 100%;
+            margin-bottom: 16px;
+          }
 
-            .dashboard-content {
-                padding: 10px;
-            }
-
-            table {
-                display: block;
-                width: 100%;
-                overflow-x: auto;
-                white-space: nowrap;
-                border-collapse: collapse;
-            }
-
-            th, td {
-                text-align: left;
-                padding: 10px;
-                font-size: 14px;
-            }
-
-            /* Adjust chart container for responsiveness */
-            .chart-container {
-                width: 100%;
-                height: auto;
-                overflow: hidden;
-            }
-
-            .chart {
-                width: 100%;
-                height: auto;
-            }
+          button {
+            min-height: 44px;
+            font-size: 1rem;
+          }
         }
 
         @media (max-width: 480px) {
@@ -1879,55 +1885,24 @@
 }
 
 @media (max-width: 768px) {
-    /* Ensure touch targets are at least 44px */
-    button, .nav-item, .form-control {
-        min-height: 44px;
-        padding: 10px;
-        font-size: 16px;
-    }
+  .navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
 
-    /* Adjust spacing for form elements */
-    .form-group {
-        margin-bottom: 15px;
-    }
+  .dashboard-grid {
+    display: block;
+    overflow-x: auto;
+  }
 
-    input, select, textarea {
-        width: 100%;
-        padding: 10px;
-        font-size: 16px;
-        border-radius: 5px;
-        border: 1px solid var(--border-light);
-    }
+  .dashboard-card {
+    width: 100%;
+    margin-bottom: 16px;
+  }
 
-    /* Ensure buttons are full-width on mobile */
-    button {
-        width: 100%;
-    }
-
-    /* Make tables horizontally scrollable */
-    table {
-        display: block;
-        width: 100%;
-        overflow-x: auto;
-        white-space: nowrap;
-        border-collapse: collapse;
-    }
-
-    th, td {
-        text-align: left;
-        padding: 10px;
-        font-size: 14px;
-    }
-
-    /* Adjust chart container for responsiveness */
-    .chart-container {
-        width: 100%;
-        height: auto;
-        overflow: hidden;
-    }
-
-    .chart {
-        width: 100%;
-        height: auto;
-    }
+  button {
+    min-height: 44px;
+    font-size: 1rem;
+  }
 }

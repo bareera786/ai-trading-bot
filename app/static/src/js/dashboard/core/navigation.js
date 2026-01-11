@@ -93,12 +93,10 @@ export function initNavigation() {
 
 export function toggleSidebar() {
   const sidebar = document.querySelector('.sidebar');
-  if (sidebar) {
-    sidebar.classList.toggle('open');
-  }
+  sidebar.classList.toggle('open');
 }
 
-// Make toggleSidebar available globally
+// Add touch event handlers for mobile navigation
 if (typeof window !== 'undefined') {
   window.toggleSidebar = toggleSidebar;
 }

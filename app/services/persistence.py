@@ -246,6 +246,11 @@ class ProfessionalPersistence:
                 },
             }
 
+            # Validate pnl before persisting state
+            def validate_pnl(trade):
+                if trade.get("status") == "CLOSED" and _to_float(trade.get("pnl", 0)) == 0:
+                    raise ValueError("Invalid pnl for CLOSED trade")
+
             # Create backup directory if it doesn't exist
             backup_dir.mkdir(exist_ok=True)
 
@@ -254,7 +259,12 @@ class ProfessionalPersistence:
             self.compressor.compress_json(state, backup_file)
 
             with _bot_state_file_lock(state_file):
-                _atomic_write_json(state_file, state)
+                _atomic_write_json(state_file, {
+                    **state,
+                    "trades": [
+                        validate_pnl(trade) or trade for trade in state.get("trades", [])
+                    ],
+                })
 
             self._save_critical_components(trader, ml_system)
             self._update_save_count(profile)

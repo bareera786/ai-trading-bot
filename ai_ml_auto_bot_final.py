@@ -7,6 +7,13 @@ ENHANCED WITH COMPREHENSIVE TRADE HISTORY & CRT MODULE
 PROFESSIONAL PERSISTENCE SYSTEM ADDED
 """
 
+# Validate order_id and client_order_id before persisting execution
+def validate_order_ids(order_id, client_order_id):
+    if not order_id or not isinstance(order_id, (str, int)):
+        raise ValueError("Invalid order_id")
+    if not client_order_id or not isinstance(client_order_id, str):
+        raise ValueError("Invalid client_order_id")
+
 AI_BOT_VERSION = "ULTIMATE_AI_TRADER_V4.0_CRT_COMPREHENSIVE_PERSISTENCE"
 
 from flask import (
@@ -9471,9 +9478,33 @@ class UltimateAIAutoTrader:
             status.update(self.futures_trader.get_status())
         return status
 
+    import time
+    from requests.exceptions import Timeout
+    
     def _submit_futures_order(
         self, symbol, side, quantity, leverage=None, reduce_only=False
     ):
+        # ...existing code...
+    
+        retries = 2
+        timeout = 30
+    
+        for attempt in range(retries + 1):
+            try:
+                # Replace the following line with the actual API call
+                response = self.futures_trader.submit_order(
+                    symbol=symbol,
+                    side=side,
+                    quantity=qty,
+                    leverage=leverage_to_use,
+                    timeout=timeout,
+                )
+                return response
+            except Timeout:
+                if attempt < retries:
+                    time.sleep(1)  # Delay before retrying
+                else:
+                    raise
         if not self.futures_trading_enabled or not self.futures_trader:
             return None
 
@@ -9645,6 +9676,28 @@ class UltimateAIAutoTrader:
     def _submit_real_order(
         self, symbol, side, quantity, price=None, order_type="MARKET"
     ):
+        # ...existing code...
+    
+        retries = 2
+        timeout = 30
+    
+        for attempt in range(retries + 1):
+            try:
+                # Replace the following line with the actual API call
+                response = self.real_trader.submit_order(
+                    symbol=symbol,
+                    side=side,
+                    quantity=qty,
+                    price=resolved_price,
+                    order_type=order_type,
+                    timeout=timeout,
+                )
+                return response
+            except Timeout:
+                if attempt < retries:
+                    time.sleep(1)  # Delay before retrying
+                else:
+                    raise
         if not self.real_trading_enabled or not self.real_trader:
             return None
 

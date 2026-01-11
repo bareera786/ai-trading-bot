@@ -20,6 +20,9 @@ from utils.compression import get_compressor
 from app.services.persistence import ProfessionalPersistence
 from app.tasks.self_improvement import SelfImprovementWorker
 
+print("Python executable:", sys.executable)
+print("Python path:", sys.path)
+
 class AITradingBot:
     """
     Main AI Trading Bot application with resource optimization

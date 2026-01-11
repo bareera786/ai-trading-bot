@@ -87,6 +87,11 @@ async function updatePerformanceChart() {
   }
 }
 
+// Ensure trades are ordered by timestamp in descending order
+function sortTradesByTimestamp(trades) {
+  return trades.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+}
+
 export async function refreshRecentActivity() {
   const user = await fetchJson('/api/current_user');
   const mergeParam = user && user.is_admin ? '&merge_db=1' : '';
@@ -94,8 +99,12 @@ export async function refreshRecentActivity() {
   if (!data || data.error || !Array.isArray(data.trades)) return;
   const tbody = document.getElementById('recent-activity');
   if (!tbody) return;
+
+  // Sort trades by timestamp
+  const sortedTrades = sortTradesByTimestamp(data.trades);
+
   tbody.innerHTML = '';
-  data.trades.slice(0, 5).forEach((trade) => {
+  sortedTrades.slice(0, 5).forEach((trade) => {
     const row = document.createElement('tr');
     const timestamp = new Date(trade.timestamp * 1000);
     const timeString = timestamp.toLocaleTimeString('en-US', {
@@ -170,12 +179,22 @@ function updateUserTradesTable(trades) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No recent trades</td></tr>';
     return;
   }
+
+  // Sort trades by timestamp
+  const sortedTrades = sortTradesByTimestamp(trades);
+
   tbody.innerHTML = '';
-  trades.slice(0, 10).forEach((trade) => {
+  sortedTrades.slice(0, 10).forEach((trade) => {
     const row = document.createElement('tr');
     const timestamp = new Date((trade.timestamp || 0) * 1000);
     const dateString = timestamp.toLocaleDateString('en-US');
     const pnl = trade.pnl || 0;
+
+    // Add visual indicator for incomplete trades
+    const isIncomplete = !trade.pnl || trade.status !== 'closed';
+    const statusClass = isIncomplete ? 'status-warning' : 'status-success';
+    const statusText = isIncomplete ? 'Incomplete' : trade.status;
+
     row.innerHTML = `
       <td>${dateString}</td>
       <td>${trade.symbol || 'N/A'}</td>
@@ -183,8 +202,21 @@ function updateUserTradesTable(trades) {
       <td>${trade.quantity || 0}</td>
       <td>$${(trade.price || 0).toFixed(4)}</td>
       <td class="${pnl >= 0 ? 'text-success' : 'text-danger'}">${pnl >= 0 ? '+' : '-'}$${Math.abs(pnl).toFixed(2)}</td>
-      <td><span class="status-indicator status-${trade.status === 'closed' ? 'success' : 'warning'}">${trade.status || 'unknown'}</span></td>
+      <td><span class="status-indicator ${statusClass}">${statusText}</span></td>
     `;
+
+    // Disable "Details" button for incomplete trades
+    const detailsButton = document.createElement('button');
+    detailsButton.textContent = 'Details';
+    detailsButton.disabled = isIncomplete;
+    detailsButton.className = 'btn btn-primary';
+    if (isIncomplete) {
+      detailsButton.title = 'Trade incomplete - details unavailable';
+    }
+    const detailsCell = document.createElement('td');
+    detailsCell.appendChild(detailsButton);
+    row.appendChild(detailsCell);
+
     tbody.appendChild(row);
   });
 }
@@ -197,26 +229,5 @@ function updateText(selector, text) {
 }
 
 function formatCurrency(value) {
-  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-export async function logout() {
-  try {
-    const response = await fetch('/logout', {
-      method: 'GET',
-      credentials: 'same-origin',
-    });
-    if (response.redirected) {
-      window.location.href = response.url;
-    } else {
-      window.location.href = '/login';
-    }
-  } catch (error) {
-    console.error('Logout error:', error);
-    window.location.href = '/login';
-  }
-}
-
-if (typeof window !== 'undefined') {
-  window.logout = logout;
+  return '$' + Math.abs(value).toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,');
 }

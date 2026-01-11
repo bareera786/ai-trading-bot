@@ -262,6 +262,16 @@
                         const section = document.getElementById('admin-dashboard');
                         if (!section || !section.classList.contains('active')) return;
 
+                        function formatAgeSeconds(s) {
+                            if (s === null || s === undefined) return null;
+                            const n = Number(s) || 0;
+                            if (n < 1) return '<1s';
+                            if (n < 60) return `${n}s`;
+                            if (n < 3600) return `${Math.round(n/60)}m`;
+                            if (n < 86400) return `${Math.round(n/3600)}h`;
+                            return `${Math.round(n/86400)}d`;
+                        }
+
                         fetch('/api/ribs/progress')
                         .then(r => {
                             if (!r.ok) throw new Error('no-status');
@@ -304,7 +314,8 @@
 
                             if (sub) {
                                 const age = data.latest_checkpoint_age_seconds;
-                                sub.textContent = age != null ? `Last checkpoint: ${age}s ago` : 'Last checkpoint: unknown';
+                                const formatted = formatAgeSeconds(age);
+                                sub.textContent = formatted ? `Last checkpoint: ${formatted} ago` : 'Last checkpoint: unknown';
                             }
                         })
                         .catch(() => {

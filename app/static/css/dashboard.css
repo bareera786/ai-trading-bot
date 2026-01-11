@@ -566,7 +566,8 @@
             font-size: var(--font-size-sm);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            padding: var(--spacing-lg) var(--spacing-md);
+            /* Use the same horizontal padding as table cells so header columns align */
+            padding: var(--spacing-md) var(--spacing-lg);
             text-align: left;
             border-bottom: 1px solid var(--border-color);
         }

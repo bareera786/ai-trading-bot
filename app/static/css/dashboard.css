@@ -950,222 +950,48 @@
         }
 
         @media (max-width: 768px) {
-            .content-body {
-                padding: var(--spacing-lg);
-            }
-
-            .section-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: var(--spacing-md);
-            }
-
-            .data-table-container {
-                overflow-x: auto;
-            }
-
-            /* Mobile sidebar improvements */
             .sidebar {
-                width: 100%;
-                max-width: 320px;
+                display: none;
             }
 
-            .sidebar-header {
-                padding: var(--spacing-lg);
-            }
-
-            .sidebar-header h1 {
-                font-size: var(--font-size-md);
-            }
-
-            /* Mobile navigation */
-            .nav-item {
-                padding: var(--spacing-md) var(--spacing-lg);
-                font-size: var(--font-size-sm);
-            }
-
-            .nav-icon {
-                font-size: var(--font-size-md);
-                margin-right: var(--spacing-sm);
-            }
-
-            /* Mobile content header */
-            .content-header {
-                padding: var(--spacing-lg);
+            .app {
+                display: flex;
                 flex-direction: column;
-                align-items: flex-start;
-                gap: var(--spacing-md);
             }
 
-            .header-actions {
-                width: 100%;
-                justify-content: flex-start;
+            .nav-item {
+                padding: 10px;
+                font-size: 14px;
             }
 
-            .content-header .btn {
-                width: auto;
+            .dashboard-content {
+                padding: 10px;
             }
 
-            .content-header h1 {
-                font-size: var(--font-size-xl);
-            }
-
-            /* Mobile dashboard cards */
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-                gap: var(--spacing-lg);
-            }
-
-            .dashboard-card {
-                padding: var(--spacing-lg);
-            }
-
-            .card-header {
-                margin-bottom: var(--spacing-md);
-            }
-
-            .card-icon {
-                font-size: var(--font-size-xl);
-                margin-right: var(--spacing-sm);
-            }
-
-            .card-title {
-                font-size: var(--font-size-base);
-            }
-
-            .card-value {
-                font-size: var(--font-size-2xl);
-            }
-
-            /* Mobile data tables */
-            .data-table-container {
-                border-radius: var(--radius-md);
-                margin: 0 -var(--spacing-lg);
-                width: calc(100% + 2 * var(--spacing-lg));
-            }
-
-            /* Ensure tables are scrollable even when not wrapped */
-            .data-table {
+            table {
                 display: block;
+                width: 100%;
                 overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
+                white-space: nowrap;
+                border-collapse: collapse;
             }
 
-            .data-table {
-                min-width: 600px; /* Ensure table doesn't get too cramped */
+            th, td {
+                text-align: left;
+                padding: 10px;
+                font-size: 14px;
             }
 
-            .data-table th,
-            .data-table td {
-                padding: var(--spacing-sm) var(--spacing-md);
-                font-size: var(--font-size-xs);
-            }
-
-            /* Mobile buttons */
-            .btn {
-                padding: var(--spacing-sm) var(--spacing-md);
-                font-size: var(--font-size-xs);
+            /* Adjust chart container for responsiveness */
+            .chart-container {
                 width: 100%;
-                justify-content: center;
+                height: auto;
+                overflow: hidden;
             }
 
-            /* Mobile form elements */
-            .form-input {
-                padding: var(--spacing-sm);
-                font-size: var(--font-size-sm);
-            }
-
-            /* Mobile section headers */
-            .section-header {
-                margin-bottom: var(--spacing-lg);
-                padding-bottom: var(--spacing-md);
-            }
-
-            .section-title {
-                font-size: var(--font-size-lg);
-            }
-
-            /* Mobile custom symbols grid */
-            .custom-symbols-grid {
-                grid-template-columns: 1fr;
-                gap: var(--spacing-lg);
-            }
-
-            .input-row {
-                flex-direction: column;
-                gap: var(--spacing-sm);
-            }
-
-            .input-row input,
-            .input-row button {
+            .chart {
                 width: 100%;
-            }
-
-            /* Mobile pill collections */
-            .pill-collection {
-                gap: var(--spacing-xs);
-            }
-
-            .symbol-pill {
-                padding: var(--spacing-xs) var(--spacing-sm);
-                font-size: var(--font-size-xs);
-            }
-
-            /* Mobile status indicators */
-            .status-indicator {
-                padding: var(--spacing-xs) var(--spacing-sm);
-                font-size: var(--font-size-xs);
-            }
-
-            /* Mobile page sections */
-            .page-section {
-                padding: var(--spacing-lg);
-                margin-bottom: var(--spacing-lg);
-            }
-
-            /* Mobile admin dashboard */
-            .admin-dashboard-page .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-
-            /* Mobile premium guard */
-            .premium-guard {
-                flex-direction: column;
-                text-align: center;
-                gap: var(--spacing-md);
-            }
-
-            /* Mobile hero stats */
-            .hero-stats {
-                grid-template-columns: 1fr;
-                gap: var(--spacing-md);
-            }
-
-            /* Mobile navigation toggle */
-            .mobile-menu-toggle {
-                display: inline-flex;
-                position: static;
-            }
-        }
-
-        /* Touch targets (mobile/tablet) */
-        @media (pointer: coarse) {
-            .nav-item {
-                padding-top: calc(var(--spacing-md) + 2px);
-                padding-bottom: calc(var(--spacing-md) + 2px);
-            }
-
-            .btn {
-                min-height: 44px;
-            }
-
-            .form-input {
-                min-height: 44px;
-            }
-
-            canvas {
-                max-width: 100% !important;
-                height: auto !important;
+                height: auto;
             }
         }
 
@@ -1206,6 +1032,34 @@
 
             .page-section {
                 padding: var(--spacing-md);
+            }
+        }
+
+        /* Touch Optimization and Forms */
+        @media (max-width: 768px) {
+            /* Ensure touch targets are at least 44px */
+            button, .nav-item, .form-control {
+                min-height: 44px;
+                padding: 10px;
+                font-size: 16px;
+            }
+
+            /* Adjust spacing for form elements */
+            .form-group {
+                margin-bottom: 15px;
+            }
+
+            input, select, textarea {
+                width: 100%;
+                padding: 10px;
+                font-size: 16px;
+                border-radius: 5px;
+                border: 1px solid var(--border-light);
+            }
+
+            /* Ensure buttons are full-width on mobile */
+            button {
+                width: 100%;
             }
         }
 
@@ -2022,113 +1876,58 @@
     padding: var(--spacing-lg);
     max-height: 360px;
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
 }
 
 @media (max-width: 768px) {
-    .ribs-dashboard-page .ribs-toolbar {
-        flex-direction: column;
-        align-items: stretch;
+    /* Ensure touch targets are at least 44px */
+    button, .nav-item, .form-control {
+        min-height: 44px;
+        padding: 10px;
+        font-size: 16px;
     }
 
-    .ribs-dashboard-page .ribs-toolbar-actions {
+    /* Adjust spacing for form elements */
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    input, select, textarea {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        border-radius: 5px;
+        border: 1px solid var(--border-light);
+    }
+
+    /* Ensure buttons are full-width on mobile */
+    button {
         width: 100%;
     }
 
-    .ribs-dashboard-page .ribs-toolbar-actions .btn {
+    /* Make tables horizontally scrollable */
+    table {
+        display: block;
         width: 100%;
-        justify-content: center;
+        overflow-x: auto;
+        white-space: nowrap;
+        border-collapse: collapse;
     }
 
-    .ribs-dashboard-page .control-buttons .btn {
+    th, td {
+        text-align: left;
+        padding: 10px;
+        font-size: 14px;
+    }
+
+    /* Adjust chart container for responsiveness */
+    .chart-container {
         width: 100%;
-        justify-content: center;
+        height: auto;
+        overflow: hidden;
     }
 
-    .ribs-dashboard-page .progress-indicators {
-        grid-template-columns: 1fr;
+    .chart {
+        width: 100%;
+        height: auto;
     }
-
-    .ribs-dashboard-page #ribs-3d-plot {
-        height: 320px;
-    }
-
-    .ribs-dashboard-page .ribs-parameters .params-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Health: Model + Training blocks */
-.model-metrics-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-    max-height: 320px;
-    overflow: auto;
-    padding-right: var(--spacing-xs);
-}
-
-.model-metric {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--spacing-md);
-    padding: var(--spacing-sm) var(--spacing-md);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-hover);
-    font-size: var(--font-size-sm);
-    line-height: 1.2;
-}
-
-.model-symbol {
-    color: var(--text-primary);
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.2px;
-}
-
-.model-meta {
-    display: inline-flex;
-    align-items: baseline;
-    gap: var(--spacing-md);
-    color: var(--text-secondary);
-    white-space: nowrap;
-}
-
-.model-accuracy {
-    color: var(--text-primary);
-    font-variant-numeric: tabular-nums;
-}
-
-.model-indicators {
-    color: var(--text-secondary);
-    font-size: var(--font-size-xs);
-}
-
-.training-status {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-sm);
-}
-
-.training-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--spacing-md);
-    padding: var(--spacing-sm) var(--spacing-md);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-hover);
-}
-
-.training-item .label {
-    color: var(--text-secondary);
-    font-size: var(--font-size-sm);
-}
-
-.training-item .value {
-    color: var(--text-primary);
-    font-size: var(--font-size-sm);
-    font-variant-numeric: tabular-nums;
 }

@@ -1,0 +1,24 @@
+{
+  "desktop": {
+    "label": "desktop",
+    "orderOk": true,
+    "detailsOk": true,
+    "missingBtnCount": 0,
+    "disabledCount": 0,
+    "modalOpened": false,
+    "consoleMessages": [
+      "error: Failed to load resource: the server responded with a status of 404 (NOT FOUND)"
+    ]
+  },
+  "mobile": {
+    "label": "mobile",
+    "orderOk": true,
+    "detailsOk": true,
+    "missingBtnCount": 0,
+    "disabledCount": 0,
+    "modalOpened": false,
+    "consoleMessages": [
+      "error: Failed to load resource: the server responded with a status of 404 (NOT FOUND)"
+    ]
+  }
+}

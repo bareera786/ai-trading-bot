@@ -294,6 +294,37 @@ class AITradingBot:
         except Exception as e:
             self.logger.error(f"Failed to save model state: {e}")
 
+    def _capture_current_state(self) -> dict:
+        """Capture a serializable snapshot of the bot's current runtime state.
+
+        This is a minimal, safe implementation to satisfy static checkers
+        and provide useful information for persistence/backups. It should
+        be extended later to include richer, application-specific data.
+        """
+        try:
+            state = {
+                "timestamp": int(time.time()),
+                "is_running": bool(self.is_running),
+                "daily_trade_count": int(self.daily_trade_count),
+                "daily_pnl": float(self.daily_pnl),
+                "active_pairs": list(self.active_pairs) if self.active_pairs else [],
+                "total_position_size": float(self.total_position_size),
+                "current_model_class": (
+                    self.current_model.__class__.__name__
+                    if hasattr(self.current_model, "__class__")
+                    else str(type(self.current_model))
+                ),
+            }
+        except Exception as e:
+            # Never fail capturing state: log and return minimal info
+            try:
+                self.logger.debug("Failed to capture detailed state: %s", e)
+            except Exception:
+                pass
+            return {"timestamp": int(time.time()), "is_running": bool(self.is_running)}
+
+        return state
+
     def save_state(self):
         """Compressed state persistence"""
         try:

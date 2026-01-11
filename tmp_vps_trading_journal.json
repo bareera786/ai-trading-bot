@@ -1,0 +1,5502 @@
+[
+  {
+    "timestamp": "2026-01-11T00:35:00.405230",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 168.32675337201633,
+      "market_stress": 0.0,
+      "volatility": 0.0001696140440606292
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:35:38.389712",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 169.89575018207617,
+      "market_stress": 0.0,
+      "volatility": 0.0001696140440606292
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:36:16.179367",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 171.46474699213596,
+      "market_stress": 0.0,
+      "volatility": 0.0001696140440606292
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:36:54.150159",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 173.033969573375,
+      "market_stress": 0.0,
+      "volatility": 0.0001696140440606292
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:37:31.849418",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 174.60307926902445,
+      "market_stress": 0.0,
+      "volatility": 0.0
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:38:10.919111",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 176.1711729943673,
+      "market_stress": 0.0,
+      "volatility": 0.0
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:38:49.162277",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 177.73858940617254,
+      "market_stress": 0.0,
+      "volatility": 0.0
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:39:26.687918",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 179.30679601710503,
+      "market_stress": 0.0,
+      "volatility": 0.0
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:47:41.061401",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 201.29690958000808,
+      "market_stress": 0.020115101588287453,
+      "volatility": 0.00047578512335011614
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:47:41.374622",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 205.70647463665287,
+      "market_stress": 0.0,
+      "volatility": 0.0
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:48:18.898146",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 201.35299188954878,
+      "market_stress": 0.019563495913071872,
+      "volatility": 0.0004767481321309919
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:48:56.768727",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 201.8070256106,
+      "market_stress": 0.019333212327725564,
+      "volatility": 0.00047674754390916474
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:49:34.679952",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 201.88926711893637,
+      "market_stress": 0.01852604011141132,
+      "volatility": 0.0004767473449730855
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:52:04.084877",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 193.8913029746091,
+      "market_stress": 0.0084448131035152,
+      "volatility": 0.00042578852128214405
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:57:08.790042",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 209.61602630557837,
+      "market_stress": 0.0070670438339591884,
+      "volatility": 0.0003454692315910124
+    }
+  },
+  {
+    "timestamp": "2026-01-11T00:57:46.725143",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 210.07167913632,
+      "market_stress": 0.006759222483479224,
+      "volatility": 0.0003458392488970563
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:04:56.836460",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 234.97246805426843,
+      "market_stress": 0.011007124903612761,
+      "volatility": 0.0003343753520896113
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:05:35.006822",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 240.91798932894582,
+      "market_stress": 0.011007124903612761,
+      "volatility": 0.0003279736651078212
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:06:13.547804",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 235.8373295452843,
+      "market_stress": 0.011007124903612761,
+      "volatility": 0.00032749269958410655
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:06:51.830229",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 236.2613633175553,
+      "market_stress": 0.011077813255435845,
+      "volatility": 0.0003261329710924559
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:08:08.058961",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 231.6566591409168,
+      "market_stress": 0.010691145992397615,
+      "volatility": 0.0003440823109623776
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:08:46.545969",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 240.36763975947156,
+      "market_stress": 0.010691145992397615,
+      "volatility": 0.00032581935736357605
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:24:05.023412",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 289.8894776703113,
+      "market_stress": 0.023853496494555607,
+      "volatility": 0.0005084561094892115
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:24:44.206953",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 277.5396127287091,
+      "market_stress": 0.03578024474183341,
+      "volatility": 0.0007387695994964418
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:28:36.392139",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 285.61262844454245,
+      "market_stress": 0.019326001900327672,
+      "volatility": 0.00048688478562814694
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:32:25.053092",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 329.3072317280456,
+      "market_stress": 0.0024370782119449734,
+      "volatility": 0.00012769430842118668
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:33:03.958795",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 335.76276479741915,
+      "market_stress": 0.0020933124827227172,
+      "volatility": 0.00012769430842118668
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:33:42.485108",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 337.99471269291405,
+      "market_stress": 0.0020785273822685815,
+      "volatility": 0.00012365174532006208
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:34:21.671112",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 340.2245534872176,
+      "market_stress": 0.0020785273822685815,
+      "volatility": 0.00012365174532006206
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:35:00.527784",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 342.4175262265308,
+      "market_stress": 0.0022965574922233904,
+      "volatility": 0.00012593484110368504
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:35:40.717897",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 344.6476103701463,
+      "market_stress": 0.0022966547556618135,
+      "volatility": 0.00010279168333034799
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:40:08.912990",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 319.859699282277,
+      "market_stress": 0.007723033333777556,
+      "volatility": 0.0002837229625158011
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:40:46.878075",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 312.87658652894174,
+      "market_stress": 0.00751661665620686,
+      "volatility": 0.00028870101603295755
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:41:23.733395",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 320.3063717165781,
+      "market_stress": 0.007638888770318653,
+      "volatility": 0.0002889999447012998
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:42:01.609493",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 320.79490923340995,
+      "market_stress": 0.007294915103516528,
+      "volatility": 0.0002889999447012998
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:42:40.727589",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 321.35306400259435,
+      "market_stress": 0.006520005949827938,
+      "volatility": 0.0002889999447012998
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:43:19.435414",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 321.3250337925024,
+      "market_stress": 0.018594463197468495,
+      "volatility": 0.0004979990713281228
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:43:57.369794",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 321.75781859361734,
+      "market_stress": 0.018594463197468495,
+      "volatility": 0.0004971033741555416
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:44:35.072891",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 322.146074860356,
+      "market_stress": 0.01886830446915397,
+      "volatility": 0.0004925692523451646
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:45:12.932133",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 331.56335521172144,
+      "market_stress": 0.018724693068786488,
+      "volatility": 0.0004285281225458594
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:45:50.344834",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 332.0545525080009,
+      "market_stress": 0.018447679788044017,
+      "volatility": 0.0004234510076504451
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:46:27.847078",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 320.82441429967776,
+      "market_stress": 0.019368069955428644,
+      "volatility": 0.0004358357815573892
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:52:08.318153",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 317.36510359820136,
+      "market_stress": 0.0053011270399669595,
+      "volatility": 0.0004230181771748423
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:58:27.022028",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 328.1172334490656,
+      "market_stress": 0.006973241502981331,
+      "volatility": 0.0002000998755640011
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:59:04.386823",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 348.9955194353257,
+      "market_stress": 0.006973241502981331,
+      "volatility": 0.00020009987556400113
+    }
+  },
+  {
+    "timestamp": "2026-01-11T01:59:41.751445",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 349.60265793108874,
+      "market_stress": 0.006973241502981331,
+      "volatility": 0.00019830154832589455
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:00:19.074736",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 352.37132597607615,
+      "market_stress": 0.008485817993397092,
+      "volatility": 0.00021927246869790686
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:00:57.466663",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 349.53975320469743,
+      "market_stress": 0.008485769954286028,
+      "volatility": 0.0002167720760539524
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:01:35.008864",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 344.0231075536011,
+      "market_stress": 0.007415175242965546,
+      "volatility": 0.0002167720760539524
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:02:12.513049",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 348.8633090804265,
+      "market_stress": 0.006332632648163228,
+      "volatility": 0.00020340322673924495
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:10:26.292055",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 361.1602013722741,
+      "market_stress": 0.013883219032618967,
+      "volatility": 0.00032785361171521024
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:11:05.304566",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 356.92574557879954,
+      "market_stress": 0.013893405269264728,
+      "volatility": 0.0003301163638908507
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:11:42.410957",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 367.0487693546111,
+      "market_stress": 0.016498160394602026,
+      "volatility": 0.00039333496341072133
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:12:20.707307",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 367.45640201511884,
+      "market_stress": 0.01585338804420589,
+      "volatility": 0.00038639273215895477
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:12:58.467847",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 361.0139994703247,
+      "market_stress": 0.01424610755112826,
+      "volatility": 0.0003934259300311943
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:13:35.746187",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 378.428766051194,
+      "market_stress": 0.014648110554199692,
+      "volatility": 0.00039545491273091006
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:14:13.140654",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 345.594292899427,
+      "market_stress": 0.014442635855813716,
+      "volatility": 0.00040530188819756427
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:14:13.445024",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 375.6827172573707,
+      "market_stress": 0.0,
+      "volatility": 0.0005084561094892115
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:14:51.853833",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 366.74407251980796,
+      "market_stress": 0.015070871450646277,
+      "volatility": 0.0004262448823148436
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:15:29.375385",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 359.2929533272475,
+      "market_stress": 0.013303559962247398,
+      "volatility": 0.00042144449730578405
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:16:07.688281",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 359.65678916071215,
+      "market_stress": 0.01451321479350459,
+      "volatility": 0.0004314835120416738
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:16:45.878869",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 361.208310259906,
+      "market_stress": 0.014667734796110554,
+      "volatility": 0.0004264478601389073
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:17:25.341639",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 361.9918661742828,
+      "market_stress": 0.012199463175804136,
+      "volatility": 0.00042544219776855885
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:18:03.189274",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 379.8451637906369,
+      "market_stress": 0.012831003379193587,
+      "volatility": 0.00043551579216237544
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:18:41.482118",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 372.6138338813183,
+      "market_stress": 0.012093323901783132,
+      "volatility": 0.00042795344449383655
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:19:19.729017",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 370.6521860302602,
+      "market_stress": 0.0117972354153535,
+      "volatility": 0.0003944778954725774
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:19:58.019769",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 365.02588123370555,
+      "market_stress": 0.0125618448567956,
+      "volatility": 0.0004160328785086733
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:20:35.649314",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 358.1865249069044,
+      "market_stress": 0.008129970934100577,
+      "volatility": 0.0004148973303955842
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:21:51.333369",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 376.72989354671734,
+      "market_stress": 0.0,
+      "volatility": 0.0
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:22:30.568091",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 381.9302247613496,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700842
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:23:08.931694",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 353.20796325090737,
+      "market_stress": 0.008443354346894437,
+      "volatility": 0.0004138433305666852
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:23:09.258981",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 384.6825824013371,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700842
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:23:46.768400",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 389.19399461208036,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:24:24.603598",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 389.25398422010886,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:25:03.612407",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 354.4320996172662,
+      "market_stress": 0.013352215936682859,
+      "volatility": 0.00038348026257467235
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:25:03.935601",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 390.4819211614358,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:25:41.776687",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 367.01655239806786,
+      "market_stress": 0.012790364166268166,
+      "volatility": 0.0003822850254310401
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:25:42.095663",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 387.2769291821607,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:26:19.786197",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 370.6034202325936,
+      "market_stress": 0.012790368131381478,
+      "volatility": 0.0003710968070950555
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:26:20.163028",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 384.29345770845913,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:26:57.180057",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 366.4491257527902,
+      "market_stress": 0.012790368131381477,
+      "volatility": 0.0003135850323693735
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:26:57.476190",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 382.18633758390524,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:27:35.068021",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 367.37419448408406,
+      "market_stress": 0.011510376840547417,
+      "volatility": 0.0003179225421740488
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:27:35.619006",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 372.0122977618135,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:28:13.284142",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 379.66569118319813,
+      "market_stress": 0.011059122592058964,
+      "volatility": 0.0003112128427382168
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:28:13.974696",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 372.67583868159267,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:28:51.924305",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 376.04843445277436,
+      "market_stress": 0.007048138876067205,
+      "volatility": 0.0002945471550999053
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:28:52.231527",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 372.67583868159267,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:29:30.332690",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 373.3379485155585,
+      "market_stress": 0.007048138876067205,
+      "volatility": 0.000293820417757846
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:29:30.664862",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 372.67583868159267,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:30:08.758973",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 372.4483533929104,
+      "market_stress": 0.005982245676384102,
+      "volatility": 0.0002871465247464983
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:30:09.133497",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 372.67583868159267,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:30:47.070979",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 372.67583868159267,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:31:26.036296",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 374.3377285182975,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:32:04.121634",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 375.9989016627706,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:32:42.733608",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 377.6600748072437,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:33:21.683270",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 358.7171447659392,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00024588318134926245
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:34:00.140745",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 360.2875209288124,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00024588318134926245
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:34:38.493613",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 360.2875209288124,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:35:15.963274",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 360.2875209288124,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:39:45.310141",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 370.846218615966,
+      "market_stress": 0.00398608807814956,
+      "volatility": 0.0003108023746905085
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:40:23.788864",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 362.51932207367105,
+      "market_stress": 0.003195488025355231,
+      "volatility": 0.00031080237469050843
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:41:02.497547",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 364.30773196946905,
+      "market_stress": 0.006298793029932214,
+      "volatility": 0.0003443344787883362
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:41:41.604536",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 364.7086215671215,
+      "market_stress": 0.006298793029932214,
+      "volatility": 0.00034433447878833614
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:42:19.729664",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 367.2887870231737,
+      "market_stress": 0.006022290315068631,
+      "volatility": 0.0003443344787883361
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:42:59.229901",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 365.5754070360302,
+      "market_stress": 0.006022290315068631,
+      "volatility": 0.00024731902082843926
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:43:38.259718",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 358.1078845532308,
+      "market_stress": 0.00602222265368194,
+      "volatility": 0.00020757820929775758
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:46:12.139408",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 377.09610703184376,
+      "market_stress": 0.005974988810519468,
+      "volatility": 0.00014931758343364948
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:46:50.427266",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 378.3463787120404,
+      "market_stress": 0.0022884376650532464,
+      "volatility": 0.00014462164093569652
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:47:28.901274",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 394.0169047919954,
+      "market_stress": 0.0022884376650532464,
+      "volatility": 0.0001446216409356965
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:48:08.122870",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 394.5301741184885,
+      "market_stress": 0.0022884376650532464,
+      "volatility": 0.0001446216409356965
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:48:48.385514",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 375.6164047474147,
+      "market_stress": 0.003468537610586004,
+      "volatility": 0.00014802016528527557
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:48:48.696262",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 393.75627127802017,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700842
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:49:26.831077",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 396.6466399859098,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700842
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:50:04.595660",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 399.52380643236785,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:50:43.716453",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 401.24458688864456,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:51:23.250632",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 402.57146387154654,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:52:01.118249",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 400.81609803359487,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:52:39.470738",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 399.02443668697595,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:53:19.180969",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 400.68759032264717,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:53:57.414743",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 400.5934081521959,
+      "market_stress": 0.00793911066235348,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:54:36.231900",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 403.8431030818443,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:55:15.157081",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 409.0395378979319,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:55:53.772978",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 410.6997284234141,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:56:32.011647",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 410.67324758779694,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:57:10.355018",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 410.64366383072763,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:57:49.206392",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 381.14757847420543,
+      "market_stress": 0.00911070938440352,
+      "volatility": 0.0002753478436143217
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:57:49.536897",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 408.8302001695998,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:58:28.578205",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 381.3705193312367,
+      "market_stress": 0.007946198339938744,
+      "volatility": 0.0002753478436143217
+    }
+  },
+  {
+    "timestamp": "2026-01-11T02:58:29.041397",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 405.9616422976583,
+      "market_stress": 0.0,
+      "volatility": 0.00016922841148700845
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:18:27.567221",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 431.91389420147954,
+      "market_stress": 0.008288826993770891,
+      "volatility": 0.00021425726771774243
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:19:06.584853",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 443.93458325749674,
+      "market_stress": 0.008185269294072074,
+      "volatility": 0.00021644875182330717
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:19:44.383711",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 439.57091228449343,
+      "market_stress": 0.00983446468123072,
+      "volatility": 0.00026013155613874793
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:20:22.513641",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 439.57091228449343,
+      "market_stress": 0.00983446468123072,
+      "volatility": 0.00025808412596066535
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:26:07.210250",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 419.56469343481376,
+      "market_stress": 0.012031174019741424,
+      "volatility": 0.0003552655300173185
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:35:39.055107",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 465.0807654473868,
+      "market_stress": 0.007747597803806749,
+      "volatility": 0.0002941023738319471
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:36:16.959674",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 476.5055085666235,
+      "market_stress": 0.007747597803806749,
+      "volatility": 0.0002417095010590593
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:36:53.735457",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 476.4934789202254,
+      "market_stress": 0.007590209876331824,
+      "volatility": 0.00024028211992452666
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:37:31.177362",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 484.93584537629545,
+      "market_stress": 0.007496105167117638,
+      "volatility": 0.00022892442020843273
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:38:08.729446",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 473.1591211925566,
+      "market_stress": 0.007496105167117638,
+      "volatility": 0.00022380186527640351
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:40:02.325090",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 439.2161519763607,
+      "market_stress": 0.010586222397111482,
+      "volatility": 0.000257263004936422
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:40:39.830451",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 449.8986868256031,
+      "market_stress": 0.010719110742656418,
+      "volatility": 0.00024115529798965203
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:41:17.177663",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 474.6157376086403,
+      "market_stress": 0.00815526862071215,
+      "volatility": 0.00023476709716924827
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:41:54.054889",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 471.0030285658411,
+      "market_stress": 0.00815526862071215,
+      "volatility": 0.00023476709716924827
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:42:31.861415",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 468.2728650023104,
+      "market_stress": 0.00815526862071215,
+      "volatility": 0.00023476709716924827
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:49:24.051642",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 468.6136537418532,
+      "market_stress": 0.007094089967787761,
+      "volatility": 0.00022185544378508306
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:50:01.650159",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 484.6158281386927,
+      "market_stress": 0.007094089967787761,
+      "volatility": 0.00022185544378508306
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:52:31.606204",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 475.2553199236555,
+      "market_stress": 0.00806590919916252,
+      "volatility": 0.00019356977700503607
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:53:08.983094",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 497.6917834127166,
+      "market_stress": 0.008534842750114794,
+      "volatility": 0.00020767887445157632
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:53:46.904624",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 504.4585475134068,
+      "market_stress": 0.009311156157594397,
+      "volatility": 0.0002394657661191322
+    }
+  },
+  {
+    "timestamp": "2026-01-11T03:54:24.923470",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 499.37289331513625,
+      "market_stress": 0.00934153863919463,
+      "volatility": 0.0002399431910614543
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:07:37.356666",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 492.1752819348072,
+      "market_stress": 0.01040426564541813,
+      "volatility": 0.0002328196565095006
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:08:15.513568",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 515.6987048661637,
+      "market_stress": 0.01047879967316636,
+      "volatility": 0.00023702175647564
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:08:53.228365",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 520.6870143607862,
+      "market_stress": 0.010954872537767174,
+      "volatility": 0.000243100983164209
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:09:30.733713",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 519.2814451078237,
+      "market_stress": 0.010478116546142334,
+      "volatility": 0.00024310098316420904
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:10:09.606929",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 510.1256929679503,
+      "market_stress": 0.010259000429071363,
+      "volatility": 0.00024310098316420904
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:10:47.079999",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 501.0059883716932,
+      "market_stress": 0.01016871267508647,
+      "volatility": 0.00024310098316420904
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:17:02.383486",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 509.27199270326054,
+      "market_stress": 0.012431033797739176,
+      "volatility": 0.0003349119931264103
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:34:11.811921",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 561.4326225194256,
+      "market_stress": 0.009781028627708478,
+      "volatility": 0.00023539560070115844
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:34:50.198346",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 561.9043138675468,
+      "market_stress": 0.009693454935964295,
+      "volatility": 0.00023502932316238977
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:36:06.650114",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 532.4451559072384,
+      "market_stress": 0.014585762889856331,
+      "volatility": 0.000337963046417753
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:36:43.543537",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 547.6538828154305,
+      "market_stress": 0.014600234406620937,
+      "volatility": 0.00033977091693823176
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:37:20.332430",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 547.609911493775,
+      "market_stress": 0.014759642847694507,
+      "volatility": 0.0003375215093181375
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:50:03.676632",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 556.4251708105527,
+      "market_stress": 0.018699232085060632,
+      "volatility": 0.0005127597719422294
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:50:40.970561",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 558.274093618727,
+      "market_stress": 0.012115647495752968,
+      "volatility": 0.0005078135307553664
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:51:18.938649",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 558.7738250630111,
+      "market_stress": 0.011884682246227544,
+      "volatility": 0.0004452667566182079
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:51:57.857444",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 558.7738250630111,
+      "market_stress": 0.011884682246227546,
+      "volatility": 0.00043944346820079516
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:52:36.420657",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 565.1661774615048,
+      "market_stress": 0.012254039859060033,
+      "volatility": 0.00045531708001833484
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:53:14.010372",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 581.3234623657751,
+      "market_stress": 0.005231469778747362,
+      "volatility": 0.0004541211867566745
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:53:51.158685",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 578.0238166843585,
+      "market_stress": 0.005231469778747362,
+      "volatility": 0.0004541211867566745
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:54:29.344888",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 575.0366186017794,
+      "market_stress": 0.005231469778747362,
+      "volatility": 0.00042106322903484383
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:56:58.278798",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 557.3729430187642,
+      "market_stress": 0.005271758447992831,
+      "volatility": 0.000273625975118697
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:57:35.293507",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 588.8232279682492,
+      "market_stress": 0.005271758447992831,
+      "volatility": 0.0002715727528301429
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:58:12.608945",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 589.7112100227016,
+      "market_stress": 0.0019918060313067498,
+      "volatility": 0.0002715727528301429
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:58:50.435448",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 557.7866832615975,
+      "market_stress": 0.0027139803117080153,
+      "volatility": 0.00027109282711901484
+    }
+  },
+  {
+    "timestamp": "2026-01-11T04:59:27.939747",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 589.3216522952381,
+      "market_stress": 0.0030802550910580696,
+      "volatility": 0.00012661125391315943
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:00:05.365476",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 606.4525996113399,
+      "market_stress": 0.0030802550910580696,
+      "volatility": 0.00012661125391315943
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:00:42.547669",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 592.7080030936205,
+      "market_stress": 0.008253373237955778,
+      "volatility": 0.00020500771843814415
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:08:14.384906",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 576.6668398886331,
+      "market_stress": 0.005698926471025462,
+      "volatility": 0.00022223710825059026
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:08:52.124853",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 576.6588320542478,
+      "market_stress": 0.00515004911013973,
+      "volatility": 0.00021899506624538433
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:09:29.930032",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 589.7448722928222,
+      "market_stress": 0.0049249038952129225,
+      "volatility": 0.00021899506624538433
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:10:07.931507",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 576.4845600827073,
+      "market_stress": 0.0049249038952129225,
+      "volatility": 0.00021899506624538433
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:12:00.798579",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 592.8528942655023,
+      "market_stress": 0.0038221648829543865,
+      "volatility": 0.00020904682691328533
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:12:38.230029",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 597.2747583776685,
+      "market_stress": 0.0038221648829543865,
+      "volatility": 0.00015201973403151597
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:18:18.805934",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 584.4678988491478,
+      "market_stress": 0.008761387278996667,
+      "volatility": 0.0002037500145899185
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:21:26.549078",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 592.6730455475728,
+      "market_stress": 0.006027305920815158,
+      "volatility": 0.0001964509623073363
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:22:04.285784",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 599.2509305289558,
+      "market_stress": 0.0059800304085521816,
+      "volatility": 0.00019725113609695715
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:23:20.048966",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 562.2622903651194,
+      "market_stress": 0.007970316550987233,
+      "volatility": 0.0002493717103499303
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:24:35.066217",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 548.240767793127,
+      "market_stress": 0.009782728005265051,
+      "volatility": 0.00027885482605634777
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:25:12.083407",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 580.1740790479543,
+      "market_stress": 0.012059174704318677,
+      "volatility": 0.0003039709093969771
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:25:50.320120",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 606.3351055812957,
+      "market_stress": 0.012204669846023697,
+      "volatility": 0.00030983235909543043
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:26:27.603273",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 609.6168375339186,
+      "market_stress": 0.012111504856967199,
+      "volatility": 0.00030932416855348154
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:27:04.426529",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 589.5761963462036,
+      "market_stress": 0.012111557794003623,
+      "volatility": 0.00030904545769588806
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:27:43.227845",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 596.8433587522343,
+      "market_stress": 0.012204787419547653,
+      "volatility": 0.00028502554792700135
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:28:21.142877",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 588.735839731197,
+      "market_stress": 0.011951724067298608,
+      "volatility": 0.0002896993799875556
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:28:58.538736",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 580.3329168834563,
+      "market_stress": 0.010592805814438014,
+      "volatility": 0.00027439973052448697
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:29:35.607895",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 572.2485928032921,
+      "market_stress": 0.008097933580170127,
+      "volatility": 0.000274920452528724
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:30:50.500767",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 596.7940111029648,
+      "market_stress": 0.007047527678027982,
+      "volatility": 0.0002921407956198121
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:31:27.968482",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 603.8711672062991,
+      "market_stress": 0.005839609187677396,
+      "volatility": 0.00029258119770944667
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:32:05.670472",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 615.9818781884745,
+      "market_stress": 0.006018593770303094,
+      "volatility": 0.0002925799342552922
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:32:43.766343",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 573.3226614407574,
+      "market_stress": 0.006622720726815326,
+      "volatility": 0.0002956836705224013
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:33:21.304816",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 621.9864615258086,
+      "market_stress": 0.007026774702907075,
+      "volatility": 0.0003030776976693546
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:33:58.577338",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 610.8718198117912,
+      "market_stress": 0.006863874209149982,
+      "volatility": 0.00030350204712887517
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:34:35.856553",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 592.4894223799583,
+      "market_stress": 0.006863874209149982,
+      "volatility": 0.00029663109887644306
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:35:50.495430",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 588.7502620344721,
+      "market_stress": 0.005101562130399472,
+      "volatility": 0.00023526100106193148
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:37:06.089017",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 593.4166292991378,
+      "market_stress": 0.006293051171876621,
+      "volatility": 0.0001952209419322387
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:37:43.179612",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 596.776336276421,
+      "market_stress": 0.006156669983177359,
+      "volatility": 0.00017879305734127665
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:38:20.158299",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 578.9340064992645,
+      "market_stress": 0.005265177619024268,
+      "volatility": 0.00017815283574120042
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:38:57.818612",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 603.7019926036859,
+      "market_stress": 0.004712419924258143,
+      "volatility": 0.00017508051641813212
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:39:34.659278",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 592.4626881984406,
+      "market_stress": 0.004712419924258143,
+      "volatility": 0.00017508051641813212
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:40:13.102903",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 578.4977441044875,
+      "market_stress": 0.005969695510742141,
+      "volatility": 0.00018933743670697235
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:40:50.325188",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 571.2030008144117,
+      "market_stress": 0.006491459811255407,
+      "volatility": 0.0001966587290050195
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:41:28.442289",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 585.9328013553543,
+      "market_stress": 0.006778801176610197,
+      "volatility": 0.00020601507978786838
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:41:29.785567",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 644.1824068668889,
+      "market_stress": 0.004036007058432108,
+      "volatility": 9.704527341901778e-05
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:42:07.364234",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 618.0470208463387,
+      "market_stress": 0.005639908526805682,
+      "volatility": 0.0001759414596940895
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:42:08.666211",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 611.0575691116825,
+      "market_stress": 0.004148989372792353,
+      "volatility": 9.924498600318851e-05
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:42:45.628333",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 624.0096120632171,
+      "market_stress": 0.0054093950282393935,
+      "volatility": 0.00017174786600111571
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:42:46.962560",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 624.958465603158,
+      "market_stress": 0.004148874480292513,
+      "volatility": 9.924498691084237e-05
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:43:23.944200",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 634.618635973969,
+      "market_stress": 0.0054093950282393935,
+      "volatility": 0.00017174786600111571
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:43:25.542592",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 629.4644458434205,
+      "market_stress": 0.004149104619097096,
+      "volatility": 9.924498599618243e-05
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:44:03.053115",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 621.6306771134294,
+      "market_stress": 0.0054093950282393935,
+      "volatility": 0.00017007567804390312
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:44:04.976923",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 646.090484391672,
+      "market_stress": 0.004148874480064375,
+      "volatility": 9.924331575344172e-05
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:44:42.050290",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 591.472911446989,
+      "market_stress": 0.008208811447052263,
+      "volatility": 0.00021220565550142962
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:44:43.352664",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 646.5820055145244,
+      "market_stress": 0.004131369198900362,
+      "volatility": 8.736530194279396e-05
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:45:21.761912",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 612.6518707899958,
+      "market_stress": 0.008955914931214549,
+      "volatility": 0.00022520308710217467
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:46:00.487010",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 599.0530043337131,
+      "market_stress": 0.010206563020684145,
+      "volatility": 0.0002457672163905696
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:46:38.862632",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 601.0388441122738,
+      "market_stress": 0.009658437679217355,
+      "volatility": 0.00024990111226225794
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:46:40.095911",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 648.7639158635744,
+      "market_stress": 0.0019004839199640463,
+      "volatility": 9.278242975925628e-05
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:47:17.584947",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 628.4506847249993,
+      "market_stress": 0.016604144130479014,
+      "volatility": 0.0003883229587707037
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:47:56.838864",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 630.4512196804371,
+      "market_stress": 0.016604144130479014,
+      "volatility": 0.000389747773318688
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:48:35.209581",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 627.1262871523327,
+      "market_stress": 0.02133185532502964,
+      "volatility": 0.0004587257152241595
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:49:13.155703",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 620.0395530081972,
+      "market_stress": 0.02124572596431282,
+      "volatility": 0.0004581628433279536
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:49:50.998556",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 608.4465853355978,
+      "market_stress": 0.021245725964312828,
+      "volatility": 0.0004581628433279536
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:50:28.812424",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 581.3325093771304,
+      "market_stress": 0.025101284753366846,
+      "volatility": 0.0005525386719187666
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:51:05.752703",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 569.9304432105729,
+      "market_stress": 0.025301353395593664,
+      "volatility": 0.000556022233425168
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:51:43.292643",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 625.8676472037282,
+      "market_stress": 0.026248734712187447,
+      "volatility": 0.0005849178579120654
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:52:20.895363",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 592.3265108343376,
+      "market_stress": 0.02702365066088065,
+      "volatility": 0.0006006868907923286
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:52:21.244364",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 584.866881226859,
+      "market_stress": 0.016812735157773775,
+      "volatility": 0.00041771666371914166
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:52:58.620475",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 628.5054943531425,
+      "market_stress": 0.023068273876820117,
+      "volatility": 0.0005966803497796464
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:52:58.942524",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 596.9675753212077,
+      "market_stress": 0.01681273515777378,
+      "volatility": 0.00041771666371914166
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:53:37.112013",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 621.2589278473154,
+      "market_stress": 0.024023116157055394,
+      "volatility": 0.000618818293364134
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:54:14.804848",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 611.5699144172004,
+      "market_stress": 0.02095681685493327,
+      "volatility": 0.000618818293364134
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:54:53.186693",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 584.5687214194392,
+      "market_stress": 0.021900654597821773,
+      "volatility": 0.0006312878519819495
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:55:31.614926",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 626.402848868746,
+      "market_stress": 0.021900654597821773,
+      "volatility": 0.0006312878519819495
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:56:10.304465",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 638.2141765328174,
+      "market_stress": 0.015337126572336554,
+      "volatility": 0.0006325009372943941
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:56:48.479212",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 611.221009911391,
+      "market_stress": 0.015947808809292828,
+      "volatility": 0.000635131460388168
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:57:26.875462",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 607.1397670605623,
+      "market_stress": 0.014781168982606256,
+      "volatility": 0.0006329735002492361
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:58:05.433833",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 612.4506696575436,
+      "market_stress": 0.012266570414655351,
+      "volatility": 0.0006241419835982807
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:58:43.692069",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 619.2022625925943,
+      "market_stress": 0.012237917563889355,
+      "volatility": 0.0006234996663275819
+    }
+  },
+  {
+    "timestamp": "2026-01-11T05:59:21.528867",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 621.5590600277748,
+      "market_stress": 0.010182240261441216,
+      "volatility": 0.0005399143763067138
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:00:00.107993",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 609.6903016148798,
+      "market_stress": 0.010182240261441216,
+      "volatility": 0.0005399143763067138
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:00:37.858412",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 588.1522984845101,
+      "market_stress": 0.02198554276277054,
+      "volatility": 0.0006715622143395612
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:01:53.913862",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 590.6250883606594,
+      "market_stress": 0.021908606738573366,
+      "volatility": 0.0006729615032759254
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:03:48.515017",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 588.5280712159628,
+      "market_stress": 0.02096535112915253,
+      "volatility": 0.0005543388432763855
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:09:33.010250",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 604.9560833535731,
+      "market_stress": 0.008512946672606573,
+      "volatility": 0.0004870658331792638
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:09:33.365098",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 625.9892498690858,
+      "market_stress": 0.023727430342342776,
+      "volatility": 0.0005057689099288856
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:10:11.782441",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 625.9892498690858,
+      "market_stress": 0.023727430342342776,
+      "volatility": 0.0005057689099288856
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:10:49.313958",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 605.5920044746493,
+      "market_stress": 0.010944183086728695,
+      "volatility": 0.0005259750736585888
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:10:49.726389",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 634.2315872659598,
+      "market_stress": 0.023727430342342776,
+      "volatility": 0.0005057689099288856
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:11:27.703195",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 625.3232947847864,
+      "market_stress": 0.01007882130793769,
+      "volatility": 0.0005260837016927167
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:11:28.031815",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 633.6132292562478,
+      "market_stress": 0.026806941177233787,
+      "volatility": 0.0005917359395441131
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:12:05.452525",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 619.031532582634,
+      "market_stress": 0.009880905840462412,
+      "volatility": 0.0005260837016927167
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:12:43.649812",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 615.9911375924065,
+      "market_stress": 0.009200500747963867,
+      "volatility": 0.00026736524637846194
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:12:43.986348",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 617.5399144218264,
+      "market_stress": 0.02930399797358682,
+      "volatility": 0.0006402214196198484
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:13:20.985538",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 611.433169829488,
+      "market_stress": 0.009215763257607548,
+      "volatility": 0.00025715900815441857
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:13:21.335247",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 634.3164589804946,
+      "market_stress": 0.02930399797358682,
+      "volatility": 0.0006402214196198484
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:13:59.493718",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 637.2582024082594,
+      "market_stress": 0.02930399797358682,
+      "volatility": 0.0006402214196198484
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:14:36.737659",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 637.5084226899409,
+      "market_stress": 0.02930399797358682,
+      "volatility": 0.0006402214196198484
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:15:15.167207",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 658.7157008333182,
+      "market_stress": 0.01973292616497309,
+      "volatility": 0.0006402214196198484
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:15:52.720741",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 653.4075471007842,
+      "market_stress": 0.01973292616497309,
+      "volatility": 0.0006402214196198484
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:16:30.972366",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 596.1479456794294,
+      "market_stress": 0.010011173716008522,
+      "volatility": 0.0003082613977355844
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:16:31.295130",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 648.0986113712315,
+      "market_stress": 0.01973292616497309,
+      "volatility": 0.0006402214196198484
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:17:10.041146",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 598.8138572110566,
+      "market_stress": 0.009876667701242771,
+      "volatility": 0.000308259871550146
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:17:10.406099",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 650.8902782390967,
+      "market_stress": 0.011836900014628329,
+      "volatility": 0.0006402214196198484
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:17:48.189825",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 629.9095420038734,
+      "market_stress": 0.010254067246099556,
+      "volatility": 0.00029972694480354974
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:17:48.529110",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 652.392372905058,
+      "market_stress": 0.007891266676418885,
+      "volatility": 0.0006402214196198484
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:18:27.224271",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 614.8396840711035,
+      "market_stress": 0.009904790673328697,
+      "volatility": 0.0002957070029217226
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:18:27.623114",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 652.4063489735385,
+      "market_stress": 0.0,
+      "volatility": 0.0006402214196198484
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:19:05.082200",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 596.049904911647,
+      "market_stress": 0.009904749983246511,
+      "volatility": 0.0002797754149383068
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:19:05.429358",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 643.636160062694,
+      "market_stress": 0.0,
+      "volatility": 0.0006402214196198484
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:19:43.038920",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 616.8123358108596,
+      "market_stress": 0.011641865733980095,
+      "volatility": 0.0003076390130381482
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:30:04.825889",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 627.036439569355,
+      "market_stress": 0.007032850886014002,
+      "volatility": 0.0005204735635936612
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:40:22.528804",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 641.9020610136105,
+      "market_stress": 0.003148793363265312,
+      "volatility": 0.00015706446407197936
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:41:02.435620",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 665.3139991247632,
+      "market_stress": 0.0030106954766045135,
+      "volatility": 0.00015706446407197938
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:41:42.309049",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 676.7500529672217,
+      "market_stress": 0.0044360165773350176,
+      "volatility": 0.00014812777341896466
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:42:22.556287",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 677.220070031453,
+      "market_stress": 0.004371631564931622,
+      "volatility": 0.00014985274920357503
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:46:22.031964",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 647.2103722458336,
+      "market_stress": 0.008038474812157408,
+      "volatility": 0.00018682779916477887
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:47:01.383115",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 666.1388407195972,
+      "market_stress": 0.008038474812157408,
+      "volatility": 0.0001827932324331681
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:49:01.190259",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 624.9945556532308,
+      "market_stress": 0.010384932814693668,
+      "volatility": 0.00023552797821494277
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:50:57.285701",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 640.1500366072307,
+      "market_stress": 0.010337059579936672,
+      "volatility": 0.00023643086778886302
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:52:17.723081",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 669.2775204470831,
+      "market_stress": 0.00907465272288052,
+      "volatility": 0.0002542507330491096
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:52:56.951649",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 698.61060984294,
+      "market_stress": 0.009228540846890699,
+      "volatility": 0.0002542282577933403
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:53:33.768576",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 681.5136708900123,
+      "market_stress": 0.006275233493005788,
+      "volatility": 0.00025645982408260316
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:54:12.171358",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 676.7377625092835,
+      "market_stress": 0.007594682206385087,
+      "volatility": 0.00027129531693358393
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:54:50.140094",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 692.437174360022,
+      "market_stress": 0.007803094851159997,
+      "volatility": 0.00027974513547616856
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:55:27.486783",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 708.6373644826604,
+      "market_stress": 0.007385530410749645,
+      "volatility": 0.000275633907715977
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:56:04.848969",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 710.4654118306014,
+      "market_stress": 0.007620528487781088,
+      "volatility": 0.000275633907715977
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:56:42.659497",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 691.5469726436445,
+      "market_stress": 0.007999440621592276,
+      "volatility": 0.000275633907715977
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:57:19.705684",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 713.6291264722187,
+      "market_stress": 0.007299232371777604,
+      "volatility": 0.00027345200774952084
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:57:56.997810",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 713.6248403993271,
+      "market_stress": 0.006950936739341595,
+      "volatility": 0.0002734520077495208
+    }
+  },
+  {
+    "timestamp": "2026-01-11T06:58:35.055734",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 710.4689286314928,
+      "market_stress": 0.00692013654874359,
+      "volatility": 0.00024096392080871326
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:03:35.121107",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 697.0075724852238,
+      "market_stress": 0.011902506245823131,
+      "volatility": 0.00029895967380229267
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:04:13.030627",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 661.6881107294025,
+      "market_stress": 0.012562441606720633,
+      "volatility": 0.00030304490710354574
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:04:51.893140",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 648.510481980565,
+      "market_stress": 0.012562441606720633,
+      "volatility": 0.0003013432716006558
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:05:30.086974",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 698.7048105407199,
+      "market_stress": 0.01138091342056758,
+      "volatility": 0.0003164046114117423
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:06:07.324985",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 690.9720993191576,
+      "market_stress": 0.010907519100743654,
+      "volatility": 0.00029518566863196734
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:11:48.230241",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 673.6255194598889,
+      "market_stress": 0.006886856378829542,
+      "volatility": 0.00029683560713439664
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:16:09.212063",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 688.9601644863247,
+      "market_stress": 0.0036381315832995885,
+      "volatility": 0.00020242325479271494
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:16:47.219856",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 704.4370012692451,
+      "market_stress": 0.0036957331144651263,
+      "volatility": 0.00020242325479271494
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:24:21.498936",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 650.9147415805755,
+      "market_stress": 0.0033988746930780013,
+      "volatility": 0.00014310296522531654
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:24:59.646227",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 726.687375473083,
+      "market_stress": 0.007216997270002912,
+      "volatility": 0.00020170891515360406
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:25:38.225993",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 735.03197448134,
+      "market_stress": 0.007128696856503399,
+      "volatility": 0.0002015677264169636
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:26:15.263615",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 712.4912180044741,
+      "market_stress": 0.007332685030762453,
+      "volatility": 0.00020821713511388665
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:26:53.055512",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 712.6570908519182,
+      "market_stress": 0.007332685030762453,
+      "volatility": 0.00020821713511388662
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:27:30.557802",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 712.7664116285232,
+      "market_stress": 0.007332685030762451,
+      "volatility": 0.0002086260078911645
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:28:08.627989",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 712.7732479577611,
+      "market_stress": 0.007446982837235484,
+      "volatility": 0.00019633648055862588
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:28:46.883869",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 705.1024098418387,
+      "market_stress": 0.00724570755977293,
+      "volatility": 0.00019633648055862588
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:30:02.658851",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 695.322805428755,
+      "market_stress": 0.018582060646479312,
+      "volatility": 0.0005431237306195956
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:33:49.280271",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 690.4756827106947,
+      "market_stress": 0.008043890315685616,
+      "volatility": 0.00023927657827055266
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:34:26.595914",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 721.0367278865729,
+      "market_stress": 0.00903186252634223,
+      "volatility": 0.00024904164436511506
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:35:04.936982",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 728.2661466879962,
+      "market_stress": 0.006275175869518455,
+      "volatility": 0.00025158500556147356
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:35:43.227321",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 724.2398259762753,
+      "market_stress": 0.009485417557633801,
+      "volatility": 0.00028975204274317684
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:36:21.381048",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 707.5830845314902,
+      "market_stress": 0.009305706440820053,
+      "volatility": 0.00028579497591560833
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:40:10.025366",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 772.2300979375927,
+      "market_stress": 0.0022797161326861943,
+      "volatility": 6.301256693300763e-05
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:40:50.383246",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 774.4730438281564,
+      "market_stress": 0.002280278885075999,
+      "volatility": 6.198924748468478e-05
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:41:29.168254",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 774.959935525632,
+      "market_stress": 0.0022797161332445736,
+      "volatility": 6.198777723881728e-05
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:42:06.280728",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 721.4919959354971,
+      "market_stress": 0.011410672227463727,
+      "volatility": 0.0003081351018331437
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:42:43.721855",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 715.2768021819033,
+      "market_stress": 0.011846067122614197,
+      "volatility": 0.0003110691201324319
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:43:21.134008",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 730.0486201180829,
+      "market_stress": 0.009104977107261677,
+      "volatility": 0.000318110620490784
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:43:59.142306",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 732.3081009328406,
+      "market_stress": 0.009003885415903846,
+      "volatility": 0.0003164093238177144
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:44:36.232606",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 733.1898988448677,
+      "market_stress": 0.008652873225608383,
+      "volatility": 0.0003134760635389864
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:45:13.642545",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 722.2484810151932,
+      "market_stress": 0.016338641695654323,
+      "volatility": 0.0004434089358457427
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:45:51.125248",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 724.5249671367618,
+      "market_stress": 0.016131026617682575,
+      "volatility": 0.00044260524904761976
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:46:29.193939",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 751.4678249326195,
+      "market_stress": 0.017919735058532643,
+      "volatility": 0.0004558355406276407
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:47:07.140534",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 684.2685059461467,
+      "market_stress": 0.01778159894774548,
+      "volatility": 0.0004581539208742149
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:47:45.701069",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 713.4478854579675,
+      "market_stress": 0.016937492827948566,
+      "volatility": 0.00043495856622178305
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:48:24.226108",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 746.9442975180709,
+      "market_stress": 0.01690415912648752,
+      "volatility": 0.0004336837189563198
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:49:02.910122",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 706.9673877139492,
+      "market_stress": 0.01613781655092901,
+      "volatility": 0.0004395104862814082
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:49:41.774582",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 718.4178831591423,
+      "market_stress": 0.016293424023599252,
+      "volatility": 0.0003970172248725234
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:50:19.869548",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 717.9473895571804,
+      "market_stress": 0.016473438591260384,
+      "volatility": 0.00039526013532142624
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:50:58.542938",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 720.0552170888701,
+      "market_stress": 0.008481190236071414,
+      "volatility": 0.0003909221704254744
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:51:36.688499",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 713.3294337402633,
+      "market_stress": 0.008464604459671657,
+      "volatility": 0.00039208266533130457
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:52:15.562107",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 707.839567187372,
+      "market_stress": 0.005515009091996804,
+      "volatility": 0.00039208266533130457
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:52:15.939719",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 679.5701272923396,
+      "market_stress": 0.007927095359410687,
+      "volatility": 0.0003860205593613375
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:52:53.765954",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 709.7701084845501,
+      "market_stress": 0.004689975500284406,
+      "volatility": 0.00039092467813330153
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:52:54.108249",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 705.5277196104445,
+      "market_stress": 0.007927095359410687,
+      "volatility": 0.00038602055936133757
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:53:31.736845",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 717.9537066259556,
+      "market_stress": 0.00468989004425036,
+      "volatility": 0.00039092467813330153
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:53:32.059817",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 713.5072625953245,
+      "market_stress": 0.007927095359410687,
+      "volatility": 0.00038602055936133757
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:54:09.321949",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 717.3904048205183,
+      "market_stress": 0.004689719274011599,
+      "volatility": 0.00036813870738338413
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:54:09.653263",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 713.4067374805165,
+      "market_stress": 0.007927095359410687,
+      "volatility": 0.00038602055936133757
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:54:47.739704",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 752.2883492258799,
+      "market_stress": 0.0025101565681467713,
+      "volatility": 0.0003708859586199282
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:54:48.092632",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 705.1334143017593,
+      "market_stress": 0.007927095359410687,
+      "volatility": 0.00038602055936133757
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:55:27.138715",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 690.5286337272654,
+      "market_stress": 0.002453717296019346,
+      "volatility": 0.0003594215393436633
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:55:27.494403",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 681.1579189438703,
+      "market_stress": 0.007927095359410687,
+      "volatility": 0.0003470738185102564
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:56:05.763410",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 713.348699670728,
+      "market_stress": 0.004949155120324038,
+      "volatility": 0.0003643309794915168
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:56:43.603211",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 695.2048750447641,
+      "market_stress": 0.00538255098234932,
+      "volatility": 0.00037003249247548895
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:57:20.992007",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 737.9814226736954,
+      "market_stress": 0.005511029123106174,
+      "volatility": 0.00020977673151937248
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:58:00.012343",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 727.1955591930874,
+      "market_stress": 0.005511029123106174,
+      "volatility": 0.0002089644973574822
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:58:38.667697",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 724.8916603689062,
+      "market_stress": 0.0055110200472269265,
+      "volatility": 0.00016555767052979655
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:59:17.055573",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 691.0653975876664,
+      "market_stress": 0.006089873623080219,
+      "volatility": 0.0001596945927455371
+    }
+  },
+  {
+    "timestamp": "2026-01-11T07:59:55.601472",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 694.3639509265724,
+      "market_stress": 0.006043676533673299,
+      "volatility": 0.00015933775999350884
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:00:33.918752",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 691.292722538458,
+      "market_stress": 0.005807318895464916,
+      "volatility": 0.00016065958955128486
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:01:11.997662",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 713.5740070671169,
+      "market_stress": 0.005831362630098771,
+      "volatility": 0.00013354047943472673
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:01:12.374029",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 711.2628501406152,
+      "market_stress": 0.01583621770607326,
+      "volatility": 0.0003690010513979371
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:01:50.227326",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 729.8044785799408,
+      "market_stress": 0.0037961918974791,
+      "volatility": 0.00013353910358996339
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:01:50.998788",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 733.1043483534302,
+      "market_stress": 0.015836217706073262,
+      "volatility": 0.0003690010513979371
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:02:28.807360",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 721.8880532943664,
+      "market_stress": 0.0034485672449878304,
+      "volatility": 0.00013353910358996339
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:02:29.177756",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 738.7809273834043,
+      "market_stress": 0.015836217706073262,
+      "volatility": 0.0003690010513979371
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:03:07.326724",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 713.7793344002376,
+      "market_stress": 0.0033245998051263585,
+      "volatility": 0.00013353910358996339
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:03:07.675030",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 739.0473984761703,
+      "market_stress": 0.015836217706073262,
+      "volatility": 0.00036900105139793716
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:03:45.731154",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 713.7390084793716,
+      "market_stress": 0.0033245998051263585,
+      "volatility": 0.00013353910358996339
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:03:46.125093",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 735.6503421763758,
+      "market_stress": 0.015836217706073262,
+      "volatility": 0.00036900105139793716
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:04:23.738918",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 729.4593494129426,
+      "market_stress": 0.015836217706073262,
+      "volatility": 0.00033756148268208793
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:05:02.431748",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 724.880193167294,
+      "market_stress": 0.015836217706073262,
+      "volatility": 0.00033756148268208793
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:05:40.197956",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 726.7294974731193,
+      "market_stress": 0.015836217706073262,
+      "volatility": 0.00033756148268208793
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:06:18.433619",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 726.9287228237474,
+      "market_stress": 0.015836217706073262,
+      "volatility": 0.00033756148268208793
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:06:57.474782",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 712.9859348025686,
+      "market_stress": 0.007915116370194316,
+      "volatility": 0.00038566981160655274
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:09:30.219652",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 706.0360542520327,
+      "market_stress": 0.01636987012592105,
+      "volatility": 0.0003480688633374005
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:10:07.535657",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 719.7957475336627,
+      "market_stress": 0.016446692823609967,
+      "volatility": 0.00034875901159208696
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:10:45.682783",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 739.0172552763835,
+      "market_stress": 0.010418246524642044,
+      "volatility": 0.0003494072405548172
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:11:25.332684",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 731.1159836955457,
+      "market_stress": 0.010159253758512227,
+      "volatility": 0.0003418865797011179
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:12:03.968868",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 731.8241457574728,
+      "market_stress": 0.00892475574863933,
+      "volatility": 0.0003418865797011179
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:12:42.658547",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 724.3495597319097,
+      "market_stress": 0.005199949742298148,
+      "volatility": 0.0003571750559657619
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:13:20.023100",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 740.2069101156799,
+      "market_stress": 0.006460963409678583,
+      "volatility": 0.00036001303254114535
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:13:58.042624",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Circuit breaker active for DOGEUSDT: loss_streak",
+      "position_value": 740.2073676595327,
+      "market_stress": 0.006194767516560979,
+      "volatility": 0.00035985609035342334
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:19:05.319902",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 712.6274807266608,
+      "market_stress": 0.0,
+      "volatility": 0.0003860236429349912
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:19:43.083716",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 714.2066372397858,
+      "market_stress": 0.0,
+      "volatility": 0.0003860236429349912
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:20:21.683013",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 715.7857937529109,
+      "market_stress": 0.0,
+      "volatility": 0.0003860236429349912
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:21:00.158619",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 717.3649502660362,
+      "market_stress": 0.0,
+      "volatility": 0.0003860236429349912
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:22:15.897706",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 736.0867020994241,
+      "market_stress": 0.0022463077211805588,
+      "volatility": 0.00018239056679895916
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:22:53.536868",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 747.5592815261119,
+      "market_stress": 0.0022463077211805588,
+      "volatility": 0.00018145757707020195
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:22:54.374051",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 718.2385628761072,
+      "market_stress": 0.0,
+      "volatility": 0.00016897229581901727
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:23:31.777455",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 747.452465805666,
+      "market_stress": 0.0022463077211805588,
+      "volatility": 0.00018145757707020192
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:24:09.366198",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 717.8681861657356,
+      "market_stress": 0.0022463077211805588,
+      "volatility": 0.00018145757707020192
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:24:47.767018",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 718.3045018700834,
+      "market_stress": 0.0022463077211805588,
+      "volatility": 0.00014912755828732383
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:30:38.526154",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 687.4225402916729,
+      "market_stress": 0.0072599295480179965,
+      "volatility": 0.00015702036325574833
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:33:15.103888",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 735.762475247555,
+      "market_stress": 0.00875639910803932,
+      "volatility": 0.00019878525984022482
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:36:28.871983",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 768.2408698492261,
+      "market_stress": 0.008030563556423504,
+      "volatility": 0.00022472988394841016
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:37:05.952356",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 781.260324421674,
+      "market_stress": 0.005849280196685788,
+      "volatility": 0.0002254215358281574
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:37:44.484210",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 776.1761465809363,
+      "market_stress": 0.005849263065235809,
+      "volatility": 0.00022604838840643566
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:38:21.841662",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 769.3787091667336,
+      "market_stress": 0.00594433250909774,
+      "volatility": 0.00022661107315964554
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:38:59.821231",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 773.8902490349357,
+      "market_stress": 0.0057768801498963305,
+      "volatility": 0.00021664888683805916
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:42:48.539819",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 762.4345842001027,
+      "market_stress": 0.01178391867434733,
+      "volatility": 0.000296154098005452
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:43:27.142814",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 754.8376492541668,
+      "market_stress": 0.012962039933916996,
+      "volatility": 0.0002961540980054519
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:44:41.898802",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 728.8499299862162,
+      "market_stress": 0.013123282626544377,
+      "volatility": 0.0002978698243529334
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:45:18.820116",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 743.7480424029822,
+      "market_stress": 0.013058979965850157,
+      "volatility": 0.0002999993182955884
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:50:23.123684",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 764.4271332590381,
+      "market_stress": 0.010654450494714066,
+      "volatility": 0.0003512234791197928
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:51:00.714019",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 738.0871818635015,
+      "market_stress": 0.010601608493506434,
+      "volatility": 0.0003519071134007425
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:51:38.620833",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 739.1008723335494,
+      "market_stress": 0.007869364606670056,
+      "volatility": 0.00034741412479251193
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:52:16.346102",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 739.1008723335494,
+      "market_stress": 0.007869364606670056,
+      "volatility": 0.00034741412479251193
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:54:09.221804",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 738.6854949080664,
+      "market_stress": 0.008988949396149373,
+      "volatility": 0.0002845067900786854
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:54:46.707074",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 793.4458263000524,
+      "market_stress": 0.009189094556069142,
+      "volatility": 0.0002851003522667619
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:55:24.811622",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 798.4755821812861,
+      "market_stress": 0.009219177981651177,
+      "volatility": 0.0002550235464112779
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:56:02.337016",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 798.00488891518,
+      "market_stress": 0.006225459945442082,
+      "volatility": 0.0002555220413694194
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:57:17.947454",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 744.5135356853176,
+      "market_stress": 0.016888844469194333,
+      "volatility": 0.00041973296045791093
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:57:55.818511",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 746.0949592694923,
+      "market_stress": 0.017341590327219835,
+      "volatility": 0.0003959427312831428
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:58:33.332743",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 763.3783474133955,
+      "market_stress": 0.018167586598971053,
+      "volatility": 0.00040994412222792985
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:59:10.344391",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 810.7118003340041,
+      "market_stress": 0.018290291650311773,
+      "volatility": 0.00041128476774457016
+    }
+  },
+  {
+    "timestamp": "2026-01-11T08:59:49.369327",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 803.1524723843512,
+      "market_stress": 0.017568202720876603,
+      "volatility": 0.00041107558057657857
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:00:26.295003",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 804.5395820721079,
+      "market_stress": 0.017480463669219303,
+      "volatility": 0.0004102847425486885
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:01:04.066257",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 790.3952084543927,
+      "market_stress": 0.018108423048603692,
+      "volatility": 0.0004234827696047032
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:01:42.260184",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 804.519571252944,
+      "market_stress": 0.01849748637399445,
+      "volatility": 0.0004278406085232036
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:02:20.056642",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 756.0254921576633,
+      "market_stress": 0.019107497017612076,
+      "volatility": 0.0004332538926238266
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:02:57.863832",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 822.246390134875,
+      "market_stress": 0.01316457879177646,
+      "volatility": 0.00045308105086593915
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:03:35.806529",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 810.0971136585586,
+      "market_stress": 0.013164578791776462,
+      "volatility": 0.0004579084037505474
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:04:13.180735",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 794.296812634974,
+      "market_stress": 0.012484113251392023,
+      "volatility": 0.0004579084037505474
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:04:51.559302",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 773.7954531918408,
+      "market_stress": 0.012484085322860064,
+      "volatility": 0.00045886205556036294
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:12:23.147150",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 780.9116015013071,
+      "market_stress": 0.009581979836511576,
+      "volatility": 0.00032367081877785175
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:13:01.209051",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 798.4136895080765,
+      "market_stress": 0.009581979836511576,
+      "volatility": 0.0003134899279056698
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:16:47.511745",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 769.9273140669081,
+      "market_stress": 0.008829263575872643,
+      "volatility": 0.0002680255235313672
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:17:24.867192",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 787.7140357582658,
+      "market_stress": 0.008829263575872643,
+      "volatility": 0.0002659134010810974
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:18:03.449733",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 787.9570531574544,
+      "market_stress": 0.00847388342526059,
+      "volatility": 0.0002659134010810974
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:18:40.796457",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 815.2884988601016,
+      "market_stress": 0.008523133195159984,
+      "volatility": 0.0002676039217143146
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:19:18.387735",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 815.7608749416506,
+      "market_stress": 0.007586439100823736,
+      "volatility": 0.0002676039217143146
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:19:55.713000",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 799.196967782417,
+      "market_stress": 0.008272187446346987,
+      "volatility": 0.00028295311470115023
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:20:32.780002",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 803.789125953598,
+      "market_stress": 0.008014507011491232,
+      "volatility": 0.00021095388084274217
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:21:10.653305",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 803.9556808370598,
+      "market_stress": 0.00801450701149123,
+      "volatility": 0.00021195408598430877
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:21:48.297554",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 804.6217261750464,
+      "market_stress": 0.005538229890447771,
+      "volatility": 0.00021860435391902515
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:22:25.894367",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 804.7610055229784,
+      "market_stress": 0.006135009729232196,
+      "volatility": 0.00022419666912422493
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:23:04.466040",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 815.9207899507568,
+      "market_stress": 0.0074107547901310885,
+      "volatility": 0.0002387866088225166
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:23:42.935793",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 797.1259949591688,
+      "market_stress": 0.007550537603078126,
+      "volatility": 0.00024049054229634997
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:24:20.922079",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 783.3383913746585,
+      "market_stress": 0.007550484885403232,
+      "volatility": 0.00023550851810758423
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:24:59.112982",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 773.2177187968111,
+      "market_stress": 0.007660480838757808,
+      "volatility": 0.00023693903658217978
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:25:36.895880",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 765.7769243947698,
+      "market_stress": 0.007257551059056734,
+      "volatility": 0.0002320417320177618
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:26:15.233787",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 816.5466283115912,
+      "market_stress": 0.006760297483702251,
+      "volatility": 0.00023397479602957675
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:26:53.471231",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 830.7631359190128,
+      "market_stress": 0.006760297483702251,
+      "volatility": 0.00023203754821452235
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:27:31.195763",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 806.0093998758983,
+      "market_stress": 0.005383769690082891,
+      "volatility": 0.0002320375482145223
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:28:08.742984",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 802.5563174860526,
+      "market_stress": 0.005226254708859201,
+      "volatility": 0.00017921200053249684
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:28:46.154998",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 780.6477984662448,
+      "market_stress": 0.004256471862946194,
+      "volatility": 0.00018093137956207695
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:31:18.685495",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 776.1962196587092,
+      "market_stress": 0.003714351701361779,
+      "volatility": 0.0001923868691826071
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:31:56.549122",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 802.8751367233715,
+      "market_stress": 0.0036193615797928715,
+      "volatility": 0.00016999841269571152
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:32:34.114721",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 820.7070747146328,
+      "market_stress": 0.0036193615797928715,
+      "volatility": 0.000158338535335902
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:33:11.442982",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 820.5275679204434,
+      "market_stress": 0.0036193615797928715,
+      "volatility": 0.000158338535335902
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:33:49.154592",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 785.2010812242796,
+      "market_stress": 0.0036193615797928715,
+      "volatility": 0.00013534989564936427
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:34:27.151704",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 761.5174209040645,
+      "market_stress": 0.003732986552924063,
+      "volatility": 0.00013576544476309027
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:46:35.806981",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 770.3957885210959,
+      "market_stress": 0.0064538730366479865,
+      "volatility": 0.0003325752414266546
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:47:13.654926",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 770.3957885210959,
+      "market_stress": 0.0064538730366479865,
+      "volatility": 0.00025827371224367913
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:47:51.441494",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 771.3245504594195,
+      "market_stress": 0.004050524274097712,
+      "volatility": 0.00022745405032594462
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:48:29.774570",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 771.3790504268951,
+      "market_stress": 0.00390949520735137,
+      "volatility": 0.00021859727883912622
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:53:34.927528",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 824.0015635376565,
+      "market_stress": 0.004048965671764417,
+      "volatility": 0.00016130511817961907
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:54:13.190274",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 824.0015635376565,
+      "market_stress": 0.004048965671764417,
+      "volatility": 0.00011955974720032077
+    }
+  },
+  {
+    "timestamp": "2026-01-11T09:54:50.848512",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 824.037663598719,
+      "market_stress": 0.003961521718493569,
+      "volatility": 0.00011788789956267587
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:02:22.831339",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 809.2341041274334,
+      "market_stress": 0.006394486650712531,
+      "volatility": 0.00014109550861100367
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:03:00.888591",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 809.0914489528122,
+      "market_stress": 0.006745927774093177,
+      "volatility": 0.00014726902320263098
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:03:38.998715",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 809.6477728791292,
+      "market_stress": 0.00644882922029693,
+      "volatility": 0.000147269023202631
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:10:18.301816",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 822.1761073482251,
+      "market_stress": 0.017096529195439244,
+      "volatility": 0.00037855650778599327
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:10:58.063578",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 850.3396770754723,
+      "market_stress": 0.01321012524163855,
+      "volatility": 0.0004227464787252591
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:11:36.913839",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 846.5201759513992,
+      "market_stress": 0.012286446301208155,
+      "volatility": 0.0004277190960785914
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:12:16.094615",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 847.4111765206125,
+      "market_stress": 0.010985009849339325,
+      "volatility": 0.0004277182469894016
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:12:54.720503",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 848.0963456525648,
+      "market_stress": 0.010476039123436212,
+      "volatility": 0.00041144599255487914
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:13:33.907818",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 844.1555572017561,
+      "market_stress": 0.010476039123436212,
+      "volatility": 0.00040937604536792175
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:14:12.062054",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 843.827097766554,
+      "market_stress": 0.0109653158808282,
+      "volatility": 0.0004094441132987153
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:24:31.136102",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 885.150904336827,
+      "market_stress": 0.007921101335878946,
+      "volatility": 0.00016884452847531434
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:25:10.261157",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 886.7984944482504,
+      "market_stress": 0.007921101335878946,
+      "volatility": 0.00016884452847531434
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:30:26.489663",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 875.519009239509,
+      "market_stress": 0.010611261192773398,
+      "volatility": 0.00027816923282631914
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:31:05.661104",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 857.7178221322686,
+      "market_stress": 0.006639264959342475,
+      "volatility": 0.000254805990205975
+    }
+  },
+  {
+    "timestamp": "2026-01-11T10:31:45.162984",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "DOGEUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 858.2598916613694,
+      "market_stress": 0.00639215115622364,
+      "volatility": 0.000254805990205975
+    }
+  },
+  {
+    "timestamp": "2026-01-11T11:40:50.965547",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 916.4347488525791,
+      "market_stress": 0.007927095359410687,
+      "volatility": 0.00016897229581901727
+    }
+  },
+  {
+    "timestamp": "2026-01-11T11:41:29.595444",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 916.4347488525791,
+      "market_stress": 0.007927095359410687,
+      "volatility": 0.00016897229581901727
+    }
+  },
+  {
+    "timestamp": "2026-01-11T11:42:07.451495",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 916.4347488525791,
+      "market_stress": 0.007927095359410687,
+      "volatility": 0.00016897229581901727
+    }
+  },
+  {
+    "timestamp": "2026-01-11T11:52:20.941797",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 909.6543409750207,
+      "market_stress": 0.008357125307668122,
+      "volatility": 0.00017813872366345205
+    }
+  },
+  {
+    "timestamp": "2026-01-11T11:52:58.951152",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "ETCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 930.5555859142914,
+      "market_stress": 0.008357125307668122,
+      "volatility": 0.00017813872366345207
+    }
+  },
+  {
+    "timestamp": "2026-01-11T12:09:27.346537",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 929.7976779112047,
+      "market_stress": 0.015860193820762623,
+      "volatility": 0.00033807255249520326
+    }
+  },
+  {
+    "timestamp": "2026-01-11T12:10:05.128446",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 929.7976779112047,
+      "market_stress": 0.015860193820762623,
+      "volatility": 0.00033807255249520326
+    }
+  },
+  {
+    "timestamp": "2026-01-11T12:20:13.481155",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 989.4925762739665,
+      "market_stress": 0.00631528753264672,
+      "volatility": 0.00013442618438865502
+    }
+  },
+  {
+    "timestamp": "2026-01-11T12:20:52.902228",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 968.8190722978082,
+      "market_stress": 0.006436848257625675,
+      "volatility": 0.0001361461383184495
+    }
+  },
+  {
+    "timestamp": "2026-01-11T12:21:31.947389",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 989.0677760720007,
+      "market_stress": 0.007171198621642838,
+      "volatility": 0.00014949376771198808
+    }
+  },
+  {
+    "timestamp": "2026-01-11T12:22:10.213314",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 989.139322430368,
+      "market_stress": 0.007027043036922222,
+      "volatility": 0.00014949494989191162
+    }
+  },
+  {
+    "timestamp": "2026-01-11T12:23:26.845846",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 989.1421611579779,
+      "market_stress": 0.0070213234105456,
+      "volatility": 0.00014940570672727078
+    }
+  },
+  {
+    "timestamp": "2026-01-11T12:24:06.018361",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 989.1453635460742,
+      "market_stress": 0.0070148710607813676,
+      "volatility": 0.00014934391840814575
+    }
+  },
+  {
+    "timestamp": "2026-01-11T12:29:49.030279",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 980.6470494062698,
+      "market_stress": 0.003339197331944117,
+      "volatility": 0.00016083640654624863
+    }
+  },
+  {
+    "timestamp": "2026-01-11T12:30:28.113478",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "BTCUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 991.0364516309402,
+      "market_stress": 0.003204601539686384,
+      "volatility": 0.00016114020256686472
+    }
+  },
+  {
+    "timestamp": "2026-01-11T12:36:54.034621",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 966.6630717410612,
+      "market_stress": 0.007921101335878946,
+      "volatility": 0.00016884452847531437
+    }
+  },
+  {
+    "timestamp": "2026-01-11T12:37:32.626578",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 973.7244710956817,
+      "market_stress": 0.007921101335878946,
+      "volatility": 0.00016884452847531434
+    }
+  },
+  {
+    "timestamp": "2026-01-11T12:38:10.192355",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 980.7584610869968,
+      "market_stress": 0.007921101335878946,
+      "volatility": 0.00016884452847531434
+    }
+  },
+  {
+    "timestamp": "2026-01-11T12:38:48.592065",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 928.4261970125684,
+      "market_stress": 0.011881652003818417,
+      "volatility": 0.000245325412264557
+    }
+  },
+  {
+    "timestamp": "2026-01-11T13:55:50.001250",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "XRPUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 888.9663689934471,
+      "market_stress": 0.007484995801610609,
+      "volatility": 0.0002089096546662793
+    }
+  },
+  {
+    "timestamp": "2026-01-11T14:09:21.538849",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 920.0489174851317,
+      "market_stress": 0.025973590450047445,
+      "volatility": 0.0006614684228489279
+    }
+  },
+  {
+    "timestamp": "2026-01-11T14:10:00.416554",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 921.0790776213748,
+      "market_stress": 0.02376331306548395,
+      "volatility": 0.0006614684228489279
+    }
+  },
+  {
+    "timestamp": "2026-01-11T14:10:38.320520",
+    "event_type": "SAFETY_BLOCK",
+    "payload": {
+      "symbol": "LINKUSDT",
+      "reason": "Portfolio health too weak for new exposure",
+      "position_value": 921.0790776213748,
+      "market_stress": 0.02376331306548395,
+      "volatility": 0.000661468422848928
+    }
+  }
+]

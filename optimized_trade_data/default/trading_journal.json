@@ -1,71 +1,5 @@
 [
   {
-    "timestamp": "2026-01-02T13:15:45.253517",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BCHUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.0,
-      "volatility": 0.0
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:45.267992",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "XRPUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.005240419464620955,
-      "volatility": 0.00028310619264526105
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:45.276501",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "ADAUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.011734144063734282,
-      "volatility": 0.00075173917503418
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:45.291415",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "LINKUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.01720986113048428,
-      "volatility": 0.0007261749129966436
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:15:45.305096",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "BTCUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.007173422540444798,
-      "volatility": 0.00023449166658155436
-    }
-  },
-  {
-    "timestamp": "2026-01-02T13:16:31.287899",
-    "event_type": "SAFETY_BLOCK",
-    "payload": {
-      "symbol": "SOLUSDT",
-      "reason": "Portfolio health too weak for new exposure",
-      "position_value": 11.0,
-      "market_stress": 0.006913905202232993,
-      "volatility": 0.000252625320317098
-    }
-  },
-  {
     "timestamp": "2026-01-02T13:16:31.302865",
     "event_type": "SAFETY_BLOCK",
     "payload": {
@@ -5690,6 +5624,60 @@
   },
   {
     "timestamp": "2026-01-10T03:23:08.720574",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-11T21:20:27.846382",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-11T21:20:33.393653",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-11T21:39:08.781569",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-11T21:39:14.030049",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-11T21:47:53.749713",
+    "event_type": "REAL_TRADING_TOGGLED",
+    "payload": {
+      "enabled": true,
+      "testnet": true,
+      "reason": "connected"
+    }
+  },
+  {
+    "timestamp": "2026-01-11T21:47:58.258154",
     "event_type": "REAL_TRADING_TOGGLED",
     "payload": {
       "enabled": true,

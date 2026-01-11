@@ -575,6 +575,90 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Example form for mobile optimization -->
+                    <div class="form-group">
+                        <label for="exampleInput">Example Input</label>
+                        <input type="text" id="exampleInput" class="form-control" placeholder="Enter text">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="exampleSelect">Example Select</label>
+                        <select id="exampleSelect" class="form-control">
+                            <option>Option 1</option>
+                            <option>Option 2</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </div>
+
+                    <!-- Example table for responsiveness -->
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Column 1</th>
+                                    <th>Column 2</th>
+                                    <th>Column 3</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Data 1</td>
+                                    <td>Data 2</td>
+                                    <td>Data 3</td>
+                                </tr>
+                                <tr>
+                                    <td>Data 4</td>
+                                    <td>Data 5</td>
+                                    <td>Data 6</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Example chart container -->
+                    <div class="chart-container">
+                        <canvas id="exampleChart" class="chart"></canvas>
+                    </div>
+
+                    <script>
+                        // Example chart script
+                        const ctx = document.getElementById('exampleChart').getContext('2d');
+                        const exampleChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
+                                datasets: [{
+                                    label: '# of Votes',
+                                    data: [12, 19, 3, 5, 2, 3],
+                                    backgroundColor: [
+                                        'rgba(255, 99, 132, 0.2)',
+                                        'rgba(54, 162, 235, 0.2)',
+                                        'rgba(255, 206, 86, 0.2)',
+                                        'rgba(75, 192, 192, 0.2)',
+                                        'rgba(153, 102, 255, 0.2)',
+                                        'rgba(255, 159, 64, 0.2)'
+                                    ],
+                                    borderColor: [
+                                        'rgba(255, 99, 132, 1)',
+                                        'rgba(54, 162, 235, 1)',
+                                        'rgba(255, 206, 86, 1)',
+                                        'rgba(75, 192, 192, 1)',
+                                        'rgba(153, 102, 255, 1)',
+                                        'rgba(255, 159, 64, 1)'
+                                    ],
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false
+                            }
+                        });
+                    </script>
                 </section>
 
                 <!-- Market Data Page -->
@@ -988,7 +1072,7 @@
                                 <h3 class="card-title">Avg Win Rate</h3>
                             </div>
                             <div class="card-value" id="avg-win-rate">0%</div>
-                            <p class="card-subtitle">Across all strategies</p>
+                            <p class="card-subtitle" id="avg-win-rate-period">Across all strategies</p>
                         </div>
                     </div>
 
@@ -1593,6 +1677,8 @@
                             </div>
                         </div>
 
+                       
+
                         <!-- Training Status -->
                         <div class="dashboard-card">
                             <div class="card-header">
@@ -2079,6 +2165,13 @@
     </div>
 
 
+    <!-- Add a hamburger menu for mobile -->
+    <div class="mobile-nav">
+        <button class="hamburger-menu" onclick="toggleSidebar()">
+            &#9776;
+        </button>
+    </div>
+
     <!-- SocketIO Client Library -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
@@ -2090,5 +2183,12 @@
 
     <!-- Page Scripts -->
     <script type="module" src="{{ asset_url('health.js') }}?t={{ (current_time or 0) * 1000 }}" defer></script>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
 </body>
 </html>

@@ -1744,10 +1744,16 @@
     #trade-history .data-table th.trade-col-leverage,
     #trade-history .data-table td.trade-col-leverage,
     #trade-history .data-table th.trade-col-status,
-    #trade-history .data-table td.trade-col-status,
+    #trade-history .data-table td.trade-col-status {
+        display: none;
+    }
+
+    /* Keep actions visible on mobile but compact them for layout stability */
     #trade-history .data-table th.trade-col-actions,
     #trade-history .data-table td.trade-col-actions {
-        display: none;
+        display: table-cell;
+        min-width: 96px;
+        text-align: right;
     }
 
     /* Sticky symbol (left) and PnL (right) */

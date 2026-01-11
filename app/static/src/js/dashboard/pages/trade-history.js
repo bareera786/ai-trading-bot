@@ -82,10 +82,29 @@ export async function loadTradeHistory() {
     });
     updateSymbolFilter();
 
+    // Ensure we operate on a shallow copy and sort by the most reliable
+    // timestamp candidates (timestamp, entry_timestamp, created_at).
     const trades = Array.isArray(data.trades) ? [...data.trades] : [];
     trades.sort((a, b) => {
-      const ta = parseTimestampToMs(a?.timestamp);
-      const tb = parseTimestampToMs(b?.timestamp);
+      const ta = Math.max(
+        parseTimestampToMs(a?.timestamp),
+        parseTimestampToMs(a?.entry_timestamp),
+        parseTimestampToMs(a?.created_at),
+        0
+      );
+      const tb = Math.max(
+        parseTimestampToMs(b?.timestamp),
+        parseTimestampToMs(b?.entry_timestamp),
+        parseTimestampToMs(b?.created_at),
+        0
+      );
+      // Descending (newest first)
+      if (tb === ta) {
+        // stable-ish tie-breaker: prefer larger trade id when available
+        const ida = Number(a?.trade_id ?? a?.id ?? 0);
+        const idb = Number(b?.trade_id ?? b?.id ?? 0);
+        return idb - ida;
+      }
       return tb - ta;
     });
 
@@ -123,7 +142,9 @@ function populateTradeHistoryTable(trades) {
     });
 
     const hasPnl = typeof trade?.pnl === 'number' && Number.isFinite(trade.pnl);
-    const pnl = hasPnl ? trade.pnl : 0;
+    const rawExit = trade.exit_price ?? trade.close_price ?? null;
+    const hasExit = rawExit !== null && rawExit !== undefined && rawExit !== 0;
+    const pnl = hasPnl ? trade.pnl : null;
     const pnlClass = hasPnl ? (pnl >= 0 ? 'text-success' : 'text-danger') : 'text-muted';
     const pnlText = hasPnl
       ? (pnl >= 0 ? `+$${pnl.toFixed(4)}` : `-$${Math.abs(pnl).toFixed(4)}`)
@@ -174,19 +195,23 @@ function populateTradeHistoryTable(trades) {
       <td class="trade-col-order">${trade.real_order_id || trade.order_id || ''}</td>
       <td class="trade-col-num ${pnlClass}">${pnlText}</td>
       <td class="trade-col-status"><span class="status-indicator status-${getStatusClass(status)}">${status}</span></td>
-      <td class="trade-col-actions"><button class="btn btn-secondary btn-sm trade-detail-btn">Details</button></td>
+      <td class="trade-col-actions">
+        <button class="btn btn-secondary btn-sm trade-detail-btn" ${(!hasExit && !hasPnl) ? 'disabled title="Details disabled: no exit price or P&L available"' : ''}>Details</button>
+      </td>
     `;
 
     row.style.cursor = 'pointer';
     row.addEventListener('click', () => showTradeDetail(trade));
 
     const detailBtn = row.querySelector('.trade-detail-btn');
-      if (detailBtn) {
-        detailBtn.addEventListener('click', e => {
-          e.stopPropagation();
-          showTradeDetail(trade);
-        });
-      }
+    if (detailBtn) {
+      // If disabled, do not open modal from the button (but keep row click behavior).
+      detailBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (detailBtn.disabled) return;
+        showTradeDetail(trade);
+      });
+    }
 
     tbody.appendChild(row);
   });

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict
 
 from utils.compression import get_compressor
+from scripts.clean_trade_history import _to_float
 
 LoggerLike = logging.Logger
 

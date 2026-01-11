@@ -55,6 +55,8 @@ import hashlib
 warnings.filterwarnings("ignore")
 from datetime import datetime, timedelta
 import requests
+from requests.exceptions import Timeout
+from concurrent.futures import TimeoutError as FutureTimeoutError, ThreadPoolExecutor
 import matplotlib
 
 matplotlib.use("Agg")
@@ -9478,33 +9480,10 @@ class UltimateAIAutoTrader:
             status.update(self.futures_trader.get_status())
         return status
 
-    import time
-    from requests.exceptions import Timeout
-    
     def _submit_futures_order(
         self, symbol, side, quantity, leverage=None, reduce_only=False
     ):
         # ...existing code...
-    
-        retries = 2
-        timeout = 30
-    
-        for attempt in range(retries + 1):
-            try:
-                # Replace the following line with the actual API call
-                response = self.futures_trader.submit_order(
-                    symbol=symbol,
-                    side=side,
-                    quantity=qty,
-                    leverage=leverage_to_use,
-                    timeout=timeout,
-                )
-                return response
-            except Timeout:
-                if attempt < retries:
-                    time.sleep(1)  # Delay before retrying
-                else:
-                    raise
         if not self.futures_trading_enabled or not self.futures_trader:
             return None
 
@@ -9563,9 +9542,24 @@ class UltimateAIAutoTrader:
 
         self.futures_trader.ensure_leverage(symbol, leverage_to_use)
 
-        response = self.futures_trader.place_market_order(
-            symbol, side, qty, reduce_only=reduce_only
-        )
+        # Submit to exchange with timeout + retry for timeout errors
+        retries = 2
+        timeout = 30
+        response = None
+        for attempt in range(retries + 1):
+            try:
+                # Run the exchange call in a short-lived thread and enforce a timeout
+                with ThreadPoolExecutor(max_workers=1) as _ex:
+                    future = _ex.submit(
+                        self.futures_trader.place_market_order, symbol, side, qty, reduce_only
+                    )
+                    response = future.result(timeout=timeout)
+                break
+            except (Timeout, FutureTimeoutError):
+                if attempt < retries:
+                    time.sleep(1)
+                else:
+                    raise
 
         # After Binance confirms order acceptance, persist an explicit futures execution.
         if response and isinstance(response, dict):
@@ -9574,9 +9568,10 @@ class UltimateAIAutoTrader:
                 client_order_id = response.get("clientOrderId")
 
                 order_details = None
-                if hasattr(self.futures_trader, "get_order") and (order_id or client_order_id):
+                get_order_fn = getattr(self.futures_trader, "get_order", None)
+                if callable(get_order_fn) and (order_id or client_order_id):
                     try:
-                        order_details = self.futures_trader.get_order(
+                        order_details = get_order_fn(
                             symbol,
                             order_id=order_id,
                             client_order_id=client_order_id,
@@ -9677,29 +9672,6 @@ class UltimateAIAutoTrader:
         self, symbol, side, quantity, price=None, order_type="MARKET"
     ):
         # ...existing code...
-    
-        retries = 2
-        timeout = 30
-    
-        for attempt in range(retries + 1):
-            try:
-                # Replace the following line with the actual API call
-                response = self.real_trader.submit_order(
-                    symbol=symbol,
-                    side=side,
-                    quantity=qty,
-                    price=resolved_price,
-                    order_type=order_type,
-                    timeout=timeout,
-                )
-                return response
-            except Timeout:
-                if attempt < retries:
-                    time.sleep(1)  # Delay before retrying
-                else:
-                    raise
-        if not self.real_trading_enabled or not self.real_trader:
-            return None
 
         try:
             qty = _safe_float(quantity, 0.0)
@@ -9751,9 +9723,23 @@ class UltimateAIAutoTrader:
         if qty <= 0:
             return None
 
-        response = self.real_trader.place_real_order(
-            symbol, normalized_side, qty, price=price, order_type=order_type
-        )
+        # Submit to exchange with timeout + retry for timeout errors
+        retries = 2
+        timeout = 30
+        response = None
+        for attempt in range(retries + 1):
+            try:
+                with ThreadPoolExecutor(max_workers=1) as _ex:
+                    future = _ex.submit(
+                        self.real_trader.place_real_order, symbol, normalized_side, qty, price, order_type
+                    )
+                    response = future.result(timeout=timeout)
+                break
+            except (Timeout, FutureTimeoutError):
+                if attempt < retries:
+                    time.sleep(1)
+                else:
+                    raise
 
         # After Binance confirms order acceptance, persist an explicit spot execution.
         if response and isinstance(response, dict):
@@ -9762,9 +9748,10 @@ class UltimateAIAutoTrader:
                 client_order_id = response.get("clientOrderId")
 
                 order_details = None
-                if hasattr(self.real_trader, "get_order") and (order_id or client_order_id):
+                get_order_fn = getattr(self.real_trader, "get_order", None)
+                if callable(get_order_fn) and (order_id or client_order_id):
                     try:
-                        order_details = self.real_trader.get_order(
+                        order_details = get_order_fn(
                             symbol,
                             order_id=order_id,
                             client_order_id=client_order_id,

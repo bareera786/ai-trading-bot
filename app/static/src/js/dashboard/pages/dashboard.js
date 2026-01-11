@@ -172,6 +172,30 @@ function updateUserPortfolioWidgets(portfolio) {
   updateText('#user-risk-details', `${totalPositions} position${totalPositions === 1 ? '' : 's'} open`);
 }
 
+function removeDuplicateTrades(trades) {
+  const uniqueTrades = new Map();
+  trades.forEach((trade) => {
+    const key = `${trade.symbol}-${trade.side}-${trade.timestamp}`;
+    if (!uniqueTrades.has(key)) {
+      uniqueTrades.set(key, trade);
+    }
+  });
+  return Array.from(uniqueTrades.values());
+}
+
+function calculatePnL(trade) {
+  const entry = trade.entry_price || 0;
+  const exit = trade.exit_price || 0;
+  const quantity = trade.quantity || 0;
+
+  if (trade.side === 'BUY') {
+    return (exit - entry) * quantity;
+  } else if (trade.side === 'SELL') {
+    return (entry - exit) * quantity;
+  }
+  return 0;
+}
+
 function updateUserTradesTable(trades) {
   const tbody = document.getElementById('user-recent-trades');
   if (!tbody) return;
@@ -180,15 +204,18 @@ function updateUserTradesTable(trades) {
     return;
   }
 
+  // Remove duplicate trades
+  const uniqueTrades = removeDuplicateTrades(trades);
+
   // Sort trades by timestamp
-  const sortedTrades = sortTradesByTimestamp(trades);
+  const sortedTrades = sortTradesByTimestamp(uniqueTrades);
 
   tbody.innerHTML = '';
   sortedTrades.slice(0, 10).forEach((trade) => {
     const row = document.createElement('tr');
     const timestamp = new Date((trade.timestamp || 0) * 1000);
     const dateString = timestamp.toLocaleDateString('en-US');
-    const pnl = trade.pnl || 0;
+    const pnl = calculatePnL(trade);
 
     // Add visual indicator for incomplete trades
     const isIncomplete = !trade.pnl || trade.status !== 'closed';

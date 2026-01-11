@@ -24,7 +24,7 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Sequence, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TRADE_LOG = PROJECT_ROOT / "trade_data" / "comprehensive_trades.json"
@@ -188,7 +188,7 @@ def run(mode: str) -> int:
     return 0
 
 
-def parse_args(argv: Iterable[str]) -> argparse.Namespace:
+def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--mode",

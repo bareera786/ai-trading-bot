@@ -7,14 +7,22 @@ import threading
 from collections import deque
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Union, TYPE_CHECKING
 import time
 from requests.exceptions import Timeout
+import requests
+import importlib
 
 try:  # cryptography is required for credential encryption, but we guard imports for optional installs
     from cryptography.fernet import Fernet  # type: ignore
 except Exception:  # pragma: no cover - handled gracefully downstream
     Fernet = None  # type: ignore
+
+if TYPE_CHECKING:
+    try:
+        from binance.um_futures import UMFutures as BinanceFuturesClient  # type: ignore
+    except Exception:
+        BinanceFuturesClient = None  # type: ignore
 
 
 def _coerce_bool(value: Any, default: bool = True) -> bool:
@@ -650,7 +658,7 @@ class BinanceCredentialService:
 
         api_key = creds.get("api_key")
         api_secret = creds.get("api_secret")
-        testnet = self._coerce_bool(creds.get("testnet", True), default=True)
+        testnet = _coerce_bool(creds.get("testnet", True), default=True)
         if not api_key or not api_secret:
             return False
 
@@ -747,7 +755,7 @@ class BinanceCredentialService:
                 accounts[account_key] = {
                     "account_type": account_key,
                     "has_credentials": has_credentials,
-                    "testnet": self._coerce_bool(
+                    "testnet": _coerce_bool(
                         entry.get("testnet", True), default=True
                     ),
                     "masked_key": self.mask_api_key(entry.get("api_key"))
@@ -787,7 +795,7 @@ class BinanceCredentialService:
                     creds = self.credentials_store.get_credentials(
                         account_key, user_id=user_id
                     )
-                    testnet = self._coerce_bool(creds.get("testnet", True), default=True)
+                    testnet = _coerce_bool(creds.get("testnet", True), default=True)
                     result = self.test_credentials(
                         str(creds.get("api_key") or ""),
                         str(creds.get("api_secret") or ""),
@@ -850,7 +858,7 @@ class BinanceCredentialService:
                 futures_account["last_error"] = (
                     futures_status.get("last_error") if futures_status else None
                 )
-                futures_account["testnet"] = self._coerce_bool(
+                futures_account["testnet"] = _coerce_bool(
                     futures_status.get("testnet")
                     if futures_status
                     else futures_account.get("testnet"),
@@ -865,7 +873,7 @@ class BinanceCredentialService:
             "accounts": accounts,
             "active_account": active_account,
             "has_credentials": summary.get("has_credentials", False),
-            "testnet": self._coerce_bool(summary.get("testnet"), default=True),
+            "testnet": _coerce_bool(summary.get("testnet"), default=True),
             "masked_key": summary.get("masked_key"),
             "note": summary.get("note"),
             "updated_at": summary.get("updated_at"),
@@ -920,7 +928,7 @@ class BinanceCredentialService:
         if self._terms_override is not None:
             return bool(self._terms_override)
         env_value = os.getenv("BINANCE_TERMS_ACCEPTED")
-        return self._coerce_bool(env_value, default=False)
+        return _coerce_bool(env_value, default=False)
 
     def _safe_trader_status(
         self, trader: Any, method_name: str
@@ -931,7 +939,10 @@ class BinanceCredentialService:
         if not callable(method):
             return None
         try:
-            return method() or {}
+            res = method()
+            if isinstance(res, dict):
+                return res or {}
+            return {}
         except Exception:
             return {"connected": False, "last_error": f"{method_name}_error"}
 
@@ -950,9 +961,25 @@ class BinanceCredentialService:
         try:
             account_key = self.credentials_store._normalize_account_type(account_type)
             if account_key == "futures":
+                # Import Binance futures client dynamically to avoid hard failure
+                # in environments where the optional `binance` package isn't installed.
+                try:
+                    BinanceClient = importlib.import_module("binance.client").Client
+                except Exception:
+                    BinanceClient = None
+
+                try:
+                    BinanceFuturesClient = importlib.import_module("binance.um_futures").UMFutures
+                except Exception:
+                    BinanceFuturesClient = None
+
                 from app.services.trading import BinanceFuturesTrader
-                from binance.client import Client as BinanceClient
-                from binance.um_futures import UMFutures as BinanceFuturesClient
+
+                if BinanceFuturesClient is None or BinanceClient is None:
+                    return {
+                        "connected": False,
+                        "error": "Missing optional 'binance' SDK (binance.client or binance.um_futures).",
+                    }
 
                 trader = BinanceFuturesTrader(
                     api_key=api_key,
@@ -1058,11 +1085,9 @@ class BinanceCredentialService:
             # Get current credentials
             creds_map = self.credentials_store.get_credentials()
             account_key = self.credentials_store._normalize_account_type(account_type)
-            current_creds = (
-                creds_map.get(account_key) if isinstance(creds_map, dict) else {}
-            )
+            creds_record = creds_map.get(account_key) if isinstance(creds_map, dict) else {}
 
-            if not current_creds or not current_creds.get("api_key"):
+            if not creds_record or not creds_record.get("api_key"):
                 self._log_event(
                     "ROTATION_FAILED",
                     f"No credentials found for {account_type} account",
@@ -1073,7 +1098,7 @@ class BinanceCredentialService:
                 return False
 
             # Log rotation attempt
-            masked_key = self.mask_api_key(current_creeds.get("api_key"))
+            masked_key = self.mask_api_key(creds_record.get("api_key"))
             self._log_event(
                 "ROTATION_STARTED",
                 f"Starting credential rotation for {account_type} account ({masked_key})",
@@ -1092,19 +1117,18 @@ class BinanceCredentialService:
             # and mark the credentials as needing manual renewal.
 
             # Update the credential metadata to indicate rotation needed
-            updated_creds = current_creds.copy()
+            updated_creds = creds_record.copy()
             updated_creds["rotation_needed"] = True
             updated_creds["last_rotation_check"] = datetime.utcnow().isoformat()
             updated_creds["rotation_reason"] = reason
 
-            # Save updated credentials
+            # Save updated credentials (store rotation flag in note)
             success = self.credentials_store.save_credentials(
-                api_key=current_creds["api_key"],
-                api_secret=current_creds["api_secret"],
-                testnet=current_creds.get("testnet", True),
+                api_key=creds_record["api_key"],
+                api_secret=creds_record["api_secret"],
+                testnet=creds_record.get("testnet", True),
                 account_type=account_type,
-                note=f"Rotation needed: {reason} - {current_creeds.get('note', '')}",
-                extra_data=updated_creds,
+                note=f"Rotation needed: {reason} - {creds_record.get('note', '')}",
             )
 
             if success:
@@ -1144,6 +1168,7 @@ class BinanceCredentialService:
             )
             return False
 
+    @staticmethod
     def fetch_with_retries(url, params=None, timeout=30.0, retries=2):
         """Fetch data from Binance API with retries for timeout errors."""
         for attempt in range(retries + 1):
@@ -1161,4 +1186,4 @@ class BinanceCredentialService:
     def fetch_ticker_data(self, symbol):
         url = f"https://api.binance.com/api/v3/ticker/24hr"
         params = {"symbol": symbol}
-        return fetch_with_retries(url, params=params, timeout=30.0)
+        return self.fetch_with_retries(url, params=params, timeout=30.0)

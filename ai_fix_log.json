@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-01-12T01:58:28.424899",
+  "results": [],
+  "tasks": [
+    {
+      "nodeid": "tests/test_bot_strategy.py::test_calculate_risk_basic",
+      "start_time": 1768183066.685226,
+      "end_time": 1768183089.14704,
+      "duration_sec": null
+    },
+    {
+      "nodeid": "tests/test_bot_strategy.py::test_generate_signal_buy",
+      "start_time": 1768183089.147073,
+      "end_time": 1768183095.5307178,
+      "duration_sec": null
+    },
+    {
+      "nodeid": "tests/test_bot_strategy.py::test_generate_signal_sell",
+      "start_time": 1768183095.530725,
+      "end_time": 1768183102.081811,
+      "duration_sec": null
+    },
+    {
+      "nodeid": "tests/test_strategy.py::test_generate_signal_hold",
+      "start_time": 1768183102.081845,
+      "end_time": 1768183108.424077,
+      "duration_sec": null
+    }
+  ]
+}

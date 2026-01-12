@@ -1,92 +1,63 @@
-# Python
+# Python cache
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
 # Virtual environments
 .venv/
 venv/
-ENV/
 env/
+ENV/
 
-# IDE
+# Pytest / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+junit-*.xml
+test_results/
+
+# Logs & runtime artifacts
+logs/
+*.log
+ai_fix_log.json
+
+# Local AI agent artifacts (DO NOT COMMIT)
+.github/ai_agent*.py
+.github/run_tests_and_report*.py
+bot_backup/
+ribs_checkpoints/
+self_improvement_snapshots/
+
+# Temp / scratch files
+tmp/
+temp/
+*.tmp
+tmp_*.json
+tmp_*.txt
+
+# Node / frontend
+node_modules/
+dist/
+build/
+.cache/
+
+# Editors
 .vscode/
 .idea/
 *.swp
-*.swo
 *~
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-logs/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-instance/
-
-# Credentials and sensitive data
-*.key
-*.pem
-cookies.txt
+# Env files
 .env
-.env.local
-.env.*.local
-config/deploy.env
-config/*.env
-bot_persistence/
-binance_credentials.json
-credentials/
+.env.*
+deploy.env*
 
-# Temporary files
-*.tmp
-*.temp
-temp/
-tmp/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Models and data (optional - comment out if you want to include)
-futures_models/
-optimized_models/
-ultimate_models/
-trade_data/
-datasets/
-reports/
-
-# Large artifacts and coverage
-artifacts/
-htmlcov/
-.coverage
-.coverage.*
-
-# Node modules and build artifacts
-node_modules/
-dist/
-build/
-# Deployment artifacts
-deployments/
+# Docker overrides
+docker-compose.override.yml
+.env.docker

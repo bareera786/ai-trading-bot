@@ -1,7 +1,7 @@
-# Python cache
+# Python bytecode
 __pycache__/
 *.py[cod]
-*$py.class
+*.class
 
 # Virtual environments
 .venv/
@@ -9,55 +9,21 @@ venv/
 env/
 ENV/
 
-# Pytest / coverage
+# Test/coverage
 .pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-coverage.xml
-junit-*.xml
+.coverage*
 test_results/
 
-# Logs & runtime artifacts
+# Logs and AI agent artifacts
 logs/
-*.log
 ai_fix_log.json
-
-# Local AI agent artifacts (DO NOT COMMIT)
+bot_backup/
 .github/ai_agent*.py
 .github/run_tests_and_report*.py
-bot_backup/
-ribs_checkpoints/
-self_improvement_snapshots/
 
-# Temp / scratch files
-tmp/
-temp/
-*.tmp
-tmp_*.json
-tmp_*.txt
-
-# Node / frontend
+# VS Code, Mac, Node, etc.
+.vscode/
+.DS_Store
 node_modules/
 dist/
 build/
-.cache/
-
-# Editors
-.vscode/
-.idea/
-*.swp
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Env files
-.env
-.env.*
-deploy.env*
-
-# Docker overrides
-docker-compose.override.yml
-.env.docker

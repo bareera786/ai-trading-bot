@@ -6,6 +6,7 @@ pytest-json-report
 openai
 requests
 python-binance
+zstandard
 
 # Minimal, safe requirements used by the CI and AI agent.
 # Add your project's full dependency list to this file as needed.

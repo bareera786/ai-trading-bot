@@ -1,1 +1,56 @@
-@import url('../../css/dashboard.css');
+/* Small UI-focused styles to improve mobile-first presentation of dashboard cards and responsive trade lists.
+	 These styles are additive and conservative; they avoid changing backend behavior. */
+:root {
+	--primary: #7c3aed; /* accent */
+	--success: #10b981;
+	--danger: #ef4444;
+	--muted: #64748b;
+}
+
+.card {
+	background: #fff;
+	border-radius: 0.5rem;
+	border: 1px solid rgba(15, 23, 42, 0.04);
+	box-shadow: 0 1px 2px rgba(2,6,23,0.04);
+}
+
+.status-indicator {
+	display: inline-block;
+	padding: 0.15rem 0.5rem;
+	border-radius: 999px;
+	font-size: 0.72rem;
+	font-weight: 600;
+}
+.status-success { background: rgba(16,185,129,0.08); color: var(--success); border: 1px solid rgba(16,185,129,0.12); }
+.status-warning { background: rgba(250,204,21,0.06); color: #b45309; border: 1px solid rgba(250,204,21,0.12); }
+.status-danger { background: rgba(239,68,68,0.06); color: var(--danger); border: 1px solid rgba(239,68,68,0.12); }
+
+/* Mobile trade card specific styles */
+.mobile-trade-card, .mobile-card { width: 100%; }
+.mobile-trade-card .text-sm { font-size: 0.95rem; }
+
+/* Table row visual improvements */
+.dashboard-row td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(2,6,23,0.03); }
+
+/* Buttons (light styles used by table details) */
+.btn { padding: 0.45rem 0.75rem; border-radius: 0.375rem; border: none; cursor: pointer; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-sm { padding: 0.35rem 0.5rem; font-size: 0.85rem; }
+.btn-xs { padding: 0.25rem 0.4rem; font-size: 0.78rem; }
+.btn-outline { background: transparent; border: 1px solid rgba(15,23,42,0.06); }
+.btn[disabled], .btn:disabled { opacity: 0.6; cursor: not-allowed }
+
+/* Simple modal class used by the UI fallback in dashboard.js */
+#trade-details-modal { display: none; }
+#trade-details-modal.open { display: block; position: fixed; inset: 0; z-index: 60; padding: 2rem; background: rgba(0,0,0,0.4); }
+#trade-details-modal .modal-body { background: white; padding: 1rem; border-radius: 0.5rem; max-height: 70vh; overflow: auto; }
+
+/* Responsive: hide table on narrow screens if a mobile placeholder exists */
+@media (max-width: 640px) {
+	table.responsive-hide-on-mobile, .desktop-only { display: none !important; }
+	.mobile-only { display: block !important; }
+}
+
+@media (min-width: 641px) {
+	.mobile-only { display: none !important; }
+}

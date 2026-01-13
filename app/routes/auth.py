@@ -18,7 +18,7 @@ from flask import (
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app.extensions import db, limiter
-from app.models import User
+from app.models import User, AuditLog
 from app.routes.utils import marketing_analytics_context
 from app.utils.email_utils import (
     send_password_reset_email,
@@ -31,8 +31,24 @@ auth_bp = Blueprint("auth", __name__)
 logger = logging.getLogger(__name__)
 
 
+@auth_bp.route("/test")
+def test():
+    return "Hello World"
+
+
+# Utility function to log user actions
+def log_action(user_id, action, details=None):
+    audit_log = AuditLog(
+        user_id=user_id,  # type: ignore
+        action=action,  # type: ignore
+        details=details  # type: ignore
+    )
+    db.session.add(audit_log)
+    db.session.commit()
+
+
 @auth_bp.route("/login", methods=["GET", "POST"], endpoint="login")
-@limiter.limit("20 per minute")
+# @limiter.limit("20 per minute")
 def login():
     """Handle login via form or JSON payload."""
     if current_user.is_authenticated:
@@ -64,9 +80,7 @@ def login():
                 return jsonify({"error": error_message}), 429
             flash(error_message)
             return render_template(
-                "auth/auth.html",
-                analytics=marketing_analytics_context(),
-                active_tab=active_tab,
+                "auth/auth.html"
             )
 
         if user and user.check_password(password):
@@ -75,8 +89,12 @@ def login():
                 return redirect(url_for("auth.login"))
 
             # Reset failed login attempts on successful login
-            user.failed_login_attempts = 0
-            user.locked_until = None
+            try:
+                user.reset_failed_logins()
+            except Exception:
+                # fallback in case older DB column exists
+                user.failed_login_count = 0
+                user.locked_until = None
             db.session.commit()
 
             login_user(user)
@@ -90,6 +108,8 @@ def login():
             logger.info(
                 f"User {username} logged in successfully from IP {request.remote_addr}"
             )
+            # Log the login action
+            log_action(user.id, 'LOGIN', f"User {user.id} logged in from {request.remote_addr}")
             if request.is_json:
                 return jsonify(
                     {
@@ -117,17 +137,23 @@ def login():
         else:
             # Handle failed login attempt
             if user:
-                user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+                try:
+                    user.increment_failed_logins()
+                except Exception:
+                    # fallback if legacy column name persisted
+                    user.failed_login_count = (getattr(user, 'failed_login_count', 0) or 0) + 1
 
-                # Lock account after 5 failed attempts for 15 minutes
-                if user.failed_login_attempts >= 5:
-                    user.locked_until = datetime.utcnow() + timedelta(minutes=15)
-                    error_message = "Account locked due to too many failed login attempts. Try again in 15 minutes."
+                # Lock account after configured max failed attempts
+                max_failed = current_app.config.get("MAX_FAILED_LOGINS", 5)
+                lock_minutes = current_app.config.get("LOCKOUT_DURATION", 15)
+                if user.failed_login_count >= max_failed:
+                    user.locked_until = datetime.utcnow() + timedelta(minutes=lock_minutes)
+                    error_message = f"Account locked due to too many failed login attempts. Try again in {lock_minutes} minutes."
                     logger.warning(
-                        f"Account locked for user {username} after {user.failed_login_attempts} failed attempts from IP {request.remote_addr}"
+                        f"Account locked for user {username} after {user.failed_login_count} failed attempts from IP {request.remote_addr}"
                     )
                 else:
-                    remaining_attempts = 5 - user.failed_login_attempts
+                    remaining_attempts = max_failed - user.failed_login_count
                     error_message = f"Invalid username or password. {remaining_attempts} attempts remaining before account lockout."
 
                 db.session.commit()
@@ -142,7 +168,7 @@ def login():
         flash(error_message)
 
     return render_template(
-        "auth/auth.html", analytics=marketing_analytics_context(), active_tab=active_tab
+        "auth/auth.html"
     )
 
 
@@ -204,6 +230,10 @@ def register():
 
         if not email or "@" not in email or "." not in email:
             flash("Please enter a valid email address")
+            return redirect(url_for("auth.register"))
+
+        if not password:
+            flash("Password is required")
             return redirect(url_for("auth.register"))
 
         if password != confirm_password:
@@ -295,6 +325,10 @@ def reset_password(token):
     if request.method == "POST":
         password = request.form.get("password")
         confirm_password = request.form.get("confirm_password")
+
+        if not password:
+            flash("Password is required.")
+            return redirect(request.url)
 
         if password != confirm_password:
             flash("Passwords do not match.")

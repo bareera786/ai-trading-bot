@@ -22,9 +22,13 @@ def upgrade():
     bind = op.get_bind()
     insp = inspect(bind)
     with op.batch_alter_table('user', schema=None) as batch_op:
-        if not insp.has_column('user', 'last_ip'):
+        # Use get_columns to detect presence of a column rather than
+        # relying on a (non-public) helper on Inspector which some
+        # linters/type-checkers may not recognise.
+        existing_columns = [c.get('name') for c in insp.get_columns('user')]
+        if 'last_ip' not in existing_columns:
             batch_op.add_column(sa.Column('last_ip', sa.String(length=45), nullable=True))
-        if not insp.has_column('user', 'failed_login_count'):
+        if 'failed_login_count' not in existing_columns:
             batch_op.add_column(sa.Column('failed_login_count', sa.Integer(), nullable=True))
 
         # create index if it does not exist

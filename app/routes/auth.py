@@ -18,6 +18,7 @@ from flask import (
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app.extensions import db, limiter
+from sqlalchemy.exc import OperationalError as SQLOperationalError
 from app.models import User, AuditLog
 from app.routes.utils import marketing_analytics_context
 from app.utils.email_utils import (
@@ -62,121 +63,132 @@ def login():
             # Surround POST handling with explicit exception logging
             # so we can capture full tracebacks during debugging.
             if request.is_json:
-            data = request.get_json()
-            username = data.get("username")
-            password = data.get("password")
-        else:
-            username = request.form.get("username")
-            password = request.form.get("password")
-
-        user = User.query.filter_by(username=username).first()
-
-        # Check if account is locked
-        if user and user.locked_until and user.locked_until > datetime.utcnow():
-            remaining_time = user.locked_until - datetime.utcnow()
-            minutes_left = int(remaining_time.total_seconds() / 60)
-            error_message = f"Account is locked due to too many failed login attempts. Try again in {minutes_left} minutes."
-            logger.warning(
-                f"Login attempt for locked account: {username} from IP {request.remote_addr}"
-            )
-            if request.is_json:
-                return jsonify({"error": error_message}), 429
-            flash(error_message)
-            return render_template(
-                "auth/auth.html"
-            )
-
-        logger.info("Login POST: username=%s, user_present=%s", username, bool(user))
-        if user:
-            try:
-                logger.info("User state before auth check: %s", getattr(user, "__dict__", {}))
-            except Exception:
-                logger.info("Unable to serialize user.__dict__")
-
-        if user and user.check_password(password):
-            if not user.email_verified and not user.is_admin:
-                flash("Please verify your email address before logging in.")
-                return redirect(url_for("auth.login"))
-
-            # Reset failed login attempts on successful login
-            try:
-                user.reset_failed_logins()
-            except Exception:
-                # fallback in case older DB column exists
-                user.failed_login_count = 0
-                user.locked_until = None
-            db.session.commit()
-
-            login_user(user)
-            # Also set session-based user_id for compatibility with endpoints
-            try:
-                from flask import session
-
-                session["user_id"] = user.id
-            except Exception:
-                logger.debug("Could not set session user_id for compatibility")
-            logger.info(
-                f"User {username} logged in successfully from IP {request.remote_addr}"
-            )
-            # Log the login action
-            log_action(user.id, 'LOGIN', f"User {user.id} logged in from {request.remote_addr}")
-            if request.is_json:
-                return jsonify(
-                    {
-                        "success": True,
-                        "message": "Login successful",
-                        "user": {
-                            "username": user.username,
-                            "is_admin": user.is_admin,
-                            "id": user.id,
-                        },
-                    }
-                )
-            next_page = request.args.get("next")
-            response = (
-                redirect(next_page)
-                if next_page
-                else redirect(url_for("dashboard_bp.dashboard"))
-            )
-            response.headers[
-                "Cache-Control"
-            ] = "no-cache, no-store, must-revalidate, max-age=0, private, no-transform"
-            response.headers["Pragma"] = "no-cache"
-            response.headers["Expires"] = "0"
-            return response
-        else:
-            # Handle failed login attempt
-            if user:
-                logger.info("Failed login handling for user: %s, state before increment: %s", username, getattr(user, "__dict__", {}))
-                try:
-                    user.increment_failed_logins()
-                except Exception:
-                    # fallback if legacy column name persisted
-                    user.failed_login_count = (getattr(user, 'failed_login_count', 0) or 0) + 1
-
-                # Lock account after configured max failed attempts
-                max_failed = current_app.config.get("MAX_FAILED_LOGINS", 5)
-                lock_minutes = current_app.config.get("LOCKOUT_DURATION", 15)
-                if user.failed_login_count >= max_failed:
-                    user.locked_until = datetime.utcnow() + timedelta(minutes=lock_minutes)
-                    error_message = f"Account locked due to too many failed login attempts. Try again in {lock_minutes} minutes."
-                    logger.warning(
-                        f"Account locked for user {username} after {user.failed_login_count} failed attempts from IP {request.remote_addr}"
-                    )
-                else:
-                    remaining_attempts = max_failed - user.failed_login_count
-                    error_message = f"Invalid username or password. {remaining_attempts} attempts remaining before account lockout."
-
-                db.session.commit()
+                data = request.get_json()
+                username = data.get("username")
+                password = data.get("password")
             else:
+                username = request.form.get("username")
+                password = request.form.get("password")
+
+            user = User.query.filter_by(username=username).first()
+
+            # Check if account is locked
+            if user and user.locked_until and user.locked_until > datetime.utcnow():
+                remaining_time = user.locked_until - datetime.utcnow()
+                minutes_left = int(remaining_time.total_seconds() / 60)
+                error_message = f"Account is locked due to too many failed login attempts. Try again in {minutes_left} minutes."
                 logger.warning(
-                    f"Failed login attempt for non-existent username '{username}' from IP {request.remote_addr}"
+                    f"Login attempt for locked account: {username} from IP {request.remote_addr}"
+                )
+                if request.is_json:
+                    return jsonify({"error": error_message}), 429
+                flash(error_message)
+                return render_template(
+                    "auth/auth.html"
                 )
 
-            if request.is_json:
-                return jsonify({"error": error_message}), 401
+            logger.info("Login POST: username=%s, user_present=%s", username, bool(user))
+            if user:
+                try:
+                    logger.info("User state before auth check: %s", getattr(user, "__dict__", {}))
+                except Exception:
+                    logger.info("Unable to serialize user.__dict__")
 
-            flash(error_message)
+            if user and user.check_password(password):
+                if not user.email_verified and not user.is_admin:
+                    flash("Please verify your email address before logging in.")
+                    return redirect(url_for("auth.login"))
+
+                # Reset failed login attempts on successful login
+                try:
+                    user.reset_failed_logins()
+                except Exception:
+                    # fallback in case older DB column exists
+                    user.failed_login_count = 0
+                    user.locked_until = None
+                db.session.commit()
+
+                login_user(user)
+                # Also set session-based user_id for compatibility with endpoints
+                try:
+                    from flask import session
+
+                    session["user_id"] = user.id
+                except Exception:
+                    logger.debug("Could not set session user_id for compatibility")
+                logger.info(
+                    f"User {username} logged in successfully from IP {request.remote_addr}"
+                )
+                # Log the login action
+                log_action(user.id, 'LOGIN', f"User {user.id} logged in from {request.remote_addr}")
+                if request.is_json:
+                    return jsonify(
+                        {
+                            "success": True,
+                            "message": "Login successful",
+                            "user": {
+                                "username": user.username,
+                                "is_admin": user.is_admin,
+                                "id": user.id,
+                            },
+                        }
+                    )
+                next_page = request.args.get("next")
+                response = (
+                    redirect(next_page)
+                    if next_page
+                    else redirect(url_for("dashboard_bp.dashboard"))
+                )
+                response.headers[
+                    "Cache-Control"
+                ] = "no-cache, no-store, must-revalidate, max-age=0, private, no-transform"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
+                return response
+            else:
+                # Handle failed login attempt
+                if user:
+                    logger.info("Failed login handling for user: %s, state before increment: %s", username, getattr(user, "__dict__", {}))
+                    try:
+                        user.increment_failed_logins()
+                    except Exception:
+                        # fallback if legacy column name persisted
+                        user.failed_login_count = (getattr(user, 'failed_login_count', 0) or 0) + 1
+
+                    # Lock account after configured max failed attempts
+                    max_failed = current_app.config.get("MAX_FAILED_LOGINS", 5)
+                    lock_minutes = current_app.config.get("LOCKOUT_DURATION", 15)
+                    if user.failed_login_count >= max_failed:
+                        user.locked_until = datetime.utcnow() + timedelta(minutes=lock_minutes)
+                        error_message = f"Account locked due to too many failed login attempts. Try again in {lock_minutes} minutes."
+                        logger.warning(
+                            f"Account locked for user {username} after {user.failed_login_count} failed attempts from IP {request.remote_addr}"
+                        )
+                    else:
+                        remaining_attempts = max_failed - user.failed_login_count
+                        error_message = f"Invalid username or password. {remaining_attempts} attempts remaining before account lockout."
+
+                    db.session.commit()
+                else:
+                    logger.warning(
+                        f"Failed login attempt for non-existent username '{username}' from IP {request.remote_addr}"
+                    )
+
+                if request.is_json:
+                    return jsonify({"error": error_message}), 401
+
+                flash(error_message)
+        except SQLOperationalError as e:
+            # Common during local development when the DB schema is out of
+            # sync (e.g. missing columns from pending migrations). Log a
+            # helpful message so the developer knows to run migrations and
+            # re-raise to preserve behavior in production.
+            logger.error(
+                "Database operational error during login (possible schema mismatch). %s",
+                e,
+                exc_info=True,
+            )
+            raise
         except Exception:
             logger.exception("Unhandled exception in login POST")
             # Re-raise so Flask/WSGI surfaces the 500 and stacktrace

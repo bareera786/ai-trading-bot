@@ -1,0 +1,49 @@
+{
+  "positions": {},
+  "balance": 1000,
+  "trading_enabled": false,
+  "models_loaded": [
+    "MATICUSDT",
+    "LINKUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "LTCUSDT",
+    "XLMUSDT",
+    "BNBUSDT",
+    "DOGEUSDT",
+    "DOTUSDT",
+    "XRPUSDT",
+    "ADAUSDT",
+    "BCHUSDT",
+    "AVAXUSDT",
+    "ETCUSDT",
+    "BTCUSDT"
+  ],
+  "futures_manual_settings": {
+    "mode": "manual",
+    "selected_symbol": "BTCUSDT",
+    "available_symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "BNBUSDT",
+      "SOLUSDT",
+      "XRPUSDT",
+      "ADAUSDT",
+      "DOGEUSDT",
+      "AVAXUSDT"
+    ],
+    "auto_trade_enabled": false,
+    "leverage": 3,
+    "order_size_usdt": 50.0,
+    "testnet": true,
+    "last_action": null,
+    "last_signal": null,
+    "last_error": null,
+    "position": null,
+    "position_notional": 0.0,
+    "entry_price": null,
+    "pending_order": null,
+    "order_history": [],
+    "updated_at": 1768338769.9740548
+  }
+}

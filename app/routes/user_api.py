@@ -379,6 +379,7 @@ def api_user_trades(user_id: int):
         if execution_mode:
             query = query.filter(UserTrade.execution_mode == execution_mode)
 
+        # Sort by opened_at (canonical schema field) instead of timestamp
         query = query.order_by(UserTrade.timestamp.desc())
         total_trades = query.count()
         per_page = 20
@@ -386,25 +387,9 @@ def api_user_trades(user_id: int):
 
         trades_data = []
         for trade in trades:
-            trades_data.append(
-                {
-                    "id": trade.id,
-                    "user_id": trade.user_id,
-                    "symbol": trade.symbol,
-                    "side": trade.side,
-                    "quantity": trade.quantity,
-                    "entry_price": trade.entry_price,
-                    "exit_price": trade.exit_price,
-                    "pnl": trade.pnl,
-                    "status": trade.status,
-                    "trade_type": trade.trade_type,
-                    # Optional columns may not exist in all deployments.
-                    "execution_mode": getattr(trade, "execution_mode", None),
-                    "tax_amount": getattr(trade, "tax_amount", None),
-                    "fees": getattr(trade, "fees", None),
-                    "timestamp": trade.timestamp.isoformat() if trade.timestamp else None,
-                }
-            )
+            # Normalize trade to canonical schema
+            normalized_trade = normalize_trade_to_canonical(trade)
+            trades_data.append(normalized_trade)
 
         return jsonify(
             {
@@ -426,6 +411,54 @@ def api_user_trades(user_id: int):
     except Exception as exc:  # pragma: no cover - defensive logging
         print(f"Error in /api/user/{user_id}/trades: {exc}")
         return jsonify({"error": str(exc)}), 500
+
+
+def normalize_trade_to_canonical(trade) -> dict:
+    """Normalize a UserTrade object to the canonical trade schema."""
+    # Base canonical fields
+    canonical = {
+        "id": trade.id,
+        "symbol": trade.symbol or "N/A",
+        "side": trade.side or "N/A",
+        "quantity": float(trade.quantity or 0),
+        "entry_price": float(trade.entry_price or 0),
+        "exit_price": float(trade.exit_price or 0) if trade.exit_price else None,
+        "status": trade.status or "OPEN",
+        "market_type": getattr(trade, "execution_mode", None) or getattr(trade, "trade_type", None) or "SPOT",
+        "opened_at": trade.timestamp.isoformat() if trade.timestamp else None,
+        "closed_at": getattr(trade, "closed_at", None),
+    }
+
+    # Calculate PnL for CLOSED trades only
+    if canonical["status"] == "CLOSED" and canonical["exit_price"] and canonical["entry_price"] and canonical["quantity"]:
+        if canonical["side"].upper() == "BUY":
+            canonical["pnl"] = (canonical["exit_price"] - canonical["entry_price"]) * canonical["quantity"]
+        elif canonical["side"].upper() == "SELL":
+            canonical["pnl"] = (canonical["entry_price"] - canonical["exit_price"]) * canonical["quantity"]
+        else:
+            canonical["pnl"] = None
+    else:
+        canonical["pnl"] = None
+
+    # Add optional fields if they exist
+    if hasattr(trade, "tax_amount") and trade.tax_amount is not None:
+        canonical["tax_amount"] = float(trade.tax_amount)
+    if hasattr(trade, "fees") and trade.fees is not None:
+        canonical["fees"] = float(trade.fees)
+    if hasattr(trade, "leverage") and trade.leverage is not None:
+        canonical["leverage"] = float(trade.leverage)
+    if hasattr(trade, "exchange") and trade.exchange:
+        canonical["exchange"] = trade.exchange
+    if hasattr(trade, "margin_type") and trade.margin_type:
+        canonical["margin_type"] = trade.margin_type
+    if hasattr(trade, "reduce_only") and trade.reduce_only is not None:
+        canonical["reduce_only"] = trade.reduce_only
+    if hasattr(trade, "real_order_id") and trade.real_order_id:
+        canonical["real_order_id"] = trade.real_order_id
+    if hasattr(trade, "order_id") and trade.order_id:
+        canonical["order_id"] = trade.order_id
+
+    return canonical
 
 
 @user_api_bp.route("/api/user/<int:user_id>/trades/clear", methods=["POST"])
@@ -597,18 +630,7 @@ def api_user_dashboard(user_id: int):
             .all()
         )
         trades_data = [
-            {
-                "id": trade.id,
-                "symbol": trade.symbol,
-                "side": trade.side,
-                "quantity": trade.quantity,
-                "entry_price": trade.entry_price,
-                "exit_price": trade.exit_price,
-                "pnl": trade.pnl,
-                "status": trade.status,
-                "trade_type": trade.trade_type,
-                "timestamp": trade.timestamp.isoformat() if trade.timestamp else None,
-            }
+            normalize_trade_to_canonical(trade)
             for trade in recent_trades
         ]
 

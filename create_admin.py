@@ -7,6 +7,8 @@ import argparse
 import os
 from getpass import getpass
 
+import click
+
 from app import create_app
 from app.extensions import db
 from app.models import User
@@ -97,6 +99,71 @@ def main() -> None:
     email = args.email or f"{args.username}@example.com"
     password = args.password or _prompt_for_password()
     create_or_update_admin(args.username, email, password, args.reset_password)
+
+
+@app.cli.command("users-create")
+@click.argument("email")
+@click.argument("username")
+@click.argument("password")
+@click.option("--role", default="viewer", help="Role of the user (admin, trader, viewer)")
+def create_user(email, username, password, role):
+    """Create a new user."""
+    with app.app_context():
+        if User.query.filter_by(email=email).first():
+            click.echo("Error: User with this email already exists.")
+            return
+
+        user = User(email=email, username=username, role=role)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        click.echo(f"User {username} created successfully.")
+
+
+@app.cli.command("users-promote")
+@click.argument("email")
+def promote_user(email):
+    """Promote a user to admin."""
+    with app.app_context():
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            click.echo("Error: User not found.")
+            return
+
+        user.role = "admin"
+        db.session.commit()
+        click.echo(f"User {user.username} promoted to admin.")
+
+
+@app.cli.command("users-deactivate")
+@click.argument("email")
+def deactivate_user(email):
+    """Deactivate a user."""
+    with app.app_context():
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            click.echo("Error: User not found.")
+            return
+
+        user.is_active = False
+        db.session.commit()
+        click.echo(f"User {user.username} deactivated.")
+
+
+@app.cli.command("users-reset-password")
+@click.argument("email")
+@click.argument("new_password")
+def reset_password(email, new_password):
+    """Reset a user's password."""
+    with app.app_context():
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            click.echo("Error: User not found.")
+            return
+
+        user.set_password(new_password)
+        db.session.commit()
+        click.echo(f"Password for user {user.username} has been reset.")
 
 
 if __name__ == "__main__":

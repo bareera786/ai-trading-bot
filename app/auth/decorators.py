@@ -14,7 +14,9 @@ def admin_required(func):
     def wrapper(*args, **kwargs):
         if not current_user.is_authenticated:
             return jsonify({"error": "Please login first"}), 401
-        if not current_user.is_admin:
+        # Use getattr to avoid AttributeError if `is_admin` is missing on the
+        # current_user (defensive for partially-migrated DBs or legacy users).
+        if not getattr(current_user, "is_admin", False):
             return jsonify({"error": "Admin access required"}), 403
         return func(*args, **kwargs)
 

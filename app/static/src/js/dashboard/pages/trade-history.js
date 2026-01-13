@@ -41,9 +41,21 @@ const parseTimestampToMs = (ts) => {
   return Date.now();
 };
 
+let currentTrades = [];
+
 export async function loadTradeHistory() {
   try {
-    const user = await fetchJson('/api/current_user');
+    let user;
+    try {
+      user = await fetchJson('/api/current_user');
+    } catch (authError) {
+      if (authError.message.includes('Authentication required')) {
+        // Redirect to login page
+        window.location.href = '/login';
+        return;
+      }
+      throw authError;
+    }
     const isAdmin = Boolean(user?.is_admin);
     const userId = user?.id;
 
@@ -82,33 +94,31 @@ export async function loadTradeHistory() {
     });
     updateSymbolFilter();
 
-    // Ensure we operate on a shallow copy and sort by the most reliable
-    // timestamp candidates (timestamp, entry_timestamp, created_at).
+    // Ensure we operate on a shallow copy and sort by opened_at from canonical schema
     const trades = Array.isArray(data.trades) ? [...data.trades] : [];
     trades.sort((a, b) => {
-      const ta = Math.max(
-        parseTimestampToMs(a?.timestamp),
-        parseTimestampToMs(a?.entry_timestamp),
-        parseTimestampToMs(a?.created_at),
-        0
-      );
-      const tb = Math.max(
-        parseTimestampToMs(b?.timestamp),
-        parseTimestampToMs(b?.entry_timestamp),
-        parseTimestampToMs(b?.created_at),
-        0
-      );
+      const ta = parseTimestampToMs(a?.opened_at) || 0;
+      const tb = parseTimestampToMs(b?.opened_at) || 0;
       // Descending (newest first)
       if (tb === ta) {
         // stable-ish tie-breaker: prefer larger trade id when available
-        const ida = Number(a?.trade_id ?? a?.id ?? 0);
-        const idb = Number(b?.trade_id ?? b?.id ?? 0);
+        const ida = Number(a?.id ?? 0);
+        const idb = Number(b?.id ?? 0);
         return idb - ida;
       }
       return tb - ta;
     });
 
+    currentTrades = trades;
     populateTradeHistoryTable(trades);
+
+    // Add resize listener for responsive rendering
+    if (!window.tradeHistoryResizeListener) {
+      window.tradeHistoryResizeListener = () => {
+        populateTradeHistoryTable(currentTrades);
+      };
+      window.addEventListener('resize', window.tradeHistoryResizeListener);
+    }
   } catch (error) {
     console.error('Error loading trade history:', error);
     renderEmptyState('Unable to load trade history');
@@ -117,104 +127,167 @@ export async function loadTradeHistory() {
 
 function populateTradeHistoryTable(trades) {
   const tbody = document.getElementById('trade-history-table');
-  if (!tbody) return;
+  const mobileContainer = document.getElementById('trade-history-mobile');
+  const isMobile = window.innerWidth <= 768;
 
-  tbody.innerHTML = '';
+  // Clear both containers
+  if (tbody) tbody.innerHTML = '';
+  if (mobileContainer) mobileContainer.innerHTML = '';
 
   if (!trades || trades.length === 0) {
-    const row = document.createElement('tr');
-    // Updated colspan to match expanded column count (16)
-    row.innerHTML = '<td colspan="16" style="text-align: center; padding: 2rem;">No trades found</td>';
-    tbody.appendChild(row);
+    if (!isMobile && tbody) {
+      const row = document.createElement('tr');
+      row.innerHTML = '<td colspan="16" style="text-align: center; padding: 2rem;">No trades found</td>';
+      tbody.appendChild(row);
+    } else if (isMobile && mobileContainer) {
+      mobileContainer.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No trades found</div>';
+    }
     return;
   }
 
-  trades.forEach(trade => {
-    const row = document.createElement('tr');
+  if (isMobile && mobileContainer) {
+    // Render mobile cards
+    trades.forEach(trade => renderMobileTradeCard(trade, mobileContainer));
+  } else if (!isMobile && tbody) {
+    // Render table rows
+    trades.forEach(trade => renderTradeTableRow(trade, tbody));
+  }
+}
 
-    const timestamp = new Date(parseTimestampToMs(trade.timestamp));
-    const dateString = timestamp.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+function renderTradeTableRow(trade, tbody) {
+  const row = document.createElement('tr');
 
-    const hasPnl = typeof trade?.pnl === 'number' && Number.isFinite(trade.pnl);
-    const rawExit = trade.exit_price ?? trade.close_price ?? null;
-    const hasExit = rawExit !== null && rawExit !== undefined && rawExit !== 0;
-    const pnl = hasPnl ? trade.pnl : null;
-    const pnlClass = hasPnl ? (pnl >= 0 ? 'text-success' : 'text-danger') : 'text-muted';
-    const pnlText = hasPnl
-      ? (pnl >= 0 ? `+$${pnl.toFixed(4)}` : `-$${Math.abs(pnl).toFixed(4)}`)
-      : '—';
-
-    const quantity = toSafeNumber(trade.quantity ?? trade.qty, 0);
-    const entryPrice = toSafeNumber(trade.entry_price ?? trade.price ?? trade.fill_price, 0);
-    const status = trade.status || trade.state || 'unknown';
-    const normalizedStatus = String(status || 'unknown').toLowerCase();
-    const isClosed = normalizedStatus === 'filled' || normalizedStatus === 'closed' || normalizedStatus === 'success';
-    const side = trade.side || trade.position_side || 'N/A';
-    const symbol = trade.symbol || trade.ticker || 'N/A';
-
-    const marketType = String(trade?.market_type || '').toUpperCase();
-    const exchange = String(trade?.exchange || '').toUpperCase();
-
-    let tradeTypeLabel = '—';
-    let tradeTypeClass = 'unknown';
-
-    if (marketType === 'FUTURES' || marketType === 'SPOT') {
-      tradeTypeLabel = exchange ? `${marketType} / ${exchange}` : marketType;
-      tradeTypeClass = marketType.toLowerCase();
-    } else if (trade?.execution_mode) {
-      const mode = String(trade.execution_mode).toUpperCase();
-      tradeTypeLabel = mode;
-      tradeTypeClass = mode === 'PAPER' ? 'paper' : mode === 'FUTURES' ? 'futures' : 'unknown';
-    }
-
-    const leverage = (marketType === 'FUTURES' || String(trade?.execution_mode || '').toLowerCase() === 'futures') && trade.leverage
-      ? `${trade.leverage}x`
-      : '-';
-
-    row.classList.add('trade-row', isClosed ? 'trade-row-closed' : 'trade-row-open');
-
-    row.innerHTML = `
-      <td class="trade-col-date">${dateString}</td>
-      <td class="trade-col-symbol">${symbol}</td>
-      <td class="trade-col-type"><span class="trade-type-${tradeTypeClass}">${tradeTypeLabel}</span></td>
-      <td class="trade-col-side">${side}</td>
-      <td class="trade-col-num">${quantity.toFixed(4)}</td>
-      <td class="trade-col-num">$${entryPrice.toFixed(4)}</td>
-      <td class="trade-col-num">${leverage}</td>
-      <td class="trade-col-execmode">${trade.execution_mode || ''}</td>
-      <td class="trade-col-market">${marketType || ''}</td>
-      <td class="trade-col-exchange">${exchange || ''}</td>
-      <td class="trade-col-margin">${trade.margin_type || ''}</td>
-      <td class="trade-col-reduce">${trade.reduce_only ? String(trade.reduce_only) : ''}</td>
-      <td class="trade-col-order">${trade.real_order_id || trade.order_id || ''}</td>
-      <td class="trade-col-num ${pnlClass}">${pnlText}</td>
-      <td class="trade-col-status"><span class="status-indicator status-${getStatusClass(status)}">${status}</span></td>
-      <td class="trade-col-actions">
-        <button class="btn btn-secondary btn-sm trade-detail-btn" ${(!hasExit && !hasPnl) ? 'disabled title="Details disabled: no exit price or P&L available"' : ''}>Details</button>
-      </td>
-    `;
-
-    row.style.cursor = 'pointer';
-    row.addEventListener('click', () => showTradeDetail(trade));
-
-    const detailBtn = row.querySelector('.trade-detail-btn');
-    if (detailBtn) {
-      // If disabled, do not open modal from the button (but keep row click behavior).
-      detailBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        if (detailBtn.disabled) return;
-        showTradeDetail(trade);
-      });
-    }
-
-    tbody.appendChild(row);
+  // Use canonical schema: opened_at for timestamp
+  const timestamp = new Date(parseTimestampToMs(trade.opened_at));
+  const dateString = timestamp.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
+
+  // Use canonical schema: PnL is provided by backend, null for OPEN trades
+  const pnl = trade.pnl;
+  const hasPnl = typeof pnl === 'number' && Number.isFinite(pnl);
+  const pnlClass = hasPnl ? (pnl >= 0 ? 'text-success' : 'text-danger') : 'text-muted';
+  // Only show PnL for CLOSED trades - for OPEN trades, show '—'
+  const pnlText = (hasPnl && trade.status === 'CLOSED')
+    ? (pnl >= 0 ? `+$${pnl.toFixed(4)}` : `-$${Math.abs(pnl).toFixed(4)}`)
+    : '—';
+
+  const quantity = toSafeNumber(trade.quantity, 0);
+  const entryPrice = toSafeNumber(trade.entry_price, 0);
+  const status = trade.status || 'OPEN';
+  const isClosed = status === 'CLOSED';
+  const side = trade.side || 'N/A';
+  const symbol = trade.symbol || 'N/A';
+
+  const marketType = String(trade?.market_type || '').toUpperCase();
+
+  let tradeTypeLabel = marketType || 'SPOT';
+  let tradeTypeClass = marketType.toLowerCase() || 'spot';
+
+  const leverage = (marketType === 'FUTURES') && trade.leverage
+    ? `${trade.leverage}x`
+    : '-';
+
+  row.classList.add('trade-row', isClosed ? 'trade-row-closed' : 'trade-row-open');
+
+  row.innerHTML = `
+    <td class="trade-col-date">${dateString}</td>
+    <td class="trade-col-symbol">${symbol}</td>
+    <td class="trade-col-type"><span class="trade-type-${tradeTypeClass}">${tradeTypeLabel}</span></td>
+    <td class="trade-col-side">${side}</td>
+    <td class="trade-col-num">${quantity.toFixed(4)}</td>
+    <td class="trade-col-num">$${entryPrice.toFixed(4)}</td>
+    <td class="trade-col-num">${leverage}</td>
+    <td class="trade-col-execmode">${trade.market_type || ''}</td>
+    <td class="trade-col-market">${marketType || ''}</td>
+    <td class="trade-col-exchange">-</td>
+    <td class="trade-col-margin">-</td>
+    <td class="trade-col-reduce">-</td>
+    <td class="trade-col-order">-</td>
+    <td class="trade-col-num ${pnlClass}">${pnlText}</td>
+    <td class="trade-col-status"><span class="status-indicator status-${getStatusClass(status)}">${status}</span></td>
+    <td class="trade-col-actions">
+      <button class="btn btn-secondary btn-sm trade-detail-btn">Details</button>
+    </td>
+  `;
+
+  row.style.cursor = 'pointer';
+  row.addEventListener('click', (e) => {
+    if (e.target.closest('button')) return;
+    showTradeDetail(trade);
+  });
+
+  const detailBtn = row.querySelector('.trade-detail-btn');
+  if (detailBtn) {
+    detailBtn.addEventListener('click', () => showTradeDetail(trade));
+  }
+
+  tbody.appendChild(row);
+}
+
+function renderMobileTradeCard(trade, container) {
+  // Use canonical schema: opened_at for timestamp
+  const timestamp = new Date(parseTimestampToMs(trade.opened_at));
+  const dateString = timestamp.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  // Use canonical schema: PnL is provided by backend, null for OPEN trades
+  const pnl = trade.pnl;
+  const hasPnl = typeof pnl === 'number' && Number.isFinite(pnl);
+  const quantity = toSafeNumber(trade.quantity, 0);
+  const entryPrice = toSafeNumber(trade.entry_price, 0);
+  const status = trade.status || 'OPEN';
+  const isClosed = status === 'CLOSED';
+  const side = trade.side || 'N/A';
+  const symbol = trade.symbol || 'N/A';
+
+  const card = document.createElement('div');
+  card.className = 'mobile-trade-card';
+
+  card.innerHTML = `
+    <div class="mobile-trade-card-header">
+      <div>
+        <div class="mobile-trade-card-symbol">${symbol}</div>
+        <div class="mobile-trade-card-meta">${dateString} • ${side}</div>
+      </div>
+      <div class="mobile-trade-card-status status-${isClosed ? 'closed' : 'open'}">
+        ${status}
+      </div>
+    </div>
+    <div class="mobile-trade-card-details">
+      <div>
+        <div class="mobile-trade-card-price">$${entryPrice.toFixed(4)}</div>
+        <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+          Qty: ${quantity.toFixed(4)}
+        </div>
+      </div>
+      ${isClosed && hasPnl ? `
+        <div style="text-align: right;">
+          <div style="font-size: var(--font-size-md); font-weight: var(--font-weight-medium); color: ${pnl >= 0 ? 'var(--success-text)' : 'var(--danger-text)'}">
+            ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(4)}
+          </div>
+        </div>
+      ` : ''}
+    </div>
+    <div class="mobile-trade-card-actions">
+      <button class="btn btn-secondary btn-sm trade-detail-btn">Details</button>
+    </div>
+  `;
+
+  const detailBtn = card.querySelector('.trade-detail-btn');
+  if (detailBtn) {
+    detailBtn.addEventListener('click', () => showTradeDetail(trade));
+  }
+
+  container.appendChild(card);
 }
 
 function showTradeDetail(trade) {
@@ -225,25 +298,26 @@ function showTradeDetail(trade) {
   }
 
   let el = modal.querySelector('.trade-detail-timestamp');
-  if (el) el.textContent = new Date(parseTimestampToMs(trade.timestamp)).toLocaleString();
+  // Use canonical schema: opened_at for timestamp
+  if (el) el.textContent = new Date(parseTimestampToMs(trade.opened_at)).toLocaleString();
 
   el = modal.querySelector('.trade-detail-symbol');
-  if (el) el.textContent = trade.symbol || trade.ticker || 'N/A';
+  if (el) el.textContent = trade.symbol || 'N/A';
 
   el = modal.querySelector('.trade-detail-side');
-  if (el) el.textContent = trade.side || trade.position_side || 'N/A';
+  if (el) el.textContent = trade.side || 'N/A';
 
   el = modal.querySelector('.trade-detail-qty');
-  if (el) el.textContent = toSafeNumber(trade.quantity ?? trade.qty, 0).toFixed(8);
+  if (el) el.textContent = toSafeNumber(trade.quantity, 0).toFixed(8);
 
   el = modal.querySelector('.trade-detail-entry');
-  if (el) el.textContent = toSafeNumber(trade.entry_price ?? trade.price ?? trade.fill_price, 0).toFixed(8);
+  // Use canonical schema: entry_price
+  if (el) el.textContent = toSafeNumber(trade.entry_price, 0).toFixed(8);
 
   el = modal.querySelector('.trade-detail-exit');
   if (el) {
-    const status = String(trade.status || trade.state || '').toUpperCase();
-    const rawExit = trade.exit_price ?? trade.close_price;
-    const exit = toSafeNumber(rawExit, 0);
+    const status = trade.status || 'OPEN';
+    const exit = toSafeNumber(trade.exit_price, 0);
     if (status === 'OPEN' && exit === 0) {
       el.textContent = '—';
     } else {
@@ -253,16 +327,18 @@ function showTradeDetail(trade) {
 
   el = modal.querySelector('.trade-detail-pnl');
   if (el) {
-    const hasPnl = typeof trade?.pnl === 'number' && Number.isFinite(trade.pnl);
-    el.textContent = hasPnl ? trade.pnl.toFixed(8) : '—';
+    // Use canonical schema: PnL is provided by backend, null for OPEN trades
+    const pnl = trade.pnl;
+    const hasPnl = typeof pnl === 'number' && Number.isFinite(pnl);
+    el.textContent = hasPnl ? pnl.toFixed(8) : '—';
   }
 
   el = modal.querySelector('.trade-detail-status');
-  if (el) el.textContent = trade.status || trade.state || 'N/A';
+  if (el) el.textContent = trade.status || 'OPEN';
 
   // Structured metadata fields for clarity
   el = modal.querySelector('.trade-detail-execmode');
-  if (el) el.textContent = trade.execution_mode || trade.mode || '';
+  if (el) el.textContent = trade.market_type || '';
 
   el = modal.querySelector('.trade-detail-market');
   if (el) el.textContent = trade.market_type || '';
@@ -465,7 +541,17 @@ async function exportTradesToCSV() {
   let originalText;
 
   try {
-    const user = await fetchJson('/api/current_user');
+    let user;
+    try {
+      user = await fetchJson('/api/current_user');
+    } catch (authError) {
+      if (authError.message.includes('Authentication required')) {
+        // Redirect to login page
+        window.location.href = '/login';
+        return;
+      }
+      throw authError;
+    }
     const isAdmin = Boolean(user?.is_admin);
     const userId = user?.id;
 
@@ -544,7 +630,17 @@ export function initTradeHistory() {
   if (clearBtn) {
     clearBtn.addEventListener('click', async () => {
       try {
-        const user = await fetchJson('/api/current_user');
+        let user;
+        try {
+          user = await fetchJson('/api/current_user');
+        } catch (authError) {
+          if (authError.message.includes('Authentication required')) {
+            // Redirect to login page
+            window.location.href = '/login';
+            return;
+          }
+          throw authError;
+        }
         const isAdmin = Boolean(user?.is_admin);
         const userId = user?.id;
         if (!userId) {
@@ -602,7 +698,17 @@ export function initTradeHistory() {
   if (clearSystemBtn) {
     clearSystemBtn.addEventListener('click', async () => {
       try {
-        const user = await fetchJson('/api/current_user');
+        let user;
+        try {
+          user = await fetchJson('/api/current_user');
+        } catch (authError) {
+          if (authError.message.includes('Authentication required')) {
+            // Redirect to login page
+            window.location.href = '/login';
+            return;
+          }
+          throw authError;
+        }
         const isAdmin = Boolean(user?.is_admin);
         if (!isAdmin) {
           alert('Access denied.');

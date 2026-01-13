@@ -108,7 +108,7 @@ async function updatePerformanceChart() {
 
 // Sort helper (desc by timestamp)
 function sortTradesByTimestamp(trades) {
-  return trades.slice().sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+  return trades.slice().sort((a, b) => (new Date(b.opened_at || 0) - new Date(a.opened_at || 0)))
 }
 
 export async function refreshRecentActivity() {
@@ -134,15 +134,16 @@ function renderRecentActivity(trades) {
   if (mobileList) mobileList.innerHTML = ''
 
   trades.forEach((trade) => {
-    const ts = new Date((trade.timestamp || 0) * 1000)
-    const timeString = ts.toLocaleTimeString('en-US', { hour12: false })
-    const statusClass = trade.status === 'filled' ? 'status-success' : 'status-warning'
+    // Use canonical schema: opened_at for timestamp
+    const ts = new Date(trade.opened_at || Date.now())
+    const timeString = isNaN(ts.getTime()) ? '—' : ts.toLocaleTimeString('en-US', { hour12: false })
+    const statusClass = trade.status === 'CLOSED' ? 'status-success' : 'status-warning'
     const rowHtml = `
       <tr class="dashboard-row">
         <td class="px-2 py-2 text-sm">${timeString}</td>
         <td class="px-2 py-2 text-sm">${escapeHtml(trade.symbol || 'N/A')}</td>
         <td class="px-2 py-2 text-sm">${escapeHtml(trade.side || 'N/A')}</td>
-        <td class="px-2 py-2 text-sm">$${(trade.price || 0).toFixed(2)}</td>
+        <td class="px-2 py-2 text-sm">$${(trade.entry_price || 0).toFixed(2)}</td>
         <td class="px-2 py-2 text-sm"><span class="status-indicator ${statusClass}">${escapeHtml(trade.status || 'unknown')}</span></td>
       </tr>
     `
@@ -158,8 +159,8 @@ function renderRecentActivity(trades) {
               <div class="text-xs text-slate-500">${timeString} • ${escapeHtml(trade.side || '')}</div>
             </div>
             <div class="text-right">
-              <div class="text-sm">$${(trade.price || 0).toFixed(2)}</div>
-              <div class="text-xs ${trade.status === 'filled' ? 'text-emerald-600' : 'text-amber-600'}">${escapeHtml(trade.status || '')}</div>
+              <div class="text-sm">$${(trade.entry_price || 0).toFixed(2)}</div>
+              <div class="text-xs ${trade.status === 'CLOSED' ? 'text-emerald-600' : 'text-amber-600'}">${escapeHtml(trade.status || '')}</div>
             </div>
           </div>
         </div>
@@ -248,12 +249,14 @@ function updateUserTradesTable(trades) {
   if (mobilePlaceholder) mobilePlaceholder.innerHTML = ''
 
   sorted.slice(0, 20).forEach(trade => {
-    const pnl = calculatePnL(trade)
-    const isIncomplete = !(trade.status === 'closed' || trade.status === 'filled')
-    const statusClass = isIncomplete ? 'status-warning' : 'status-success'
-    const pnlClass = pnl >= 0 ? 'text-success' : 'text-danger'
-    const ts = new Date((trade.timestamp || 0) * 1000)
-    const dateString = ts.toLocaleDateString('en-US')
+    // Use canonical schema: PnL is provided by backend, null for OPEN trades
+    const pnl = trade.pnl  // No client-side calculation
+    const isOpen = trade.status === 'OPEN'
+    const statusClass = trade.status === 'CLOSED' ? 'status-success' : 'status-warning'
+    const pnlClass = pnl && pnl >= 0 ? 'text-success' : 'text-danger'
+    // Use opened_at from canonical schema
+    const ts = new Date(trade.opened_at || Date.now())
+    const dateString = isNaN(ts.getTime()) ? '—' : ts.toLocaleDateString('en-US')
 
     if (tbody) {
       const row = document.createElement('tr')
@@ -262,10 +265,10 @@ function updateUserTradesTable(trades) {
         <td class="px-3 py-2 text-sm">${dateString}</td>
         <td class="px-3 py-2 text-sm">${escapeHtml(trade.symbol || 'N/A')}</td>
         <td class="px-3 py-2 text-sm">${escapeHtml(trade.side || 'N/A')}</td>
-        <td class="px-3 py-2 text-sm">${escapeHtml(String(trade.quantity || trade.qty || 0))}</td>
-        <td class="px-3 py-2 text-sm">$${(Number(trade.price || 0)).toFixed(4)}</td>
-        <td class="px-3 py-2 text-sm ${pnlClass}">${pnl >= 0 ? '+' : '-'}$${Math.abs(pnl).toFixed(2)}</td>
-        <td class="px-3 py-2 text-sm"><span class="status-indicator ${statusClass}">${escapeHtml(trade.status || (isIncomplete ? 'incomplete' : 'closed'))}</span></td>
+        <td class="px-3 py-2 text-sm">${escapeHtml(String(trade.quantity || 0))}</td>
+        <td class="px-3 py-2 text-sm">$${(Number(trade.entry_price || 0)).toFixed(4)}</td>
+        <td class="px-3 py-2 text-sm ${pnlClass}">${isOpen || pnl === null ? '—' : (pnl >= 0 ? '+' : '-') + '$' + Math.abs(pnl).toFixed(2)}</td>
+        <td class="px-3 py-2 text-sm"><span class="status-indicator ${statusClass}">${escapeHtml(trade.status || 'OPEN')}</span></td>
       `
 
       // details cell with disabled state for incomplete trades (keeps UI consistent)
@@ -273,8 +276,8 @@ function updateUserTradesTable(trades) {
       const detailsBtn = document.createElement('button')
       detailsBtn.className = 'btn btn-sm btn-primary'
       detailsBtn.textContent = 'Details'
-      detailsBtn.disabled = isIncomplete
-      if (isIncomplete) detailsBtn.title = 'Trade incomplete - details unavailable'
+      detailsBtn.disabled = isOpen
+      if (isOpen) detailsBtn.title = 'Trade open - details unavailable'
       detailsBtn.addEventListener('click', () => openTradeModal(trade))
       detailsCell.appendChild(detailsBtn)
       row.appendChild(detailsCell)
@@ -286,7 +289,7 @@ function updateUserTradesTable(trades) {
       const card = document.createElement('div')
       card.className = 'mobile-card p-3 mb-3 card'
       card.innerHTML = `
-        <div class=\"flex justify-between items-start\">\n          <div>\n            <div class=\"font-medium\">${escapeHtml(trade.symbol || 'N/A')}</div>\n            <div class=\"text-xs text-slate-500\">${dateString} • ${escapeHtml(trade.side || '')}</div>\n          </div>\n          <div class=\"text-right\">\n            <div class=\"text-sm\">$${(Number(trade.price || 0)).toFixed(2)}</div>\n            <div class=\"text-xs ${trade.status === 'filled' ? 'text-emerald-600' : 'text-amber-600'}\">${escapeHtml(trade.status || '')}</div>\n          </div>\n        </div>\n        <div class=\"mt-2 flex items-center justify-between\">\n          <div class=\"text-sm ${pnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}\">${pnl >= 0 ? '+' : '-'}$${Math.abs(pnl).toFixed(2)}</div>\n          <div><button class=\"btn btn-xs btn-outline\" ${isIncomplete ? 'disabled' : ''}>Details</button></div>\n        </div>\n      `
+        <div class=\"flex justify-between items-start\">\n          <div>\n            <div class=\"font-medium\">${escapeHtml(trade.symbol || 'N/A')}</div>\n            <div class=\"text-xs text-slate-500\">${dateString} • ${escapeHtml(trade.side || '')}</div>\n          </div>\n          <div class=\"text-right\">\n            <div class=\"text-sm\">$${(Number(trade.entry_price || 0)).toFixed(2)}</div>\n            <div class=\"text-xs ${trade.status === 'CLOSED' ? 'text-emerald-600' : 'text-amber-600'}\">${escapeHtml(trade.status || '')}</div>\n          </div>\n        </div>\n        <div class=\"mt-2 flex items-center justify-between\">\n          <div class=\"text-sm ${pnl && pnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}\">${isOpen || pnl === null ? '—' : (pnl >= 0 ? '+' : '-') + '$' + Math.abs(pnl).toFixed(2)}</div>\n          <div><button class=\"btn btn-xs btn-outline\" ${isOpen ? 'disabled' : ''}>Details</button></div>\n        </div>\n      `
       mobilePlaceholder.appendChild(card)
     }
   })

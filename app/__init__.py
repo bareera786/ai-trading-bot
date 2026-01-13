@@ -6,9 +6,15 @@ import os
 
 from flask import Flask
 from .config import Config
-from .extensions import init_extensions
+from .extensions import init_extensions, limiter, csrf
 from .routes import register_blueprints
 from .bootstrap import bootstrap_runtime
+
+
+def _register_cli_commands(app: Flask) -> None:
+    """Register Flask CLI commands for user management."""
+    from .cli import register_cli_commands
+    register_cli_commands(app)
 
 
 def create_app(config_class: Optional[type[Config]] = None) -> Flask:
@@ -54,15 +60,18 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
 
     # Initialize tenant isolation for multi-user support (optional)
     try:
-        from .core.tenant_isolation import init_tenant_isolation
+        from .core.tenant_isolation import init_tenant_isolation  # type: ignore
         init_tenant_isolation(app)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # Tenant isolation is optional in local/dev setups or when the
         # module is not present. Skip initialization to allow the app
         # to start for debugging and development tasks.
         pass
 
     register_blueprints(app)
+
+    # Register CLI commands
+    _register_cli_commands(app)
 
     bootstrap_runtime(app)
 
@@ -131,5 +140,22 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
             # If rendering fails for any unexpected reason, return 404 so
             # the original error path is visible to callers.
             return abort(404)
+
+    from app.extensions import limiter, csrf
+
+    # Initialize extensions
+    limiter.init_app(app)
+    csrf.init_app(app)
+
+    # Temporary global error handler to log full tracebacks for debugging
+    # production 500s. This will be removed once root causes are fixed.
+    from flask import jsonify
+
+    @app.errorhandler(Exception)
+    def _log_unhandled_exception(exc):
+        # Log full traceback to the application logger for diagnostics
+        app.logger.exception("Unhandled exception during request: %s", exc)
+        # Return a minimal opaque error to clients
+        return jsonify({"success": False, "error": "Internal Server Error"}), 500
 
     return app

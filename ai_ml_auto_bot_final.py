@@ -68,6 +68,7 @@ import io
 from io import BytesIO
 from types import SimpleNamespace
 from typing import Optional, Any
+from urllib.parse import urlparse
 
 from app.extensions import db, init_extensions, login_manager, socketio
 from app.routes import register_blueprints
@@ -5884,10 +5885,10 @@ class UltimateMLTrainingSystem:
 
             try:
                 models["logistic"] = LogisticRegression(
-                    random_state=42, max_iter=500, n_jobs=-1
+                    random_state=42, max_iter=500, n_jobs=-1, multi_class='ovr'
                 )
             except Exception:
-                models["logistic"] = LogisticRegression(random_state=42, max_iter=200)
+                models["logistic"] = LogisticRegression(random_state=42, max_iter=200, multi_class='ovr')
 
             try:
                 models["svc"] = SVC(probability=True, random_state=42, kernel="rbf")
@@ -6823,8 +6824,22 @@ class UltimateMLTrainingSystem:
                 warnings.filterwarnings("ignore", category=UserWarning)
                 warnings.filterwarnings("ignore", category=DataConversionWarning)
 
-                prediction_proba = model.predict_proba([features])[0]
-                prediction = model.predict([features])[0]
+                try:
+                    prediction_proba = model.predict_proba([features])[0]
+                    prediction = model.predict([features])[0]
+                except Exception as e:
+                    if "multi_class" in str(e) and "LogisticRegression" in str(e):
+                        self.log_training(
+                            symbol,
+                            f"⚠️ Model prediction failed due to outdated LogisticRegression, retraining...",
+                            0,
+                        )
+                        # Remove the model so it gets retrained
+                        if symbol in self.models:
+                            del self.models[symbol]
+                        return None
+                    else:
+                        raise
 
             signal_map = {
                 2: "STRONG_BUY",
@@ -7312,12 +7327,25 @@ class UltimateMLTrainingSystem:
                         )
                         return True
                     except Exception as e:
-                        if "numpy._core" in str(e):
+                        error_str = str(e)
+                        if "numpy._core" in error_str:
                             self.log_training(
                                 symbol,
                                 f"⚠️ Model incompatible with current NumPy version (numpy._core issue), skipping",
                                 0,
                             )
+                        elif "multi_class" in error_str and "LogisticRegression" in error_str:
+                            self.log_training(
+                                symbol,
+                                f"⚠️ Model contains outdated LogisticRegression parameters, retraining...",
+                                0,
+                            )
+                            # Delete the old model file so it gets retrained
+                            try:
+                                os.remove(model_path)
+                            except:
+                                pass
+                            return False
                         else:
                             self.log_training(symbol, f"❌ Error loading model: {e}", 0)
                         return False
@@ -9232,7 +9260,26 @@ class UltimateAIAutoTrader:
         # NEW: Use ComprehensiveTradeHistory instead of EnhancedTradeHistory
         self.trade_history = ComprehensiveTradeHistory(log_callback=log_component_event)
         # Initialize TimescaleDB service for efficient candle storage
-        self.timescaledb_service = TimescaleDBService(logger=bot_logger)
+        # Parse DATABASE_URL to get connection parameters for TimescaleDB
+        database_url = os.getenv("DATABASE_URL", "sqlite:///trading_bot.db")
+        if database_url.startswith("postgresql://"):
+            parsed = urlparse(database_url)
+            db_host = parsed.hostname or "localhost"
+            db_port = parsed.port or 5432
+            db_name = parsed.path.lstrip("/")
+            db_user = parsed.username or "trading_user"
+            db_password = parsed.password or "secure_password_123"
+            self.timescaledb_service = TimescaleDBService(
+                host=db_host,
+                port=db_port,
+                database=db_name,
+                user=db_user,
+                password=db_password,
+                logger=bot_logger
+            )
+        else:
+            # Fallback to default for SQLite or other databases
+            self.timescaledb_service = TimescaleDBService(logger=bot_logger)
         self.trading_enabled = TRADING_CONFIG.get("auto_trade_enabled", False)
         self.paper_trading = False
         self.real_trader = RealBinanceTrader(

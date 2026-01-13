@@ -8,6 +8,7 @@ from flask import jsonify, redirect, request, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_login import LoginManager
+from flask_wtf.csrf import CSRFProtect, generate_csrf
 
 try:
     from flask_mail import Mail as _FlaskMail  # type: ignore[assignment]
@@ -44,7 +45,13 @@ mail: Any = Mail()
 
 # Configure Redis storage for rate limiting
 redis_client = None  # Will be initialized in init_extensions
-limiter = Limiter(key_func=get_remote_address)  # Storage will be set in init_extensions
+limiter = Limiter(
+    get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+)  # Storage will be set in init_extensions
+
+# Initialize CSRF protection
+csrf = CSRFProtect()
 
 
 def init_extensions(app):
@@ -102,7 +109,7 @@ def init_extensions(app):
             return jsonify({"success": False, "error": "Authentication required"}), 401
 
         next_url = request.full_path if request.query_string else request.path
-        return redirect(url_for(login_manager.login_view, next=next_url))
+        return redirect(url_for(login_manager.login_view, next=next_url))  # type: ignore
 
     # Socket.IO (reuse config defaults)
     cors = app.config.get(
@@ -143,3 +150,8 @@ def init_extensions(app):
 
     # Ensure asset helpers are always registered, even for ad-hoc Flask apps in tests
     register_asset_helpers(app)
+
+    # Expose a `csrf_token` helper for templates that calls the library function
+    @app.context_processor
+    def _inject_csrf():
+        return {"csrf_token": generate_csrf}

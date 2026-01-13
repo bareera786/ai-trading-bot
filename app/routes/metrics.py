@@ -374,7 +374,7 @@ def api_trades():
 
     # Ensure consistent ordering using parsed datetimes (service also sorts,
     # but apply here defensively in case merged logic altered ordering).
-    trades.sort(key=lambda x: (safe_parse_datetime(x.get("timestamp")) or datetime.min), reverse=True)
+    trades.sort(key=lambda x: (safe_parse_datetime(x.get("opened_at")) or datetime.min), reverse=True)
 
     per_page = 20
     start_idx = (page - 1) * per_page
@@ -439,18 +439,38 @@ def api_trades():
         if symbol:
             q = q.filter_by(symbol=symbol)
         for ut in q.order_by(UserTrade.timestamp.desc()).limit(200).all():
+            # Normalize DB trade to canonical schema
+            status = ut.status.upper() if ut.status else "OPEN"
+            if status in ("CLOSED", "FILLED", "COMPLETED"):
+                normalized_status = "CLOSED"
+                exit_price = float(ut.exit_price or 0) if ut.exit_price else None
+                # Calculate PnL if we have exit_price
+                pnl = None
+                if exit_price and ut.entry_price and ut.quantity:
+                    if ut.side.upper() == "BUY":
+                        pnl = (exit_price - ut.entry_price) * ut.quantity
+                    elif ut.side.upper() == "SELL":
+                        pnl = (ut.entry_price - exit_price) * ut.quantity
+                closed_at = ut.timestamp.isoformat() if ut.timestamp else None
+            else:
+                normalized_status = "OPEN"
+                exit_price = None
+                pnl = None
+                closed_at = None
+
             db_trades.append(
                 {
-                    "db_id": ut.id,
+                    "id": f"db_{ut.id}",
                     "symbol": ut.symbol,
-                    "side": ut.side,
-                    "quantity": ut.quantity,
-                    "price": ut.entry_price,
-                    "type": ut.trade_type,
-                    "status": ut.status,
-                    "signal": ut.signal_source,
-                    "confidence": ut.confidence_score,
-                    "timestamp": ut.timestamp.isoformat() if ut.timestamp else None,
+                    "side": ut.side.upper() if ut.side else "BUY",
+                    "quantity": float(ut.quantity or 0),
+                    "entry_price": float(ut.entry_price or 0),
+                    "exit_price": exit_price,
+                    "status": normalized_status,
+                    "pnl": pnl,
+                    "opened_at": ut.timestamp.isoformat() if ut.timestamp else datetime.utcnow().isoformat(),
+                    "closed_at": closed_at,
+                    "market_type": "spot",  # Default for DB trades
                     "source": "db",
                     "user_id": ut.user_id,
                 }
@@ -458,7 +478,7 @@ def api_trades():
 
         # Combine and re-paginate
         combined = trades + db_trades
-        combined.sort(key=lambda x: (safe_parse_datetime(x.get("timestamp")) or datetime.min), reverse=True)
+        combined.sort(key=lambda x: (safe_parse_datetime(x.get("opened_at")) or datetime.min), reverse=True)
         start_idx = (page - 1) * per_page
         paginated = combined[start_idx : start_idx + per_page]
 

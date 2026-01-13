@@ -1,19 +1,26 @@
-name: CI
+name: CI with AI-assisted fixes
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, dev ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, dev ]
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
-  test:
+  test-and-ai:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: Set up Python
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
@@ -26,19 +33,31 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies (minimal for tests)
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install --no-cache-dir -r requirements.txt
 
-      - name: Run lint (ruff)
+      - name: Run tests and generate JSON report
         run: |
-          python -m pip install ruff
-          ruff --version || true
-
-      - name: Run focused tests
+          # Run the helper that executes pytest and writes artifacts/failed_tests.json
+          python .github/run_tests_and_report_clean.py
         env:
-          AI_BOT_TEST_MODE: '1'
-          SKIP_RUNTIME_BOOTSTRAP: '1'
+          PYTEST_ADDOPTS: "--json-report --json-report-file=artifacts/pytest_report.json"
+
+      - name: Publish test report artifact (optional)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report
+          path: artifacts/
+
+      - name: Analyze failures with AI agent and optionally open PR
+        if: always()
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_ACTOR: ${{ github.actor }}
         run: |
-          pytest -q tests/test_config_database_url.py
+          python .github/ai_agent.py

@@ -1,5 +1,6 @@
 import unittest
 import json
+import pytest
 from app import create_app
 from app.extensions import db
 from app.models import User
@@ -82,6 +83,45 @@ class UserManagementTestCase(unittest.TestCase):
         data = json.loads(response.data)
         self.assertIn("message", data)
         self.assertIn("deleted successfully", data["message"])
+
+    def test_create_user(self, client):
+        response = client.post(
+            "/api/admin/users",
+            json={
+                "email": "test@example.com",
+                "username": "testuser",
+                "password": "password123",
+                "role": "viewer",
+            },
+        )
+        assert response.status_code == 201
+        assert b"User created successfully" in response.data
+
+    def test_get_users(self, client):
+        # Create a user first
+        user = User(email="test@example.com", username="testuser", role="viewer")
+        user.set_password("password123")
+        db.session.add(user)
+        db.session.commit()
+
+        response = client.get("/api/admin/users")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert len(data) == 1
+        assert data[0]["email"] == "test@example.com"
+
+    def test_promote_user(self, runner):
+        # Create a user first
+        user = User(email="test@example.com", username="testuser", role="viewer")
+        user.set_password("password123")
+        db.session.add(user)
+        db.session.commit()
+
+        result = runner.invoke(args=["users-promote", "test@example.com"])
+        assert "promoted to admin" in result.output
+        user = User.query.filter_by(email="test@example.com").first()
+        assert user is not None
+        assert user.role == "admin"
 
 
 if __name__ == "__main__":

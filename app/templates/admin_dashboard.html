@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Admin Dashboard</h1>
+
+        <!-- User Table -->
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="user-table-body">
+                <!-- Rows will be dynamically populated -->
+            </tbody>
+        </table>
+
+        <!-- Add User Button -->
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userModal">Add User</button>
+
+        <!-- User Modal -->
+        <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="userModalLabel">Add/Edit User</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="user-form">
+                            <input type="hidden" id="user-id">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="username" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="role" class="form-label">Role</label>
+                                <select class="form-select" id="role" required>
+                                    <option value="user">User</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add a section for viewing audit logs -->
+        <div class="audit-logs mt-5">
+            <h3>Audit Logs</h3>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>Actor</th>
+                        <th>Target</th>
+                        <th>IP Address</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody id="audit-log-entries">
+                    <!-- Audit log entries will be dynamically populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const userTableBody = document.getElementById('user-table-body');
+            const userForm = document.getElementById('user-form');
+            const userIdInput = document.getElementById('user-id');
+            const usernameInput = document.getElementById('username');
+            const roleInput = document.getElementById('role');
+
+            // Fetch and display users
+            function fetchUsers() {
+                fetch('/admin/users')
+                    .then(response => response.json())
+                    .then(users => {
+                        userTableBody.innerHTML = '';
+                        users.forEach(user => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${user.id}</td>
+                                <td>${user.username}</td>
+                                <td>${user.role}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning" onclick="editUser(${user.id}, '${user.username}', '${user.role}')">Edit</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">Delete</button>
+                                </td>
+                            `;
+                            userTableBody.appendChild(row);
+                        });
+                    });
+            }
+
+            // Add/Edit user
+            userForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const userId = userIdInput.value;
+                const username = usernameInput.value;
+                const role = roleInput.value;
+
+                const method = userId ? 'PUT' : 'POST';
+                const url = userId ? `/admin/users/${userId}` : '/admin/users';
+
+                fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, role })
+                })
+                .then(response => response.json())
+                .then(() => {
+                    fetchUsers();
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('userModal'));
+                    modal.hide();
+                });
+            });
+
+            // Edit user
+            window.editUser = (id, username, role) => {
+                userIdInput.value = id;
+                usernameInput.value = username;
+                roleInput.value = role;
+                const modal = new bootstrap.Modal(document.getElementById('userModal'));
+                modal.show();
+            };
+
+            // Delete user
+            window.deleteUser = (id) => {
+                if (confirm('Are you sure you want to delete this user?')) {
+                    fetch(`/admin/users/${id}`, { method: 'DELETE' })
+                        .then(() => fetchUsers());
+                }
+            };
+
+            // Fetch and display audit logs
+            function fetchAuditLogs() {
+                fetch('/api/admin/audit-logs')
+                    .then(response => response.json())
+                    .then(data => {
+                        const tbody = document.getElementById('audit-log-entries');
+                        tbody.innerHTML = '';
+                        data.forEach(log => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${log.action}</td>
+                                <td>${log.actor_user_id}</td>
+                                <td>${log.target_user_id || 'N/A'}</td>
+                                <td>${log.ip_address || 'N/A'}</td>
+                                <td>${log.created_at}</td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                    });
+            }
+
+            // Initial fetch
+            fetchUsers();
+            fetchAuditLogs();
+        });
+    </script>
+</body>
+</html>

@@ -127,24 +127,25 @@ class ComprehensiveTradeHistory:
         status = trade_data.get("status")
         if isinstance(status, str):
             normalized = status.strip().upper()
-            if normalized in {"OPEN", "CLOSED"}:
+            if normalized in {"OPEN", "CLOSED", "CLOSE_FAILED"}:
                 return normalized
 
-        side = str(trade_data.get("side") or "").strip().upper()
-
+        # A trade is CLOSED ONLY if:
+        # a) explicit exit_price > 0 OR
+        # b) an explicit exit event updates the trade.
+        # Otherwise status MUST remain OPEN.
         try:
             exit_price = float(trade_data.get("exit_price") or 0)
         except Exception:
             exit_price = 0.0
 
-        # Treat as CLOSED only when an explicit exit price exists.
-        # (pnl/pnl_percent can be unrealized for open positions.)
-        if exit_price != 0.0:
+        # Only mark as CLOSED when an explicit exit price exists.
+        if exit_price > 0:
             return "CLOSED"
 
-        # Legacy heuristic: BUY opens, SELL closes.
-        if side == "SELL":
-            return "CLOSED"
+        # REMOVE the legacy heuristic that marks SELL as CLOSED.
+        # SELL does NOT automatically mean CLOSED - a trade remains OPEN
+        # until a real exit occurs with an exit_price > 0.
         return "OPEN"
 
     @staticmethod
@@ -166,19 +167,10 @@ class ComprehensiveTradeHistory:
             except Exception:
                 pass
 
-        # Otherwise, fall back to other known keys. In this codebase, many
-        # CLOSED trade records store the close execution price in `price`.
-        for key in ("close_price", "price", "fill_price", "entry_price"):
-            raw_val = trade_data.get(key)
-            if raw_val in (None, ""):
-                continue
-            try:
-                val = float(raw_val)
-                if val > 0:
-                    return val
-            except Exception:
-                continue
-
+        # For CLOSED trades, we MUST have an explicit exit_price.
+        # DO NOT fall back to entry_price or any other price - if no
+        # explicit exit_price exists, the trade should not be CLOSED.
+        # This prevents incorrect PnL calculations and status inference.
         return None
 
     def add_trade(self, trade_data: Dict[str, Any]) -> dict[str, Any] | None:
@@ -474,7 +466,15 @@ class ComprehensiveTradeHistory:
                 key=lambda x: (safe_parse_datetime(x.get("timestamp")) or datetime.min),
                 reverse=True,
             )
-            return all_trades
+
+            # Normalize all trades to canonical schema
+            normalized_trades = []
+            for trade in all_trades:
+                normalized = self.normalize_trade(trade)
+                if normalized:  # Only include valid trades
+                    normalized_trades.append(normalized)
+
+            return normalized_trades
         except Exception as exc:
             logging.getLogger(__name__).error("Error getting trade history: %s", exc)
             return []
@@ -738,3 +738,135 @@ class ComprehensiveTradeHistory:
                 json.dump(list(events)[-500:], f, indent=2, default=str)
         except Exception as exc:
             logging.getLogger(__name__).error("Journal save error: %s", exc)
+
+    def normalize_trade(self, trade: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize a trade to the canonical schema.
+
+        Canonical Trade Schema:
+        {
+          id: string | int,
+          symbol: string,
+          side: "BUY" | "SELL",
+          quantity: number,
+          entry_price: number,
+          exit_price: number | null,
+          status: "OPEN" | "CLOSED" | "CLOSE_FAILED",
+          pnl: number | null,
+          opened_at: ISO-8601 datetime string,
+          closed_at: ISO-8601 datetime string | null,
+          market_type: "spot" | "futures" | "paper"
+        }
+        """
+        if not isinstance(trade, dict):
+            return {}
+
+        # Extract basic fields with fallbacks
+        symbol = str(trade.get("symbol", "")).strip().upper()
+        if not symbol:
+            return {}
+
+        side = str(trade.get("side", "")).strip().upper()
+        if side not in ("BUY", "SELL"):
+            side = "BUY"  # Default fallback
+
+        quantity = float(trade.get("quantity", trade.get("qty", 0)) or 0)
+        if quantity <= 0:
+            return {}
+
+        # Handle entry_price - must be positive for valid trades
+        entry_price = float(trade.get("entry_price", trade.get("price", trade.get("executed_entry", 0))) or 0)
+        if entry_price <= 0:
+            return {}
+
+        # Determine status
+        raw_status = str(trade.get("status", "")).strip().upper()
+        if raw_status in ("CLOSED", "FILLED", "COMPLETED"):
+            status = "CLOSED"
+        elif raw_status in ("OPEN", "PENDING", "PARTIAL"):
+            status = "OPEN"
+        elif raw_status in ("FAILED", "CANCELLED", "REJECTED"):
+            status = "CLOSE_FAILED"
+        else:
+            status = "OPEN"  # Default to OPEN for unknown status
+
+        # Handle exit_price and pnl based on status
+        exit_price = None
+        pnl = None
+
+        if status == "CLOSED":
+            # For CLOSED trades, exit_price should be set
+            exit_price = float(trade.get("exit_price", trade.get("executed_exit", 0)) or 0)
+            if exit_price <= 0:
+                # Try to infer from other fields
+                exit_price = float(trade.get("price", 0) or 0)
+            if exit_price <= 0:
+                # If still no exit price, this might be malformed - treat as OPEN
+                status = "OPEN"
+            else:
+                # Calculate PnL for closed trades
+                if side == "BUY":
+                    pnl = (exit_price - entry_price) * quantity
+                else:  # SELL
+                    pnl = (entry_price - exit_price) * quantity
+        # For OPEN and CLOSE_FAILED trades, exit_price and pnl remain null
+
+        # Handle timestamps
+        opened_at = None
+        closed_at = None
+
+        # Try multiple timestamp fields
+        timestamp_sources = ["timestamp", "opened_at", "created_at", "time"]
+        for ts_field in timestamp_sources:
+            ts_value = trade.get(ts_field)
+            if ts_value:
+                try:
+                    if isinstance(ts_value, str):
+                        # Parse ISO string
+                        parsed = safe_parse_datetime(ts_value)
+                        if parsed:
+                            opened_at = parsed.isoformat()
+                            break
+                    elif isinstance(ts_value, (int, float)):
+                        # Convert Unix timestamp
+                        parsed = datetime.fromtimestamp(ts_value)
+                        opened_at = parsed.isoformat()
+                        break
+                except Exception:
+                    continue
+
+        # If no opened_at found, use current time as fallback
+        if not opened_at:
+            opened_at = datetime.utcnow().isoformat()
+
+        # Set closed_at only for CLOSED trades
+        if status == "CLOSED":
+            closed_at = opened_at  # Use opened_at as approximation if no specific close time
+
+        # Determine market_type
+        execution_mode = str(trade.get("execution_mode", "")).strip().lower()
+        if execution_mode == "futures":
+            market_type = "futures"
+        elif execution_mode == "paper":
+            market_type = "paper"
+        else:
+            market_type = "spot"
+
+        # Generate ID if not present
+        trade_id = trade.get("id", trade.get("trade_id", trade.get("db_id")))
+        if not trade_id:
+            # Generate a simple ID based on symbol, timestamp, and side
+            trade_id = f"{symbol}_{opened_at}_{side}_{quantity}"
+
+        return {
+            "id": trade_id,
+            "symbol": symbol,
+            "side": side,
+            "quantity": round(quantity, 8),  # Round to avoid floating point issues
+            "entry_price": round(entry_price, 8),
+            "exit_price": round(exit_price, 8) if exit_price else None,
+            "status": status,
+            "pnl": round(pnl, 8) if pnl is not None else None,
+            "opened_at": opened_at,
+            "closed_at": closed_at,
+            "market_type": market_type,
+        }

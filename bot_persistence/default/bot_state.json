@@ -1,0 +1,416 @@
+{
+  "version": "2.0",
+  "timestamp": "2026-01-14T02:13:06.285177",
+  "trader_state": {
+    "balance": 1000,
+    "positions": {},
+    "trading_enabled": false,
+    "paper_trading": false,
+    "futures_trading_enabled": false,
+    "daily_pnl": 0,
+    "max_drawdown": 0,
+    "peak_balance": 1000,
+    "bot_efficiency": {
+      "total_trades": 0,
+      "successful_trades": 0,
+      "total_profit": 0,
+      "learning_cycles": 0,
+      "last_improvement": null,
+      "ensemble_accuracy": 0.5,
+      "risk_adjustment_history": [],
+      "market_stress_history": []
+    },
+    "risk_manager_state": {
+      "current_risk_profile": "moderate",
+      "risk_adjustment_history": [],
+      "volatility_regime": "NORMAL",
+      "market_stress_indicator": 0.0
+    },
+    "ensemble_system_state": {
+      "market_regime": "NEUTRAL",
+      "correlation_matrix": {},
+      "last_rebuild_time": null
+    }
+  },
+  "ml_system_state": {
+    "models_loaded": [
+      "MATICUSDT",
+      "LINKUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "LTCUSDT",
+      "XLMUSDT",
+      "BNBUSDT",
+      "DOGEUSDT",
+      "DOTUSDT",
+      "XRPUSDT",
+      "ADAUSDT",
+      "BCHUSDT",
+      "AVAXUSDT",
+      "ETCUSDT",
+      "BTCUSDT"
+    ],
+    "training_progress": {
+      "SYSTEM": 80,
+      "MATICUSDT": 100,
+      "ETHUSDT": 100,
+      "ETCUSDT": 100,
+      "XRPUSDT": 100,
+      "BCHUSDT": 100,
+      "AVAXUSDT": 100,
+      "BTCUSDT": 100,
+      "BNBUSDT": 100,
+      "LTCUSDT": 100,
+      "XLMUSDT": 100,
+      "LINKUSDT": 100,
+      "DOGEUSDT": 100,
+      "ADAUSDT": 100,
+      "DOTUSDT": 100,
+      "SOLUSDT": 100
+    },
+    "last_training_cycle": [
+      {
+        "timestamp": "2026-01-14T02:12:49.818601",
+        "symbol": "ADAUSDT",
+        "message": "\u2705 Ultimate model loaded (Accuracy: 0.2123, Indicators: 43)",
+        "progress": 100
+      },
+      {
+        "timestamp": "2026-01-14T02:12:49.847423",
+        "symbol": "BCHUSDT",
+        "message": "\u2705 Ultimate model loaded (Accuracy: 0.2192, Indicators: 43)",
+        "progress": 100
+      },
+      {
+        "timestamp": "2026-01-14T02:12:49.875196",
+        "symbol": "AVAXUSDT",
+        "message": "\u2705 Ultimate model loaded (Accuracy: 0.1370, Indicators: 43)",
+        "progress": 100
+      },
+      {
+        "timestamp": "2026-01-14T02:12:49.904762",
+        "symbol": "ETCUSDT",
+        "message": "\u2705 Ultimate model loaded (Accuracy: 0.2260, Indicators: 43)",
+        "progress": 100
+      },
+      {
+        "timestamp": "2026-01-14T02:12:49.973727",
+        "symbol": "BTCUSDT",
+        "message": "\u2705 Ultimate model loaded (Accuracy: 0.1164, Indicators: 43)",
+        "progress": 100
+      }
+    ],
+    "crt_signals_count": 0
+  },
+  "configuration": {
+    "TRADING_CONFIG": {
+      "confidence_threshold": 0.4,
+      "max_positions": 3,
+      "take_profit": 0.08,
+      "stop_loss": 0.03,
+      "min_confidence_diff": 0.12,
+      "risk_per_trade": 0.01,
+      "max_position_size": 0.08,
+      "use_ensemble": true,
+      "ensemble_min_agreement": 0.75,
+      "correlation_threshold": 0.6,
+      "market_regime_aware": true,
+      "dynamic_position_sizing": true,
+      "parallel_processing": true,
+      "advanced_stop_loss": true,
+      "periodic_rebuilding": true,
+      "adaptive_risk_management": true,
+      "continuous_training": true,
+      "optimized_indicators": [
+        "price_change",
+        "price_momentum",
+        "log_return",
+        "rsi_14",
+        "macd_hist",
+        "sma_20",
+        "ema_12",
+        "ema_26",
+        "ema_cross_12_26",
+        "price_volatility",
+        "average_true_range",
+        "bb_percent_b",
+        "volume_ratio",
+        "volume_obv",
+        "adx",
+        "mfi",
+        "stoch_k",
+        "cci",
+        "supertrend_signal",
+        "supertrend_distance",
+        "qfm_velocity",
+        "qfm_acceleration",
+        "qfm_jerk",
+        "qfm_volume_pressure",
+        "qfm_trend_confidence",
+        "qfm_regime_score",
+        "qfm_entropy"
+      ],
+      "dynamic_threshold_floor": 0.4,
+      "dynamic_threshold_ceiling": 0.6,
+      "default_min_notional": 10.0,
+      "min_notional_buffer": 1.1,
+      "min_notional_overrides": {
+        "BTCUSDT": 10.0,
+        "ETHUSDT": 10.0,
+        "BNBUSDT": 10.0,
+        "ADAUSDT": 10.0,
+        "XRPUSDT": 10.0,
+        "SOLUSDT": 10.0,
+        "DOTUSDT": 10.0,
+        "DOGEUSDT": 10.0,
+        "AVAXUSDT": 10.0,
+        "MATICUSDT": 10.0,
+        "LINKUSDT": 10.0,
+        "LTCUSDT": 10.0,
+        "BCHUSDT": 10.0,
+        "XLMUSDT": 10.0,
+        "ETCUSDT": 10.0
+      },
+      "balance_cash_buffer": 1.01,
+      "auto_take_profit_percent": 0.05,
+      "auto_take_profit_time_in_force": "GTC",
+      "auto_take_profit_adjust_interval": 30,
+      "auto_take_profit_reprice_threshold": 0.002,
+      "auto_take_profit_spread_margin": 0.0005,
+      "enable_ribs_optimization": false,
+      "ribs_optimization_interval_hours": 6,
+      "ribs_iterations_per_cycle": 200,
+      "ribs_max_elite_strategies": 5,
+      "ribs_auto_deploy_elites": true,
+      "ribs_checkpoint_interval": 50,
+      "record_system_trades_to_db": false,
+      "system_trade_user_id": null,
+      "futures_enabled": false,
+      "futures_initial_balance": 1000,
+      "futures_max_leverage": 10,
+      "futures_default_leverage": 3,
+      "futures_risk_mode": "conservative",
+      "futures_update_interval": 30,
+      "futures_signal_weight": 0.3,
+      "futures_manual_mode": true,
+      "futures_selected_symbol": "BTCUSDT",
+      "futures_manual_auto_trade": false,
+      "futures_manual_leverage": 3,
+      "futures_manual_default_notional": 50.0,
+      "futures_safety_min_atr_pct": 0.4,
+      "futures_safety_min_adx": 22.0,
+      "futures_safety_backtest_refresh_minutes": 5,
+      "futures_safety_min_win_rate_pct": 55.0,
+      "futures_safety_min_profit_factor": 1.15,
+      "futures_safety_min_backtest_trades": 8,
+      "futures_safety_max_trades_per_day": 4,
+      "futures_safety_max_daily_loss_usdt": 20.0,
+      "futures_safety_max_consecutive_losses": 2,
+      "auto_trade_enabled": false
+    },
+    "TOP_SYMBOLS": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "BNBUSDT",
+      "ADAUSDT",
+      "XRPUSDT",
+      "SOLUSDT",
+      "DOTUSDT",
+      "DOGEUSDT",
+      "AVAXUSDT",
+      "MATICUSDT",
+      "LINKUSDT",
+      "LTCUSDT",
+      "BCHUSDT",
+      "XLMUSDT",
+      "ETCUSDT"
+    ],
+    "MARKET_CAP_WEIGHTS": {
+      "BTCUSDT": 1.0,
+      "ETHUSDT": 0.9,
+      "BNBUSDT": 0.8,
+      "ADAUSDT": 0.7,
+      "XRPUSDT": 0.7,
+      "SOLUSDT": 0.8,
+      "DOTUSDT": 0.7,
+      "DOGEUSDT": 0.6,
+      "AVAXUSDT": 0.7,
+      "MATICUSDT": 0.7,
+      "LINKUSDT": 0.7,
+      "LTCUSDT": 0.6,
+      "BCHUSDT": 0.6,
+      "XLMUSDT": 0.5,
+      "ETCUSDT": 0.5
+    }
+  },
+  "historical_data_summary": {
+    "ADAUSDT": {
+      "data_points": 1,
+      "latest_price": 0.4097,
+      "price_range": [
+        0.4097,
+        0.4097
+      ],
+      "last_updated": "2026-01-14T02:13:06.285189"
+    },
+    "AVAXUSDT": {
+      "data_points": 1,
+      "latest_price": 14.5,
+      "price_range": [
+        14.5,
+        14.5
+      ],
+      "last_updated": "2026-01-14T02:13:06.285191"
+    },
+    "ETCUSDT": {
+      "data_points": 1,
+      "latest_price": 12.97,
+      "price_range": [
+        12.97,
+        12.97
+      ],
+      "last_updated": "2026-01-14T02:13:06.285193"
+    },
+    "BTCUSDT": {
+      "data_points": 1,
+      "latest_price": 94398.0,
+      "price_range": [
+        94398.0,
+        94398.0
+      ],
+      "last_updated": "2026-01-14T02:13:06.285194"
+    },
+    "LTCUSDT": {
+      "data_points": 1,
+      "latest_price": 76.62,
+      "price_range": [
+        76.62,
+        76.62
+      ],
+      "last_updated": "2026-01-14T02:13:06.285195"
+    },
+    "ETHUSDT": {
+      "data_points": 1,
+      "latest_price": 3207.04,
+      "price_range": [
+        3207.04,
+        3207.04
+      ],
+      "last_updated": "2026-01-14T02:13:06.285196"
+    },
+    "DOGEUSDT": {
+      "data_points": 1,
+      "latest_price": 0.14416,
+      "price_range": [
+        0.14416,
+        0.14416
+      ],
+      "last_updated": "2026-01-14T02:13:06.285197"
+    },
+    "SOLUSDT": {
+      "data_points": 1,
+      "latest_price": 144.08,
+      "price_range": [
+        144.08,
+        144.08
+      ],
+      "last_updated": "2026-01-14T02:13:06.285198"
+    },
+    "DOTUSDT": {
+      "data_points": 1,
+      "latest_price": 2.232,
+      "price_range": [
+        2.232,
+        2.232
+      ],
+      "last_updated": "2026-01-14T02:13:06.285199"
+    },
+    "BNBUSDT": {
+      "data_points": 1,
+      "latest_price": 941.59,
+      "price_range": [
+        941.59,
+        941.59
+      ],
+      "last_updated": "2026-01-14T02:13:06.285200"
+    },
+    "MATICUSDT": {
+      "data_points": 1,
+      "latest_price": 0.3794,
+      "price_range": [
+        0.3794,
+        0.3794
+      ],
+      "last_updated": "2026-01-14T02:13:06.285201"
+    },
+    "LINKUSDT": {
+      "data_points": 1,
+      "latest_price": 13.74,
+      "price_range": [
+        13.74,
+        13.74
+      ],
+      "last_updated": "2026-01-14T02:13:06.285202"
+    },
+    "BCHUSDT": {
+      "data_points": 1,
+      "latest_price": 612.9,
+      "price_range": [
+        612.9,
+        612.9
+      ],
+      "last_updated": "2026-01-14T02:13:06.285203"
+    },
+    "XLMUSDT": {
+      "data_points": 1,
+      "latest_price": 0.2324,
+      "price_range": [
+        0.2324,
+        0.2324
+      ],
+      "last_updated": "2026-01-14T02:13:06.285204"
+    },
+    "XRPUSDT": {
+      "data_points": 1,
+      "latest_price": 2.1337,
+      "price_range": [
+        2.1337,
+        2.1337
+      ],
+      "last_updated": "2026-01-14T02:13:06.285205"
+    }
+  },
+  "futures_manual_settings": {
+    "mode": "manual",
+    "selected_symbol": "BTCUSDT",
+    "available_symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "BNBUSDT",
+      "SOLUSDT",
+      "XRPUSDT",
+      "ADAUSDT",
+      "DOGEUSDT",
+      "AVAXUSDT"
+    ],
+    "auto_trade_enabled": false,
+    "leverage": 3,
+    "order_size_usdt": 50.0,
+    "testnet": true,
+    "last_action": null,
+    "last_signal": null,
+    "last_error": null,
+    "position": null,
+    "position_notional": 0.0,
+    "entry_price": null,
+    "pending_order": null,
+    "order_history": [],
+    "updated_at": 1768338769.9740548
+  },
+  "system_metrics": {
+    "total_uptime": "unknown",
+    "save_count": 11,
+    "last_trade_time": null
+  },
+  "trades": []
+}

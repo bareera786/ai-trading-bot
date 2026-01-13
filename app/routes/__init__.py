@@ -18,6 +18,7 @@ from .leads import leads_bp  # noqa: F401
 from .admin_views import admin_views_bp  # noqa: F401
 from .admin_dashboard import admin_dashboard_bp  # noqa: F401
 from .admin_user_api import admin_user_api_bp  # noqa: F401
+from app.models import requires_role, requires_any_role
 
 __all__ = [
     "admin_analytics_bp",

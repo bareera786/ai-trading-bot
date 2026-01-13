@@ -184,6 +184,9 @@ def bootstrap_runtime(app) -> Optional[BootstrapContext]:
             except Exception as exc:  # pragma: no cover - migration is best-effort
                 app.logger.warning("Database migration skipped: %s", exc)
 
+            # Create bootstrap users if requested
+            _create_bootstrap_users_if_requested(app)
+
     # Evaluate test mode dynamically so changes to AI_BOT_TEST_MODE during tests
     # (set at runtime) are respected. Previously this used a module-level
     # _TEST_MODE computed at import time which caused bootstrap to run even
@@ -346,4 +349,80 @@ def bootstrap_runtime(app) -> Optional[BootstrapContext]:
     # Check for UI asset build status
     _check_ui_assets(app)
 
-    return context
+
+def _create_bootstrap_users_if_requested(app) -> None:
+    """Create bootstrap users if environment variables are set."""
+    # Skip if running CLI commands
+    if app.config.get("SKIP_RUNTIME_BOOTSTRAP"):
+        return
+
+    # Only create bootstrap users in development/test environments
+    env = os.getenv("FLASK_ENV", "production").lower()
+    if env not in ("development", "testing"):
+        # In production, require explicit opt-in
+        if not os.getenv("CREATE_BOOTSTRAP_USERS", "").lower() in ("1", "true", "yes"):
+            return
+
+    # Check if bootstrap users should be created
+    create_bootstrap = os.getenv("CREATE_BOOTSTRAP_USERS", "").lower() in ("1", "true", "yes")
+
+    # Alternative: check for specific user credentials
+    admin_email = os.getenv("ADMIN_EMAIL")
+    admin_password = os.getenv("ADMIN_PASSWORD")
+
+    if not (create_bootstrap or (admin_email and admin_password)):
+        return
+
+    app.logger.info("🔧 Checking for bootstrap users...")
+
+    from .models import User
+
+    # Create admin user if specified
+    if admin_email and admin_password:
+        admin_user = User.query.filter_by(email=admin_email).first()
+        if not admin_user:
+            admin_user = User(
+                username=admin_email.split("@")[0],
+                email=admin_email,
+                is_admin=True,
+                is_active=True,
+                email_verified=True,
+            )
+            admin_user.set_password(admin_password)
+            db.session.add(admin_user)
+            app.logger.info(f"✅ Bootstrap admin user created: {admin_email}")
+        else:
+            app.logger.info(f"ℹ️  Admin user already exists: {admin_email}")
+
+    # Create default bootstrap users if requested
+    if create_bootstrap:
+        # Admin user
+        admin_user = User.query.filter_by(email="admin@local").first()
+        if not admin_user:
+            admin_user = User(
+                username="admin",
+                email="admin@local",
+                is_admin=True,
+                is_active=True,
+                email_verified=True,
+            )
+            admin_user.set_password("admin123")
+            db.session.add(admin_user)
+            app.logger.info("✅ Bootstrap admin user created: admin@local / admin123")
+
+        # Test user
+        test_user = User.query.filter_by(email="test@local").first()
+        if not test_user:
+            test_user = User(
+                username="test",
+                email="test@local",
+                is_admin=False,
+                is_active=True,
+                email_verified=True,
+            )
+            test_user.set_password("test123")
+            db.session.add(test_user)
+            app.logger.info("✅ Bootstrap test user created: test@local / test123")
+
+    db.session.commit()
+    app.logger.info("🎉 Bootstrap users setup complete!")

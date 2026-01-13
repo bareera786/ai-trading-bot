@@ -96,6 +96,25 @@ class User(Base, UserMixin, db.Model):
         return None
 
     @property
+    def is_admin(self) -> bool:
+        """Return True if the user has the admin role.
+
+        This is a defensive helper used by decorators and templates; keep it
+        resilient to partial/legacy DB state by handling both Enum and
+        string-backed role values gracefully.
+        """
+        try:
+            # If `role` is an Enum member, compare directly; otherwise compare
+            # the string value in a tolerant way.
+            if hasattr(self, "role"):
+                return (self.role == RoleEnum.ADMIN) or (
+                    getattr(self.role, "value", None) == RoleEnum.ADMIN.value
+                )
+        except Exception:
+            pass
+        return False
+
+    @property
     def is_active(self):
         """Override UserMixin.is_active to return our database column value."""
         return self.__dict__.get('is_active', True)
@@ -418,7 +437,28 @@ def get_model_by_id(model_cls, identity, *, coerce_fn=int):
 
 @login_manager.user_loader
 def load_user(user_id: str):
-    return db.session.get(User, int(user_id))
+    # The primary key for User is a UUID in current schema, but some older
+    # deployments (or legacy data) may still contain integer IDs. Be tolerant
+    # when loading by trying UUID first, falling back to int, and returning
+    # None on any error so Flask-Login doesn't raise an exception which can
+    # manifest as a 500 during request processing.
+    try:
+        import uuid as _uuid
+
+        try:
+            uid = _uuid.UUID(user_id)
+            return db.session.get(User, uid)
+        except Exception:
+            # Not a UUID string; try integer ID
+            try:
+                return db.session.get(User, int(user_id))
+            except Exception:
+                return None
+    except Exception:
+        try:
+            return db.session.get(User, int(user_id))
+        except Exception:
+            return None
 
 
 # Decorators for role enforcement
@@ -426,7 +466,12 @@ def requires_role(required_role):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if not current_user.is_authenticated or current_user.role != required_role:
+            if not current_user.is_authenticated:
+                abort(403)  # Forbidden
+            # Compare role in a tolerant way: support Enum members and strings
+            user_role = getattr(current_user, "role", None)
+            role_value = getattr(user_role, "value", user_role)
+            if role_value != required_role:
                 abort(403)  # Forbidden
             return func(*args, **kwargs)
         return wrapper
@@ -436,7 +481,11 @@ def requires_any_role(allowed_roles):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if not current_user.is_authenticated or current_user.role not in allowed_roles:
+            if not current_user.is_authenticated:
+                abort(403)  # Forbidden
+            user_role = getattr(current_user, "role", None)
+            role_value = getattr(user_role, "value", user_role)
+            if role_value not in allowed_roles:
                 abort(403)  # Forbidden
             return func(*args, **kwargs)
         return wrapper

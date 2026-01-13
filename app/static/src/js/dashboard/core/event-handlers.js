@@ -12,6 +12,12 @@ export function initEventHandlers() {
       if (sidebar) sidebar.classList.toggle('open');
     });
 
+    // Mobile overlay click to close menu
+    document.getElementById('mobile-overlay')?.addEventListener('click', () => {
+      const sidebar = document.querySelector('.sidebar');
+      if (sidebar) sidebar.classList.remove('open');
+    });
+
     // Logout button - use fetch to capture server response and log details
     document.getElementById('logout-btn')?.addEventListener('click', async (ev) => {
       ev.preventDefault();

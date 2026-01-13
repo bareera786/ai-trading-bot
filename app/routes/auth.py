@@ -86,12 +86,12 @@ def login():
                 "auth/auth.html"
             )
 
-        logger.debug("Login POST: username=%s, user_present=%s", username, bool(user))
+        logger.info("Login POST: username=%s, user_present=%s", username, bool(user))
         if user:
             try:
-                logger.debug("User state before auth check: %s", getattr(user, "__dict__", {}))
+                logger.info("User state before auth check: %s", getattr(user, "__dict__", {}))
             except Exception:
-                logger.debug("Unable to serialize user.__dict__")
+                logger.info("Unable to serialize user.__dict__")
 
         if user and user.check_password(password):
             if not user.email_verified and not user.is_admin:
@@ -147,7 +147,7 @@ def login():
         else:
             # Handle failed login attempt
             if user:
-                logger.debug("Failed login handling for user: %s, state before increment: %s", username, getattr(user, "__dict__", {}))
+                logger.info("Failed login handling for user: %s, state before increment: %s", username, getattr(user, "__dict__", {}))
                 try:
                     user.increment_failed_logins()
                 except Exception:

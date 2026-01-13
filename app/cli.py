@@ -48,7 +48,7 @@ def create_user_command(email: str, username: str | None, password: str | None, 
     user = User()
     user.username = username
     user.email = email
-    user.is_admin = admin
+    user.role = "admin" if admin else "viewer"
     user.is_active = True
     user.email_verified = verified
     user.set_password(password)
@@ -81,7 +81,7 @@ def create_bootstrap_users_command() -> None:
         admin_user = User()
         admin_user.username = "admin"
         admin_user.email = "admin@local"
-        admin_user.is_admin = True
+        admin_user.role = "admin"
         admin_user.is_active = True
         admin_user.email_verified = True
         admin_user.set_password("admin123")
@@ -98,7 +98,7 @@ def create_bootstrap_users_command() -> None:
         test_user = User()
         test_user.username = "test"
         test_user.email = "test@local"
-        test_user.is_admin = False
+        test_user.role = "viewer"
         test_user.is_active = True
         test_user.email_verified = True
         test_user.set_password("test123")

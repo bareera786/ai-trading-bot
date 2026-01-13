@@ -198,7 +198,8 @@ def api_update_user(username):
             return jsonify({"error": "No data provided"}), 400
 
         user.email = data.get("email", user.email)
-        user.is_admin = data.get("is_admin", user.is_admin)
+        is_admin_value = data.get("is_admin", user.is_admin)
+        user.role = "admin" if is_admin_value else "viewer"
         user.is_active = data.get("is_active", user.is_active)
         if data.get("password"):
             user.set_password(data["password"])
@@ -312,7 +313,8 @@ def api_update_user_permissions(username):
         if username == current_user.username and not coerce_bool(data.get("is_admin"), user.is_admin):
             return jsonify({"error": "Cannot remove admin privileges from yourself"}), 400
 
-        user.is_admin = coerce_bool(data.get("is_admin"), user.is_admin)
+        is_admin_value = coerce_bool(data.get("is_admin"), user.is_admin)
+        user.role = "admin" if is_admin_value else "viewer"
         user.is_active = coerce_bool(data.get("is_active"), user.is_active)
 
         # Add additional permission fields if they exist in the model

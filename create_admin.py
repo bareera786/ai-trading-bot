@@ -53,7 +53,7 @@ def create_or_update_admin(
         admin = User(
             username=username,
             email=email,
-            is_admin=True,
+            role="admin",
             is_active=True,
             email_verified=True,
         )

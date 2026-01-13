@@ -58,7 +58,10 @@ def login():
     active_tab = "login"
 
     if request.method == "POST":
-        if request.is_json:
+        try:
+            # Surround POST handling with explicit exception logging
+            # so we can capture full tracebacks during debugging.
+            if request.is_json:
             data = request.get_json()
             username = data.get("username")
             password = data.get("password")
@@ -162,10 +165,14 @@ def login():
                     f"Failed login attempt for non-existent username '{username}' from IP {request.remote_addr}"
                 )
 
-        if request.is_json:
-            return jsonify({"error": error_message}), 401
+            if request.is_json:
+                return jsonify({"error": error_message}), 401
 
-        flash(error_message)
+            flash(error_message)
+        except Exception:
+            logger.exception("Unhandled exception in login POST")
+            # Re-raise so Flask/WSGI surfaces the 500 and stacktrace
+            raise
 
     return render_template(
         "auth/auth.html"

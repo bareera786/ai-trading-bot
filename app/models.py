@@ -2,37 +2,44 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+import uuid
+from datetime import datetime, timedelta
+import enum
 
-from flask_login import UserMixin
+from flask_login import UserMixin, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import URLSafeTimedSerializer
-from flask import current_app
+from flask import current_app, abort
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Enum, JSON
+from sqlalchemy.ext.declarative import declarative_base
+from functools import wraps
 
 from .extensions import db, login_manager
 
+Base = declarative_base()
 
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+
+class RoleEnum(enum.Enum):
+    ADMIN = "admin"
+    TRADER = "trader"
+    VIEWER = "viewer"
+
+
+class User(Base, UserMixin, db.Model):
+    __tablename__ = "user"
+
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username = db.Column(db.String(150), unique=True, nullable=False)
-    email = db.Column(db.String(150), unique=True, nullable=False)
+    email = db.Column(db.String(150), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(150), nullable=False)
-    balance = db.Column(db.Float, default=0.0)  # User's account balance
-    portfolio_value = db.Column(db.Float, default=0.0)  # Current portfolio value
-    is_admin = db.Column(db.Boolean, default=False)
+    role = db.Column(Enum(RoleEnum), nullable=False, default=RoleEnum.VIEWER)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    last_login = db.Column(db.DateTime, default=None)
-    selected_symbols = db.Column(db.Text, default="[]")  # JSON list of symbols
-    custom_symbols = db.Column(
-        db.Text, default="[]"
-    )  # JSON list of custom symbols for premium users
     email_verified = db.Column(db.Boolean, default=False)
-    email_verification_token = db.Column(db.String(100), unique=True, nullable=True)
-    email_verification_expires = db.Column(db.DateTime, nullable=True)
-    password_reset_token = db.Column(db.String(100), unique=True, nullable=True)
-    password_reset_expires = db.Column(db.DateTime, nullable=True)
-    failed_login_attempts = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login_at = db.Column(db.DateTime, nullable=True)
+    last_ip = db.Column(db.String(45), nullable=True)  # Supports IPv6
+    failed_login_count = db.Column(db.Integer, default=0)
     locked_until = db.Column(db.DateTime, nullable=True)
 
     trades = db.relationship("app.models.UserTrade", backref="user", lazy=True)
@@ -43,10 +50,13 @@ class User(UserMixin, db.Model):
         order_by="desc(UserSubscription.created_at)",
     )
 
+    # Ensure PBKDF2 is used with a strong configuration
     def set_password(self, password: str) -> None:
-        self.password_hash = generate_password_hash(password, method="pbkdf2:sha256")
+        self.password_hash = generate_password_hash(password, method="pbkdf2:sha256", salt_length=16)
 
+    # Add docstring for clarity
     def check_password(self, password: str) -> bool:
+        """Check if the provided password matches the stored hash."""
         return check_password_hash(self.password_hash, password)
 
     def generate_email_verification_token(self) -> str:
@@ -80,10 +90,20 @@ class User(UserMixin, db.Model):
 
     @property
     def active_subscription(self):
-        for subscription in self.subscriptions:
+        for subscription in self.subscriptions:  # type: ignore
             if subscription.is_active:
                 return subscription
         return None
+
+    @property
+    def is_active(self):
+        """Override UserMixin.is_active to return our database column value."""
+        return self.__dict__.get('is_active', True)
+
+    @is_active.setter
+    def is_active(self, value: bool):
+        """Allow setting the is_active attribute."""
+        self.__dict__['is_active'] = value
 
     def get_selected_symbols(self) -> list[str]:
         try:
@@ -111,8 +131,34 @@ class User(UserMixin, db.Model):
         plan_code = subscription.plan.code if subscription.plan else ""
         return plan_code in {"pro-monthly", "pro-yearly"}
 
+    def is_account_locked(self):
+        """Check if the account is currently locked."""
+        if self.locked_until and datetime.utcnow() < self.locked_until:
+            return True
+        return False
 
-class UserTrade(db.Model):
+    def increment_failed_logins(self):
+        """Increment failed login attempts and lock account if threshold is reached."""
+        self.failed_login_count += 1
+        if self.failed_login_count >= current_app.config.get("MAX_FAILED_LOGINS", 5):
+            self.locked_until = datetime.utcnow() + timedelta(minutes=current_app.config.get("LOCKOUT_DURATION", 15))
+
+    def reset_failed_logins(self):
+        """Reset failed login attempts."""
+        self.failed_login_count = 0
+        self.locked_until = None
+
+    @property
+    def failed_login_attempts(self):
+        """Backward-compatible alias for legacy code."""
+        return getattr(self, "failed_login_count", 0)
+
+    @failed_login_attempts.setter
+    def failed_login_attempts(self, value):
+        self.failed_login_count = value
+
+
+class UserTrade(Base, db.Model):
     __tablename__ = "user_trade"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -136,7 +182,7 @@ class UserTrade(db.Model):
     tax_lot_id = db.Column(db.String(50))
 
 
-class UserPortfolio(db.Model):
+class UserPortfolio(Base, db.Model):
     __tablename__ = "user_portfolio"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -163,7 +209,7 @@ class UserPortfolio(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-class SubscriptionPlan(db.Model):
+class SubscriptionPlan(Base, db.Model):
     __tablename__ = "subscription_plan"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -202,7 +248,7 @@ class SubscriptionPlan(db.Model):
         }
 
 
-class UserSubscription(db.Model):
+class UserSubscription(Base, db.Model):
     __tablename__ = "user_subscription"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -285,7 +331,7 @@ class UserSubscription(db.Model):
         }
 
 
-class Lead(db.Model):
+class Lead(Base, db.Model):
     __tablename__ = "lead"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -316,7 +362,7 @@ class Lead(db.Model):
         }
 
 
-class PaymentSettings(db.Model):
+class PaymentSettings(Base, db.Model):
     __tablename__ = "payment_settings"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -343,6 +389,18 @@ class PaymentSettings(db.Model):
         }
 
 
+class AuditLog(db.Model):
+    __tablename__ = "audit_log"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    action = db.Column(db.String(255), nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
+    details = db.Column(db.Text, nullable=True)
+
+    user = db.relationship("User", backref="audit_logs")
+
+
 def get_model_by_id(model_cls, identity, *, coerce_fn=int):
     """Safely fetch a model instance by id with optional coercion."""
     if identity is None:
@@ -361,3 +419,25 @@ def get_model_by_id(model_cls, identity, *, coerce_fn=int):
 @login_manager.user_loader
 def load_user(user_id: str):
     return db.session.get(User, int(user_id))
+
+
+# Decorators for role enforcement
+def requires_role(required_role):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if not current_user.is_authenticated or current_user.role != required_role:
+                abort(403)  # Forbidden
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+def requires_any_role(allowed_roles):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if not current_user.is_authenticated or current_user.role not in allowed_roles:
+                abort(403)  # Forbidden
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator

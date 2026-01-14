@@ -140,6 +140,22 @@ $SSH_CMD "sudo -n chown -R $VPS_USER: $VPS_PATH" || true
 # chown common data directories so the image user (appuser, UID/GID ${CONTAINER_UID}) can write
 # $SSH_CMD "set -a && . $VPS_PATH/config/deploy.env.production && for p in bot_persistence futures_models optimized_models ultimate_models trade_data app/static app/templates api_routes reports; do if [ -d $VPS_PATH/\$p ]; then sudo -n chown -R aibot: $VPS_PATH/\$p && sudo -n chmod -R u+rwX,g+rwX $VPS_PATH/\$p; fi; done" || true
 
+# Optionally install Docker and Docker Compose plugin on the remote VPS
+if [ "${INSTALL_DOCKER_ON_VPS:-0}" = "1" ]; then
+    echo "⬇️  INSTALL_DOCKER_ON_VPS=1 set — installing Docker & Compose on remote host"
+    $SSH_CMD "set -euo pipefail; \
+        sudo -n apt-get update -y || true; \
+        sudo -n apt-get install -y ca-certificates curl gnupg lsb-release software-properties-common || true; \
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo -n gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg || true; \
+        echo \"deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\" | sudo -n tee /etc/apt/sources.list.d/docker.list > /dev/null; \
+        sudo -n apt-get update -y || true; \
+        sudo -n apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin || true; \
+        sudo -n usermod -aG docker $VPS_USER || true; \
+        if ! command -v docker >/dev/null 2>&1; then echo 'ERROR: docker install may have failed'; exit 1; fi; \
+        if ! docker compose version >/dev/null 2>&1; then echo 'WARNING: docker compose plugin not available'; fi"
+    echo "✅ Remote Docker installation step finished (check remote output for errors)"
+fi
+
 # Ensure reports directory and default health report exist so admin can load system health data
 echo "🔧 Ensuring default health report exists on VPS"
 # Create reports dir and default report file and ensure correct ownership for the container user

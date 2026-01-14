@@ -23,7 +23,7 @@ def migrate_database() -> None:
                 with db.engine.connect() as conn:
                     conn.execute(
                         db.text(
-                            "ALTER TABLE user ADD COLUMN selected_symbols TEXT DEFAULT '[]'"
+                            "ALTER TABLE \"user\" ADD COLUMN selected_symbols TEXT DEFAULT '[]'"
                         )
                     )
                 LOGGER.info("✅ Added selected_symbols column to user table")
@@ -35,7 +35,7 @@ def migrate_database() -> None:
                 with db.engine.connect() as conn:
                     conn.execute(
                         db.text(
-                            "ALTER TABLE user ADD COLUMN custom_symbols TEXT DEFAULT '[]'"
+                            "ALTER TABLE \"user\" ADD COLUMN custom_symbols TEXT DEFAULT '[]'"
                         )
                     )
                 LOGGER.info("✅ Added custom_symbols column to user table")
@@ -48,7 +48,7 @@ def migrate_database() -> None:
                 with db.engine.connect() as conn:
                     conn.execute(
                         db.text(
-                            "ALTER TABLE user ADD COLUMN email_verified BOOLEAN DEFAULT FALSE"
+                            "ALTER TABLE \"user\" ADD COLUMN email_verified BOOLEAN DEFAULT FALSE"
                         )
                     )
                 LOGGER.info("✅ Added email_verified column to user table")

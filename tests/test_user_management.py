@@ -124,5 +124,41 @@ class UserManagementTestCase(unittest.TestCase):
         assert user.role == "admin"
 
 
+    def test_register_and_login(self):
+        """Test user registration via web form and immediate login."""
+        # Register a new user
+        response = self.client.post(
+            "/register",
+            data={
+                "username": "testuser",
+                "email": "testuser@example.com",
+                "password": "testpass123",
+                "confirm_password": "testpass123",
+                "captcha": "7",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        # Should redirect to login with success message
+        self.assertIn(b"Registration successful", response.data)
+
+        # Verify email for the test user
+        with self.app.app_context():
+            user = User.query.filter_by(username="testuser").first()
+            if user:
+                user.email_verified = True
+                db.session.commit()
+
+        # Now login with the same credentials
+        response = self.client.post(
+            "/api/auth/login",
+            json={"username": "testuser", "password": "testpass123"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertTrue(data.get("success"))
+        self.assertEqual(data["user"]["username"], "testuser")
+
+
 if __name__ == "__main__":
     unittest.main()

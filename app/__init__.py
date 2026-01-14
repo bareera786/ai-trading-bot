@@ -114,7 +114,10 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
     from flask import render_template, request, abort
     import time as _time
 
-    @app.route("/<path:requested_path>")
+    @app.route(
+        "/<path:requested_path>",
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    )
     def _spa_fallback(requested_path: str):
         path = f"/{requested_path or ''}"
 
@@ -148,11 +151,37 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
     csrf.init_app(app)
 
     # Temporary global error handler to log full tracebacks for debugging
-    # production 500s. This will be removed once root causes are fixed.
+    # production 500s. Preserve HTTPExceptions (404/405/400/etc) so clients
+    # see the correct status code.
     from flask import jsonify
+    from werkzeug.exceptions import HTTPException
+
+    def _wants_json_error() -> bool:
+        try:
+            from flask import request as flask_request
+
+            return bool(
+                (flask_request.path or "").startswith("/api/")
+                or flask_request.headers.get("X-Requested-With") == "XMLHttpRequest"
+                or flask_request.accept_mimetypes.best == "application/json"
+            )
+        except Exception:
+            return False
 
     @app.errorhandler(Exception)
     def _log_unhandled_exception(exc):
+        if isinstance(exc, HTTPException):
+            # Log as exception to preserve traceback visibility during rollout,
+            # but keep the correct HTTP status code.
+            app.logger.exception("HTTP exception during request: %s", exc)
+
+            if _wants_json_error():
+                description = getattr(exc, "description", None) or "Request failed"
+                code = int(getattr(exc, "code", 500) or 500)
+                return jsonify({"success": False, "error": description}), code
+
+            return exc
+
         # Log full traceback to the application logger for diagnostics
         app.logger.exception("Unhandled exception during request: %s", exc)
         # Return a minimal opaque error to clients

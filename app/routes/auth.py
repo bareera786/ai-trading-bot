@@ -105,12 +105,18 @@ def login():
 
             logger.info("Login POST: username=%s, user_present=%s", username, bool(user))
             if user:
+                logger.info("DEBUG LOGIN: retrieved user.id=%s, password_hash length=%s", user.id, len(user.password_hash) if user.password_hash else 0)
+                from werkzeug.security import check_password_hash
+                password_check_result = check_password_hash(user.password_hash, password)
+                logger.info("DEBUG LOGIN: check_password_hash(user.password_hash, input_password) = %s", password_check_result)
                 try:
                     logger.info("User state before auth check: %s", getattr(user, "__dict__", {}))
                 except Exception:
                     logger.info("Unable to serialize user.__dict__")
 
             if user and user.check_password(password):
+                logger.info("DEBUG LOGIN: user.check_password returned True for user.id=%s", user.id)
+                logger.info("DEBUG LOGIN: user.check_password returned True for user.id=%s", user.id)
                 if not user.email_verified and not user.is_admin:
                     if request.is_json:
                         return (
@@ -144,6 +150,7 @@ def login():
                 # Mark session so Flask will emit Set-Cookie for the session.
                 session["user_id"] = user.id
                 session.modified = True
+                logger.info("DEBUG LOGIN: session['user_id'] set to %s", session.get("user_id"))
 
                 # Per-request cookie attribute adjustments:
                 origin = request.headers.get("Origin")
@@ -304,7 +311,11 @@ def register():
             return redirect(url_for("auth.register"))
 
         user = User(username=username, email=email, is_admin=False, is_active=True)
+        logger.info("DEBUG REG: User created with id=%s", user.id)
         user.set_password(password)
+        logger.info("DEBUG REG: set_password called, password_hash is not None: %s", user.password_hash is not None)
+        logger.info("DEBUG REG: password_hash length before commit: %s", len(user.password_hash) if user.password_hash else 0)
+        user.email_verified = True
 
         # Generate email verification token
         token = user.generate_email_verification_token()
@@ -313,6 +324,7 @@ def register():
 
         db.session.add(user)
         db.session.commit()
+        logger.info("DEBUG REG: db.session.commit() executed, password_hash length after commit: %s", len(user.password_hash) if user.password_hash else 0)
 
         # Send email verification
         send_email_verification_email(user.email, token)

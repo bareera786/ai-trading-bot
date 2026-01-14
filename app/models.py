@@ -114,6 +114,11 @@ class User(Base, UserMixin, db.Model):
             pass
         return False
 
+    @is_admin.setter
+    def is_admin(self, value: bool):
+        """Set the user's role based on admin status."""
+        self.role = RoleEnum.ADMIN if value else RoleEnum.VIEWER
+
     @property
     def is_active(self):
         """Override UserMixin.is_active to return our database column value."""
@@ -181,7 +186,7 @@ class UserTrade(Base, db.Model):
     __tablename__ = "user_trade"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey("user.id"), nullable=False)
     symbol = db.Column(db.String(20))
     trade_type = db.Column(db.String(20))
     side = db.Column(db.String(10))
@@ -205,7 +210,7 @@ class UserPortfolio(Base, db.Model):
     __tablename__ = "user_portfolio"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey("user.id"), nullable=False)
     symbol = db.Column(db.String(20), nullable=True)
     quantity = db.Column(db.Float, default=0.0)
     avg_price = db.Column(db.Float, default=0.0)
@@ -271,7 +276,7 @@ class UserSubscription(Base, db.Model):
     __tablename__ = "user_subscription"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey("user.id"), nullable=False)
     plan_id = db.Column(
         db.Integer, db.ForeignKey("subscription_plan.id"), nullable=False
     )
@@ -412,7 +417,7 @@ class AuditLog(db.Model):
     __tablename__ = "audit_log"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey("user.id"), nullable=True)
     action = db.Column(db.String(255), nullable=False)
     timestamp = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
     details = db.Column(db.Text, nullable=True)

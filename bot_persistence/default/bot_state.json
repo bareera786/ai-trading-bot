@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "timestamp": "2026-01-14T02:13:06.285177",
+  "timestamp": "2026-01-15T01:19:16.771626",
   "trader_state": {
     "balance": 1000,
     "positions": {},
@@ -70,37 +70,37 @@
     },
     "last_training_cycle": [
       {
-        "timestamp": "2026-01-14T02:12:49.818601",
-        "symbol": "ADAUSDT",
-        "message": "\u2705 Ultimate model loaded (Accuracy: 0.2123, Indicators: 43)",
-        "progress": 100
-      },
-      {
-        "timestamp": "2026-01-14T02:12:49.847423",
-        "symbol": "BCHUSDT",
-        "message": "\u2705 Ultimate model loaded (Accuracy: 0.2192, Indicators: 43)",
-        "progress": 100
-      },
-      {
-        "timestamp": "2026-01-14T02:12:49.875196",
+        "timestamp": "2026-01-15T01:16:35.467593",
         "symbol": "AVAXUSDT",
-        "message": "\u2705 Ultimate model loaded (Accuracy: 0.1370, Indicators: 43)",
+        "message": "\ud83d\udcca Fetching 0.0027397260273972603 years of 5m data from Binance...",
+        "progress": 10
+      },
+      {
+        "timestamp": "2026-01-15T01:16:35.816110",
+        "symbol": "AVAXUSDT",
+        "message": "\ud83d\udce5 Downloaded 288 candles...",
+        "progress": 34.4
+      },
+      {
+        "timestamp": "2026-01-15T01:16:35.833551",
+        "symbol": "AVAXUSDT",
+        "message": "\u2705 Successfully loaded 288 records",
         "progress": 100
       },
       {
-        "timestamp": "2026-01-14T02:12:49.904762",
-        "symbol": "ETCUSDT",
-        "message": "\u2705 Ultimate model loaded (Accuracy: 0.2260, Indicators: 43)",
-        "progress": 100
+        "timestamp": "2026-01-15T01:16:35.835599",
+        "symbol": "SYSTEM",
+        "message": "\ud83d\udee0\ufe0f Creating 27 core technical indicators...",
+        "progress": 70
       },
       {
-        "timestamp": "2026-01-14T02:12:49.973727",
-        "symbol": "BTCUSDT",
-        "message": "\u2705 Ultimate model loaded (Accuracy: 0.1164, Indicators: 43)",
-        "progress": 100
+        "timestamp": "2026-01-15T01:16:35.936191",
+        "symbol": "SYSTEM",
+        "message": "\u2705 Core indicators created. Features: 43, Records: 288",
+        "progress": 80
       }
     ],
-    "crt_signals_count": 0
+    "crt_signals_count": 15
   },
   "configuration": {
     "TRADING_CONFIG": {
@@ -244,140 +244,140 @@
     }
   },
   "historical_data_summary": {
-    "ADAUSDT": {
-      "data_points": 1,
-      "latest_price": 0.4097,
+    "DOTUSDT": {
+      "data_points": 100,
+      "latest_price": 2.245,
       "price_range": [
-        0.4097,
-        0.4097
+        2.222,
+        2.253
       ],
-      "last_updated": "2026-01-14T02:13:06.285189"
+      "last_updated": "2026-01-15T01:19:16.771730"
     },
-    "AVAXUSDT": {
-      "data_points": 1,
-      "latest_price": 14.5,
+    "XRPUSDT": {
+      "data_points": 100,
+      "latest_price": 2.1519,
       "price_range": [
-        14.5,
-        14.5
+        2.1438,
+        2.1612
       ],
-      "last_updated": "2026-01-14T02:13:06.285191"
+      "last_updated": "2026-01-15T01:19:16.771770"
     },
     "ETCUSDT": {
-      "data_points": 1,
-      "latest_price": 12.97,
+      "data_points": 100,
+      "latest_price": 13.15,
       "price_range": [
-        12.97,
-        12.97
+        13.15,
+        13.15
       ],
-      "last_updated": "2026-01-14T02:13:06.285193"
-    },
-    "BTCUSDT": {
-      "data_points": 1,
-      "latest_price": 94398.0,
-      "price_range": [
-        94398.0,
-        94398.0
-      ],
-      "last_updated": "2026-01-14T02:13:06.285194"
-    },
-    "LTCUSDT": {
-      "data_points": 1,
-      "latest_price": 76.62,
-      "price_range": [
-        76.62,
-        76.62
-      ],
-      "last_updated": "2026-01-14T02:13:06.285195"
-    },
-    "ETHUSDT": {
-      "data_points": 1,
-      "latest_price": 3207.04,
-      "price_range": [
-        3207.04,
-        3207.04
-      ],
-      "last_updated": "2026-01-14T02:13:06.285196"
-    },
-    "DOGEUSDT": {
-      "data_points": 1,
-      "latest_price": 0.14416,
-      "price_range": [
-        0.14416,
-        0.14416
-      ],
-      "last_updated": "2026-01-14T02:13:06.285197"
-    },
-    "SOLUSDT": {
-      "data_points": 1,
-      "latest_price": 144.08,
-      "price_range": [
-        144.08,
-        144.08
-      ],
-      "last_updated": "2026-01-14T02:13:06.285198"
-    },
-    "DOTUSDT": {
-      "data_points": 1,
-      "latest_price": 2.232,
-      "price_range": [
-        2.232,
-        2.232
-      ],
-      "last_updated": "2026-01-14T02:13:06.285199"
-    },
-    "BNBUSDT": {
-      "data_points": 1,
-      "latest_price": 941.59,
-      "price_range": [
-        941.59,
-        941.59
-      ],
-      "last_updated": "2026-01-14T02:13:06.285200"
+      "last_updated": "2026-01-15T01:19:16.771808"
     },
     "MATICUSDT": {
-      "data_points": 1,
+      "data_points": 100,
       "latest_price": 0.3794,
       "price_range": [
         0.3794,
         0.3794
       ],
-      "last_updated": "2026-01-14T02:13:06.285201"
+      "last_updated": "2026-01-15T01:19:16.771847"
+    },
+    "ETHUSDT": {
+      "data_points": 100,
+      "latest_price": 3376.88,
+      "price_range": [
+        3349.29,
+        3388.15
+      ],
+      "last_updated": "2026-01-15T01:19:16.771885"
+    },
+    "AVAXUSDT": {
+      "data_points": 100,
+      "latest_price": 14.67,
+      "price_range": [
+        14.58,
+        14.72
+      ],
+      "last_updated": "2026-01-15T01:19:16.771919"
+    },
+    "LTCUSDT": {
+      "data_points": 100,
+      "latest_price": 77.78,
+      "price_range": [
+        77.5,
+        78.05
+      ],
+      "last_updated": "2026-01-15T01:19:16.771954"
+    },
+    "ADAUSDT": {
+      "data_points": 100,
+      "latest_price": 0.4152,
+      "price_range": [
+        0.4144,
+        0.4188
+      ],
+      "last_updated": "2026-01-15T01:19:16.771996"
+    },
+    "BNBUSDT": {
+      "data_points": 100,
+      "latest_price": 945.63,
+      "price_range": [
+        943.02,
+        947.09
+      ],
+      "last_updated": "2026-01-15T01:19:16.772035"
     },
     "LINKUSDT": {
-      "data_points": 1,
-      "latest_price": 13.74,
+      "data_points": 100,
+      "latest_price": 14.26,
       "price_range": [
-        13.74,
-        13.74
+        14.21,
+        14.37
       ],
-      "last_updated": "2026-01-14T02:13:06.285202"
+      "last_updated": "2026-01-15T01:19:16.772072"
     },
-    "BCHUSDT": {
-      "data_points": 1,
-      "latest_price": 612.9,
+    "SOLUSDT": {
+      "data_points": 100,
+      "latest_price": 147.08,
       "price_range": [
-        612.9,
-        612.9
+        146.56,
+        147.6
       ],
-      "last_updated": "2026-01-14T02:13:06.285203"
+      "last_updated": "2026-01-15T01:19:16.772109"
+    },
+    "DOGEUSDT": {
+      "data_points": 100,
+      "latest_price": 0.14834,
+      "price_range": [
+        0.1477,
+        0.14906
+      ],
+      "last_updated": "2026-01-15T01:19:16.772149"
     },
     "XLMUSDT": {
-      "data_points": 1,
-      "latest_price": 0.2324,
+      "data_points": 100,
+      "latest_price": 0.2377,
       "price_range": [
-        0.2324,
-        0.2324
+        0.2361,
+        0.2382
       ],
-      "last_updated": "2026-01-14T02:13:06.285204"
+      "last_updated": "2026-01-15T01:19:16.772179"
     },
-    "XRPUSDT": {
-      "data_points": 1,
-      "latest_price": 2.1337,
+    "BCHUSDT": {
+      "data_points": 100,
+      "latest_price": 604.6,
       "price_range": [
-        2.1337,
-        2.1337
+        604.4,
+        606.5
       ],
-      "last_updated": "2026-01-14T02:13:06.285205"
+      "last_updated": "2026-01-15T01:19:16.772216"
+    },
+    "BTCUSDT": {
+      "data_points": 100,
+      "latest_price": 97524.62,
+      "price_range": [
+        97071.45,
+        97742.7
+      ],
+      "last_updated": "2026-01-15T01:19:16.772257"
     }
   },
   "futures_manual_settings": {
@@ -405,11 +405,11 @@
     "entry_price": null,
     "pending_order": null,
     "order_history": [],
-    "updated_at": 1768338769.9740548
+    "updated_at": 1768398835.887229
   },
   "system_metrics": {
     "total_uptime": "unknown",
-    "save_count": 11,
+    "save_count": 71,
     "last_trade_time": null
   },
   "trades": []

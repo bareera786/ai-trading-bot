@@ -32,6 +32,7 @@ Mail: Any = _FlaskMail
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
+from flask_cors import CORS
 
 from .config import Config
 from .assets import register_asset_helpers
@@ -117,6 +118,30 @@ def init_extensions(app):
     )
     async_mode = app.config.get("SOCKETIO_ASYNC_MODE", Config.SOCKETIO_ASYNC_MODE)
     socketio.init_app(app, cors_allowed_origins=cors, async_mode=async_mode)
+
+    # Initialize Flask-CORS for the main Flask app so that credentialed
+    # XHR/fetch requests can succeed. Do NOT allow wildcard '*' when
+    # credentials are enabled; use explicit origins from config.
+    try:
+        cors_origins = app.config.get("CORS_ALLOWED_ORIGINS") or []
+        CORS(app, origins=cors_origins, supports_credentials=app.config.get("CORS_SUPPORTS_CREDENTIALS", True))
+        # Fallback: ensure explicit ACAO/ACAC headers are emitted when origins are configured.
+        allowed_origins = set(o.strip() for o in (cors_origins or []) if o and o.strip())
+
+        @app.after_request
+        def _ensure_cors_headers(response):
+            try:
+                origin = request.headers.get("Origin")
+                if origin and origin in allowed_origins:
+                    response.headers["Access-Control-Allow-Origin"] = origin
+                    response.headers["Access-Control-Allow-Credentials"] = str(app.config.get("CORS_SUPPORTS_CREDENTIALS", True)).lower()
+                    # Vary on Origin so caches treat responses per-origin
+                    response.headers["Vary"] = "Origin"
+            except Exception:
+                app.logger.debug("Failed to set fallback CORS headers", exc_info=True)
+            return response
+    except Exception:
+        app.logger.exception("Failed to initialize Flask-CORS")
 
     # Configure Redis for rate limiting (fall back to memory if Redis unavailable)
     global redis_client

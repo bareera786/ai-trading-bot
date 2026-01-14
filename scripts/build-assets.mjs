@@ -11,6 +11,7 @@ const manifestPath = path.join(distDir, 'manifest.json');
 
 const entryDefinitions = [
   { key: 'dashboard', logical: 'dashboard.js', source: path.join(staticDir, 'src', 'js', 'dashboard', 'index.js') },
+  { key: 'health', logical: 'health.js', source: path.join(staticDir, 'src', 'js', 'dashboard', 'pages', 'health.js') },
   { key: 'dashboard-styles', logical: 'dashboard.css', source: path.join(staticDir, 'css', 'dashboard.css') },
   { key: 'auth-styles', logical: 'auth.css', source: path.join(staticDir, 'src', 'css', 'auth.css') },
   { key: 'subscription-card', logical: 'subscription-card.js', source: path.join(staticDir, 'js', 'subscription-card.js') },

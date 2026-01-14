@@ -5,6 +5,7 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+from flask import current_app
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -58,6 +59,18 @@ def run_migrations_online():
     configuration = config.get_section(config.config_ini_section)
     if configuration is None:
         configuration = {}
+    # If running under Flask (Flask-Migrate / `flask db`), prefer the
+    # application's SQLALCHEMY_DATABASE_URI over the value in alembic.ini.
+    try:
+        app_db_url = current_app.config.get('SQLALCHEMY_DATABASE_URI')
+        if app_db_url:
+            config.set_main_option('sqlalchemy.url', app_db_url)
+            # refresh configuration section so engine_from_config picks it up
+            configuration = config.get_section(config.config_ini_section) or {}
+    except Exception:
+        # If current_app isn't available or something goes wrong, fall back
+        # to the alembic.ini configuration (existing behavior).
+        pass
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",

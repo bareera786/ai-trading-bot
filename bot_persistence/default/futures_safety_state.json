@@ -1,9 +1,87 @@
 {
   "meta": {
-    "last_backtest": null,
-    "last_save": "2026-01-13T17:36:56.204182+00:00"
+    "last_backtest": "2026-01-14T20:21:40.530577+00:00",
+    "last_save": "2026-01-14T20:21:40.530640+00:00",
+    "last_backtest_started": "2026-01-14T20:21:36.040868+00:00",
+    "last_backtest_symbols_total": 8,
+    "last_backtest_symbols_completed": 8,
+    "last_backtest_symbols_eligible": 0,
+    "last_backtest_progress_utc": "2026-01-14T20:21:40.530575+00:00"
   },
-  "backtest": {},
+  "backtest": {
+    "BTCUSDT": {
+      "generated_at": "2026-01-14T20:21:36.628878+00:00",
+      "eligible": false,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "trades": 0,
+      "total_return_pct": 0.0,
+      "max_drawdown_pct": 0.0
+    },
+    "ETHUSDT": {
+      "generated_at": "2026-01-14T20:21:37.187138+00:00",
+      "eligible": false,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "trades": 0,
+      "total_return_pct": 0.0,
+      "max_drawdown_pct": 0.0
+    },
+    "BNBUSDT": {
+      "generated_at": "2026-01-14T20:21:37.722829+00:00",
+      "eligible": false,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "trades": 0,
+      "total_return_pct": 0.0,
+      "max_drawdown_pct": 0.0
+    },
+    "SOLUSDT": {
+      "generated_at": "2026-01-14T20:21:38.292418+00:00",
+      "eligible": false,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "trades": 0,
+      "total_return_pct": 0.0,
+      "max_drawdown_pct": 0.0
+    },
+    "XRPUSDT": {
+      "generated_at": "2026-01-14T20:21:38.850129+00:00",
+      "eligible": false,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "trades": 0,
+      "total_return_pct": 0.0,
+      "max_drawdown_pct": 0.0
+    },
+    "ADAUSDT": {
+      "generated_at": "2026-01-14T20:21:39.409775+00:00",
+      "eligible": false,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "trades": 0,
+      "total_return_pct": 0.0,
+      "max_drawdown_pct": 0.0
+    },
+    "DOGEUSDT": {
+      "generated_at": "2026-01-14T20:21:39.962165+00:00",
+      "eligible": false,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "trades": 0,
+      "total_return_pct": 0.0,
+      "max_drawdown_pct": 0.0
+    },
+    "AVAXUSDT": {
+      "generated_at": "2026-01-14T20:21:40.530567+00:00",
+      "eligible": false,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "trades": 0,
+      "total_return_pct": 0.0,
+      "max_drawdown_pct": 0.0
+    }
+  },
   "indicators": {},
   "symbol_limits": {}
 }

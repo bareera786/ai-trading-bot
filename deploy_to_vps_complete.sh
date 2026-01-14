@@ -24,7 +24,6 @@ VPS_SSH_PORT="${VPS_SSH_PORT:-22}"
 
 echo "🚀 Starting complete AI Trading Bot deployment to VPS..."
 echo "📍 Target: $VPS_USER@$VPS_HOST:$VPS_PATH"
-echo "🔧 Production Config: $DATABASE_URL"
 echo ""
 
 # Check if required tools are installed
@@ -74,7 +73,7 @@ echo "🔧 Step 2: Setting up production environment on VPS..."
 
 SSH_CMD="ssh -p $VPS_SSH_PORT $VPS_USER@$VPS_HOST"
 
-# Create production config on VPS
+# Create production config on VPS (do not print secrets)
 echo "📝 Creating production configuration on VPS..."
 $SSH_CMD "mkdir -p $VPS_PATH/config"
 $SSH_CMD "cat > $VPS_PATH/config/deploy.env.production << 'EOF'
@@ -120,14 +119,24 @@ CONTAINER_UID=999
 CONTAINER_GID=999
 EOF"
 
-echo "✅ Production config created on VPS"
+# Secure the env file and set ownership
+echo "🔒 Securing remote env file"
+$SSH_CMD "chmod 600 $VPS_PATH/config/deploy.env.production || true"
+$SSH_CMD "sudo -n chown $VPS_USER: $VPS_PATH/config/deploy.env.production || true"
+
+echo "✅ Production config created and secured on VPS"
 
 # Ensure persistence directory ownership is correct (run inside a short-lived container)
+# Basic remote pre-checks: ensure docker is available and deploy user exists
+echo "🔎 Checking remote host prerequisites (docker, user)"
+$SSH_CMD "if ! command -v docker >/dev/null 2>&1; then echo 'WARNING: docker not found on VPS'; fi"
+$SSH_CMD "id -u $VPS_USER >/dev/null 2>&1 || (sudo -n useradd -m -s /bin/bash $VPS_USER >/dev/null 2>&1 || echo 'WARNING: Could not create user $VPS_USER; ensure it exists')"
+
 echo "🔧 Adjusting ownership of persistence dir on VPS (if needed)"
 echo "🔧 Adjusting ownership of persistence and writable data dirs on VPS (if needed)"
 # First, best-effort chown the project directory to the SSH user (aibot)
 # Use non-interactive sudo so deployments never hang on password prompts.
-$SSH_CMD "sudo -n chown -R aibot: $VPS_PATH" || true
+$SSH_CMD "sudo -n chown -R $VPS_USER: $VPS_PATH" || true
 # chown common data directories so the image user (appuser, UID/GID ${CONTAINER_UID}) can write
 # $SSH_CMD "set -a && . $VPS_PATH/config/deploy.env.production && for p in bot_persistence futures_models optimized_models ultimate_models trade_data app/static app/templates api_routes reports; do if [ -d $VPS_PATH/\$p ]; then sudo -n chown -R aibot: $VPS_PATH/\$p && sudo -n chmod -R u+rwX,g+rwX $VPS_PATH/\$p; fi; done" || true
 
@@ -142,8 +151,8 @@ echo "⚙️  Step 3: Deploying Docker Compose on VPS..."
 
 SSH_CMD="ssh -p $VPS_SSH_PORT $VPS_USER@$VPS_HOST"
 
-$SSH_CMD "cd $VPS_PATH && docker compose -f docker-compose.prod.yml build --pull ai-trading-bot"
-$SSH_CMD "cd $VPS_PATH && docker compose -f docker-compose.prod.yml up -d ai-trading-bot"
+$SSH_CMD "cd $VPS_PATH && docker compose --env-file config/deploy.env.production -f docker-compose.prod.yml build --pull ai-trading-bot"
+$SSH_CMD "cd $VPS_PATH && docker compose --env-file config/deploy.env.production -f docker-compose.prod.yml up -d ai-trading-bot"
 
 echo "✅ Docker deployment completed"
 echo ""

@@ -23,7 +23,7 @@ services:
       - PUID=1001
       - PGID=1001
     env_file:
-      - config/deploy.env
+      - config/deploy.env.production
     volumes:
       # Persistent storage for bot state and logs
       - ./bot_persistence:/app/bot_persistence:cached,rw

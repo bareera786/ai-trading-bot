@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
+from typing import Optional
 
 from flask import (
     Blueprint,
@@ -53,6 +54,8 @@ def log_action(user_id, action, details=None):
 def login():
     """Handle login via form or JSON payload."""
     if current_user.is_authenticated:
+        if request.is_json or (request.path or "").startswith("/api/"):
+            return jsonify({"success": True, "message": "Already authenticated"}), 200
         return redirect(url_for("dashboard_bp.dashboard"))
 
     error_message = "Invalid username or password"
@@ -62,6 +65,17 @@ def login():
         try:
             # Surround POST handling with explicit exception logging
             # so we can capture full tracebacks during debugging.
+            # Log raw request headers/body to aid debugging of 400s seen
+            # from clients (e.g. curl/browser proxies).
+            try:
+                raw_body = request.get_data(as_text=True)
+            except Exception:
+                raw_body = '<unreadable>'
+            # Print to stdout so the running dev server shows the raw
+            # incoming request for easier debugging in the terminal.
+            print('LOGIN DEBUG: headers=', dict(request.headers))
+            print('LOGIN DEBUG: body=', raw_body[:1000])
+
             if request.is_json:
                 data = request.get_json()
                 username = data.get("username")
@@ -70,6 +84,8 @@ def login():
                 username = request.form.get("username")
                 password = request.form.get("password")
 
+            # ORM-only lookup: in production we expect a consistent UUID PK
+            # and rely on the ORM only; do not fall back to raw SQL lookups.
             user = User.query.filter_by(username=username).first()
 
             # Check if account is locked
@@ -96,6 +112,17 @@ def login():
 
             if user and user.check_password(password):
                 if not user.email_verified and not user.is_admin:
+                    if request.is_json:
+                        return (
+                            jsonify(
+                                {
+                                    "success": False,
+                                    "error": "Please verify your email address before logging in.",
+                                }
+                            ),
+                            403,
+                        )
+
                     flash("Please verify your email address before logging in.")
                     return redirect(url_for("auth.login"))
 
@@ -108,42 +135,37 @@ def login():
                     user.locked_until = None
                 db.session.commit()
 
-                login_user(user)
-                # Also set session-based user_id for compatibility with endpoints
                 try:
-                    from flask import session
+                    login_user(user)
+                except Exception as e:
+                    logger.exception("Failed to login user: %s", e)
+                    raise
 
-                    session["user_id"] = user.id
-                except Exception:
-                    logger.debug("Could not set session user_id for compatibility")
-                logger.info(
-                    f"User {username} logged in successfully from IP {request.remote_addr}"
+                # Mark session so Flask will emit Set-Cookie for the session.
+                session["user_id"] = user.id
+                session.modified = True
+
+                # Per-request cookie attribute adjustments:
+                origin = request.headers.get("Origin")
+                forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
+                is_secure = request.is_secure or forwarded_proto.startswith("https")
+                host_url = request.host_url.rstrip("/")
+                is_cross_origin = bool(origin and origin != host_url)
+
+                if is_secure and is_cross_origin:
+                    current_app.config["SESSION_COOKIE_SAMESITE"] = "None"
+                    current_app.config["SESSION_COOKIE_SECURE"] = True
+                else:
+                    current_app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+                    current_app.config["SESSION_COOKIE_SECURE"] = False
+
+                response = jsonify(
+                    {
+                        "success": True,
+                        "message": "Login successful",
+                        "user": {"username": user.username, "is_admin": user.is_admin, "id": user.id},
+                    }
                 )
-                # Log the login action
-                log_action(user.id, 'LOGIN', f"User {user.id} logged in from {request.remote_addr}")
-                if request.is_json:
-                    return jsonify(
-                        {
-                            "success": True,
-                            "message": "Login successful",
-                            "user": {
-                                "username": user.username,
-                                "is_admin": user.is_admin,
-                                "id": user.id,
-                            },
-                        }
-                    )
-                next_page = request.args.get("next")
-                response = (
-                    redirect(next_page)
-                    if next_page
-                    else redirect(url_for("dashboard_bp.dashboard"))
-                )
-                response.headers[
-                    "Cache-Control"
-                ] = "no-cache, no-store, must-revalidate, max-age=0, private, no-transform"
-                response.headers["Pragma"] = "no-cache"
-                response.headers["Expires"] = "0"
                 return response
             else:
                 # Handle failed login attempt
@@ -307,6 +329,13 @@ def register():
     return render_template(
         "auth/auth.html", analytics=marketing_analytics_context(), active_tab=active_tab
     )
+
+
+@auth_bp.route("/api/auth/login", methods=["POST"], endpoint="api_login")
+@limiter.limit("20 per minute")
+def api_login():
+    """Alias JSON login endpoint expected by some clients."""
+    return login()
 
 
 @auth_bp.route("/forgot-password", methods=["GET", "POST"], endpoint="forgot_password")

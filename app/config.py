@@ -25,11 +25,9 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 
     # Database
-    # Prefer an explicit env var but treat an empty string as "unset" so that
-    # a blank value in an EnvironmentFile doesn't override the default local DB.
-    SQLALCHEMY_DATABASE_URI = (
-        os.environ.get("DATABASE_URL") or "sqlite:///trading_bot.db"
-    )
+    # In production the DATABASE_URL environment variable MUST be set
+    # (use PostgreSQL). Do not fall back to SQLite in production.
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Paths used by various subsystems
@@ -50,7 +48,7 @@ class Config:
     }
 
     # Socket.IO defaults
-    SOCKETIO_CORS_ALLOWED_ORIGINS = os.getenv("SOCKETIO_CORS", "*")
+    SOCKETIO_CORS_ALLOWED_ORIGINS = os.getenv("SOCKETIO_CORS", "")
     SOCKETIO_ASYNC_MODE = os.getenv("SOCKETIO_ASYNC_MODE", "threading")
 
     # Public landing flag
@@ -160,6 +158,22 @@ class Config:
     IP_WHITELIST_ENABLED = SECURITY_SETTINGS['IP_WHITELIST_ENABLED']
     LOG_SECURITY_EVENTS = SECURITY_SETTINGS['LOG_SECURITY_EVENTS']
 
+    # Session cookie settings
+    SESSION_COOKIE_NAME = "session"
+    SESSION_COOKIE_HTTPONLY = True
+    # Default to non-secure so cookies can work over plain HTTP in environments
+    # without TLS termination; production should set SESSION_COOKIE_SECURE=true
+    SESSION_COOKIE_SECURE = False
+    # Default SameSite to Lax for broad compatibility; per-request override
+    # will be applied in the login route when required for cross-site XHR.
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN", None)
+
+    # CORS settings — when cookies/credentials are used, do NOT use a wildcard
+    CORS_SUPPORTS_CREDENTIALS = True
+    # Comma-separated list of allowed origins; default includes localhost for dev
+    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,https://example.com").split(",")
+
 
 class DevelopmentConfig(Config):
     DEBUG = True
@@ -179,3 +193,8 @@ class ProductionConfig(Config):
     LOG_PERFORMANCE = True
     ENABLE_PROMETHEUS = True
     ALERT_EMAIL_ENABLED = True
+    # Enforce secure cookies for production
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = "None"
+    # Allow CORS origin to be configured via env (frontend origin)
+    CORS_ALLOWED_ORIGINS = os.getenv("FRONTEND_ORIGIN", "").split(",") if os.getenv("FRONTEND_ORIGIN") else []

@@ -27,3 +27,8 @@ bot_backup/
 node_modules/
 dist/
 build/
+
+# Local SQLite DB files (do not commit)
+trading_bot.db
+instance/trading_bot.db
+*.db

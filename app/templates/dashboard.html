@@ -303,14 +303,28 @@
                                 action.onclick = function () {
                                     action.disabled = true;
                                     const url = running ? '/api/ribs/pause' : '/api/ribs/start';
-                                    fetch(url, {method: 'POST'})
-                                        .then(r => r.json())
+                                    fetch(url, {
+                                        method: 'POST',
+                                        credentials: 'same-origin',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        }
+                                    })
+                                        .then(r => {
+                                            if (r.redirected && r.url && r.url.includes('/login')) {
+                                                throw new Error('Authentication required');
+                                            }
+                                            if (!r.ok) {
+                                                return r.json().then(j => { throw new Error(j.error || j.message || `Request failed: ${r.status}`); });
+                                            }
+                                            return r.json();
+                                        })
                                         .then(j => {
                                             setTimeout(updateAdminRIBSHealth, 800);
                                         })
-                                        .catch(() => {
+                                        .catch((error) => {
                                             action.disabled = false;
-                                            alert('Failed to update RIBS status');
+                                            alert('Failed to start RIBS: ' + error.message);
                                         });
                                 };
                             }

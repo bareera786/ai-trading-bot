@@ -11,6 +11,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import URLSafeTimedSerializer
 from flask import current_app, abort
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import String
 from sqlalchemy import Enum, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from functools import wraps
@@ -26,108 +27,32 @@ class RoleEnum(enum.Enum):
     VIEWER = "viewer"
 
 
+# DEPRECATED: Keeping for migration compatibility, but not used in new User model
+
+
 class User(Base, UserMixin, db.Model):
     __tablename__ = "user"
 
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(150), nullable=False)
-    role = db.Column(Enum(RoleEnum), nullable=False, default=RoleEnum.VIEWER)
+    is_admin = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
-    email_verified = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    last_login_at = db.Column(db.DateTime, nullable=True)
-    last_ip = db.Column(db.String(45), nullable=True)  # Supports IPv6
+    last_login = db.Column(db.DateTime, nullable=True)
+    selected_symbols = db.Column(db.Text, default="[]")
+    custom_symbols = db.Column(db.Text, default="[]")
+    
+    # Additional fields for compatibility
     failed_login_count = db.Column(db.Integer, default=0)
     locked_until = db.Column(db.DateTime, nullable=True)
 
-    trades = db.relationship("app.models.UserTrade", backref="user", lazy=True)
-    subscriptions = db.relationship(
-        "UserSubscription",
-        backref="user",
-        lazy=True,
-        order_by="desc(UserSubscription.created_at)",
-    )
-
-    # Ensure PBKDF2 is used with a strong configuration
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password, method="pbkdf2:sha256", salt_length=16)
 
-    # Add docstring for clarity
     def check_password(self, password: str) -> bool:
-        """Check if the provided password matches the stored hash."""
         return check_password_hash(self.password_hash, password)
-
-    def generate_email_verification_token(self) -> str:
-        """Generate a token for email verification."""
-        serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
-        return serializer.dumps(self.email, salt="email-verification")
-
-    def verify_email_verification_token(self, token: str, max_age: int = 86400) -> bool:
-        """Verify email verification token."""
-        serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
-        try:
-            email = serializer.loads(token, salt="email-verification", max_age=max_age)
-            return email == self.email
-        except Exception:
-            return False
-
-    def generate_password_reset_token(self) -> str:
-        """Generate a token for password reset."""
-        serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
-        return serializer.dumps(self.id, salt="password-reset")
-
-    @staticmethod
-    def verify_password_reset_token(token: str, max_age: int = 3600) -> User | None:
-        """Verify password reset token and return user."""
-        serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
-        try:
-            user_id = serializer.loads(token, salt="password-reset", max_age=max_age)
-            return User.query.get(user_id)
-        except Exception:
-            return None
-
-    @property
-    def active_subscription(self):
-        for subscription in self.subscriptions:  # type: ignore
-            if subscription.is_active:
-                return subscription
-        return None
-
-    @property
-    def is_admin(self) -> bool:
-        """Return True if the user has the admin role.
-
-        This is a defensive helper used by decorators and templates; keep it
-        resilient to partial/legacy DB state by handling both Enum and
-        string-backed role values gracefully.
-        """
-        try:
-            # If `role` is an Enum member, compare directly; otherwise compare
-            # the string value in a tolerant way.
-            if hasattr(self, "role"):
-                return (self.role == RoleEnum.ADMIN) or (
-                    getattr(self.role, "value", None) == RoleEnum.ADMIN.value
-                )
-        except Exception:
-            pass
-        return False
-
-    @is_admin.setter
-    def is_admin(self, value: bool):
-        """Set the user's role based on admin status."""
-        self.role = RoleEnum.ADMIN if value else RoleEnum.VIEWER
-
-    @property
-    def is_active(self):
-        """Override UserMixin.is_active to return our database column value."""
-        return self.__dict__.get('is_active', True)
-
-    @is_active.setter
-    def is_active(self, value: bool):
-        """Allow setting the is_active attribute."""
-        self.__dict__['is_active'] = value
 
     def get_selected_symbols(self) -> list[str]:
         try:
@@ -149,11 +74,16 @@ class User(Base, UserMixin, db.Model):
 
     @property
     def is_premium(self) -> bool:
-        subscription = self.active_subscription
-        if not subscription or not subscription.is_active:
-            return False
-        plan_code = subscription.plan.code if subscription.plan else ""
-        return plan_code in {"pro-monthly", "pro-yearly"}
+        # For simplified model, admins are considered premium
+        return self.is_admin
+
+    @property
+    def is_active(self) -> bool:  # type: ignore[override]
+        return self.__dict__.get('is_active', True)
+
+    @is_active.setter
+    def is_active(self, value: bool) -> None:
+        self.__dict__['is_active'] = value
 
     def is_account_locked(self):
         """Check if the account is currently locked."""

@@ -1,8 +1,7 @@
-"""Authentication views blueprint."""
+"""Clean, simple authentication routes."""
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
 from typing import Optional
 
 from flask import (
@@ -18,290 +17,82 @@ from flask import (
 )
 from flask_login import current_user, login_required, login_user, logout_user
 
-from app.extensions import db, limiter
-from sqlalchemy.exc import OperationalError as SQLOperationalError
-from app.models import User, AuditLog
-from app.routes.utils import marketing_analytics_context
-from app.utils.email_utils import (
-    send_password_reset_email,
-    send_email_verification_email,
-)
-from app.utils.password_utils import validate_password_strength
-
+from app.extensions import db
+from app.models import User
 
 auth_bp = Blueprint("auth", __name__)
 logger = logging.getLogger(__name__)
 
 
-@auth_bp.route("/test")
-def test():
-    return "Hello World"
-
-
-# Utility function to log user actions
-def log_action(user_id, action, details=None):
-    audit_log = AuditLog(
-        user_id=user_id,  # type: ignore
-        action=action,  # type: ignore
-        details=details  # type: ignore
-    )
-    db.session.add(audit_log)
-    db.session.commit()
-
-
-@auth_bp.route("/login", methods=["GET", "POST"], endpoint="login")
-# @limiter.limit("20 per minute")
+@auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     """Handle login via form or JSON payload."""
     if current_user.is_authenticated:
-        if request.is_json or (request.path or "").startswith("/api/"):
+        if request.is_json:
             return jsonify({"success": True, "message": "Already authenticated"}), 200
         return redirect(url_for("dashboard_bp.dashboard"))
 
-    error_message = "Invalid username or password"
-    active_tab = "login"
-
     if request.method == "POST":
-        try:
-            # Surround POST handling with explicit exception logging
-            # so we can capture full tracebacks during debugging.
-            # Log raw request headers/body to aid debugging of 400s seen
-            # from clients (e.g. curl/browser proxies).
-            try:
-                raw_body = request.get_data(as_text=True)
-            except Exception:
-                raw_body = '<unreadable>'
-            # Print to stdout so the running dev server shows the raw
-            # incoming request for easier debugging in the terminal.
-            print('LOGIN DEBUG: headers=', dict(request.headers))
-            print('LOGIN DEBUG: body=', raw_body[:1000])
+        if request.is_json:
+            data = request.get_json()
+            username = data.get("username")
+            password = data.get("password")
+        else:
+            username = request.form.get("username")
+            password = request.form.get("password")
+
+        # Validate required fields
+        if not username or not password:
+            error_message = "Username and password are required"
+            if request.is_json:
+                return jsonify({"error": error_message}), 400
+            flash(error_message)
+            return render_template("auth/auth.html")
+
+        # Find user
+        user = User.query.filter_by(username=username).first()
+
+        # Check credentials
+        if user and user.check_password(password) and user.is_active:
+            login_user(user)
+            logger.info(f"User logged in: {username}")
 
             if request.is_json:
-                data = request.get_json()
-                username = data.get("username")
-                password = data.get("password")
-            else:
-                username = request.form.get("username")
-                password = request.form.get("password")
+                return jsonify({"success": True, "message": "Login successful"}), 200
+            return redirect(url_for("dashboard_bp.dashboard"))
 
-            # ORM-only lookup: in production we expect a consistent UUID PK
-            # and rely on the ORM only; do not fall back to raw SQL lookups.
-            user = User.query.filter_by(username=username).first()
+        # Invalid credentials
+        error_message = "Invalid username or password"
+        if request.is_json:
+            return jsonify({"error": error_message}), 401
+        flash(error_message)
+        return render_template("auth/auth.html")
 
-            # Check if account is locked
-            if user and user.locked_until and user.locked_until > datetime.utcnow():
-                remaining_time = user.locked_until - datetime.utcnow()
-                minutes_left = int(remaining_time.total_seconds() / 60)
-                error_message = f"Account is locked due to too many failed login attempts. Try again in {minutes_left} minutes."
-                logger.warning(
-                    f"Login attempt for locked account: {username} from IP {request.remote_addr}"
-                )
-                if request.is_json:
-                    return jsonify({"error": error_message}), 429
-                flash(error_message)
-                return render_template(
-                    "auth/auth.html"
-                )
-
-            logger.info("Login POST: username=%s, user_present=%s", username, bool(user))
-            if user:
-                logger.info("DEBUG LOGIN: retrieved user.id=%s, password_hash length=%s", user.id, len(user.password_hash) if user.password_hash else 0)
-                from werkzeug.security import check_password_hash
-                password_check_result = check_password_hash(user.password_hash, password)
-                logger.info("DEBUG LOGIN: check_password_hash(user.password_hash, input_password) = %s", password_check_result)
-                try:
-                    logger.info("User state before auth check: %s", getattr(user, "__dict__", {}))
-                except Exception:
-                    logger.info("Unable to serialize user.__dict__")
-
-            if user and user.check_password(password):
-                logger.info("DEBUG LOGIN: user.check_password returned True for user.id=%s", user.id)
-                logger.info("DEBUG LOGIN: user.check_password returned True for user.id=%s", user.id)
-                if not user.email_verified and not user.is_admin:
-                    if request.is_json:
-                        return (
-                            jsonify(
-                                {
-                                    "success": False,
-                                    "error": "Please verify your email address before logging in.",
-                                }
-                            ),
-                            403,
-                        )
-
-                    flash("Please verify your email address before logging in.")
-                    return redirect(url_for("auth.login"))
-
-                # Reset failed login attempts on successful login
-                try:
-                    user.reset_failed_logins()
-                except Exception:
-                    # fallback in case older DB column exists
-                    user.failed_login_count = 0
-                    user.locked_until = None
-                db.session.commit()
-
-                try:
-                    login_user(user)
-                except Exception as e:
-                    logger.exception("Failed to login user: %s", e)
-                    raise
-
-                # Mark session so Flask will emit Set-Cookie for the session.
-                session["user_id"] = user.id
-                session.modified = True
-                logger.info("DEBUG LOGIN: session['user_id'] set to %s", session.get("user_id"))
-
-                # Per-request cookie attribute adjustments:
-                origin = request.headers.get("Origin")
-                forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
-                is_secure = request.is_secure or forwarded_proto.startswith("https")
-                host_url = request.host_url.rstrip("/")
-                is_cross_origin = bool(origin and origin != host_url)
-
-                if is_secure and is_cross_origin:
-                    current_app.config["SESSION_COOKIE_SAMESITE"] = "None"
-                    current_app.config["SESSION_COOKIE_SECURE"] = True
-                else:
-                    current_app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-                    current_app.config["SESSION_COOKIE_SECURE"] = False
-
-                response = jsonify(
-                    {
-                        "success": True,
-                        "message": "Login successful",
-                        "user": {"username": user.username, "is_admin": user.is_admin, "id": user.id},
-                    }
-                )
-                return response
-            else:
-                # Handle failed login attempt
-                if user:
-                    logger.info("Failed login handling for user: %s, state before increment: %s", username, getattr(user, "__dict__", {}))
-                    try:
-                        user.increment_failed_logins()
-                    except Exception:
-                        # fallback if legacy column name persisted
-                        user.failed_login_count = (getattr(user, 'failed_login_count', 0) or 0) + 1
-
-                    # Lock account after configured max failed attempts
-                    max_failed = current_app.config.get("MAX_FAILED_LOGINS", 5)
-                    lock_minutes = current_app.config.get("LOCKOUT_DURATION", 15)
-                    if user.failed_login_count >= max_failed:
-                        user.locked_until = datetime.utcnow() + timedelta(minutes=lock_minutes)
-                        error_message = f"Account locked due to too many failed login attempts. Try again in {lock_minutes} minutes."
-                        logger.warning(
-                            f"Account locked for user {username} after {user.failed_login_count} failed attempts from IP {request.remote_addr}"
-                        )
-                    else:
-                        remaining_attempts = max_failed - user.failed_login_count
-                        error_message = f"Invalid username or password. {remaining_attempts} attempts remaining before account lockout."
-
-                    db.session.commit()
-                else:
-                    logger.warning(
-                        f"Failed login attempt for non-existent username '{username}' from IP {request.remote_addr}"
-                    )
-
-                if request.is_json:
-                    return jsonify({"error": error_message}), 401
-
-                flash(error_message)
-        except SQLOperationalError as e:
-            # Common during local development when the DB schema is out of
-            # sync (e.g. missing columns from pending migrations). Log a
-            # helpful message so the developer knows to run migrations and
-            # re-raise to preserve behavior in production.
-            logger.error(
-                "Database operational error during login (possible schema mismatch). %s",
-                e,
-                exc_info=True,
-            )
-            raise
-        except Exception:
-            logger.exception("Unhandled exception in login POST")
-            # Re-raise so Flask/WSGI surfaces the 500 and stacktrace
-            raise
-
-    return render_template(
-        "auth/auth.html"
-    )
+    return render_template("auth/auth.html")
 
 
-@auth_bp.route("/logout", endpoint="logout")
-@login_required
-def logout():
-    """Destroy the active session and redirect to login."""
-    logout_user()
-
-    # Ensure any server-side session state is cleared and instruct the
-    # client to remove cookies. Being explicit here makes the logout
-    # behavior reliable for fetch() calls that follow redirects.
-    try:
-        session.clear()
-    except Exception:
-        logger.debug("Failed to clear session during logout")
-
-    response = redirect(url_for("auth.login"))
-
-    # Delete session and remember cookies if present. Use config keys
-    # with sensible fallbacks to avoid hard-coding names.
-    try:
-        session_cookie_name = current_app.config.get("SESSION_COOKIE_NAME", "session")
-        response.delete_cookie(session_cookie_name)
-    except Exception:
-        logger.debug("Failed to delete session cookie on logout")
-
-    try:
-        remember_cookie_name = current_app.config.get("REMEMBER_COOKIE_NAME", "remember_token")
-        response.delete_cookie(remember_cookie_name)
-    except Exception:
-        logger.debug("Failed to delete remember cookie on logout")
-
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    return response
-
-
-@auth_bp.route("/register", methods=["GET", "POST"], endpoint="register")
-@limiter.limit("10 per minute")
+@auth_bp.route("/register", methods=["GET", "POST"])
 def register():
-    """Render or process the registration form."""
+    """Handle user registration."""
     if current_user.is_authenticated:
         return redirect(url_for("dashboard_bp.dashboard"))
-
-    active_tab = "register"
 
     if request.method == "POST":
         username = request.form.get("username")
         email = request.form.get("email")
         password = request.form.get("password")
         confirm_password = request.form.get("confirm_password")
-        captcha = request.form.get("captcha")
 
-        if captcha != "7":
-            flash("CAPTCHA verification failed")
-            return redirect(url_for("auth.register"))
-
-        if not email or "@" not in email or "." not in email:
-            flash("Please enter a valid email address")
-            return redirect(url_for("auth.register"))
-
-        if not password:
-            flash("Password is required")
+        # Basic validation
+        if not username or not email or not password:
+            flash("All fields are required")
             return redirect(url_for("auth.register"))
 
         if password != confirm_password:
             flash("Passwords do not match")
             return redirect(url_for("auth.register"))
 
-        # Validate password strength
-        is_valid, error_msg = validate_password_strength(password)
-        if not is_valid:
-            flash(error_msg)
-            return redirect(url_for("auth.register"))
-
+        # Check for existing users
         if User.query.filter_by(username=username).first():
             flash("Username already exists")
             return redirect(url_for("auth.register"))
@@ -310,131 +101,105 @@ def register():
             flash("Email already registered")
             return redirect(url_for("auth.register"))
 
-        user = User(username=username, email=email, is_admin=False, is_active=True)
-        logger.info("DEBUG REG: User created with id=%s", user.id)
+        # Create user
+        user = User(username=username, email=email)
         user.set_password(password)
-        logger.info("DEBUG REG: set_password called, password_hash is not None: %s", user.password_hash is not None)
-        logger.info("DEBUG REG: password_hash length before commit: %s", len(user.password_hash) if user.password_hash else 0)
-        user.email_verified = True
-
-        # Generate email verification token
-        token = user.generate_email_verification_token()
-        user.email_verification_token = token
-        user.email_verification_expires = datetime.utcnow() + timedelta(hours=24)
 
         db.session.add(user)
         db.session.commit()
-        logger.info("DEBUG REG: db.session.commit() executed, password_hash length after commit: %s", len(user.password_hash) if user.password_hash else 0)
 
-        # Send email verification
-        send_email_verification_email(user.email, token)
+        logger.info(f"New user registered: {username} ({email})")
 
-        logger.info(
-            f"New user registered: {username} ({email}) from IP {request.remote_addr}"
-        )
-
-        flash(
-            "Registration successful! Please check your email to verify your account before logging in."
-        )
+        flash("Registration successful! You can now log in.")
         return redirect(url_for("auth.login"))
 
-    return render_template(
-        "auth/auth.html", analytics=marketing_analytics_context(), active_tab=active_tab
-    )
+    return render_template("auth/auth.html")
 
 
-@auth_bp.route("/api/auth/login", methods=["POST"], endpoint="api_login")
-@limiter.limit("20 per minute")
-def api_login():
-    """Alias JSON login endpoint expected by some clients."""
-    return login()
+@auth_bp.route("/logout", methods=["GET", "POST"])
+@login_required
+def logout():
+    """Handle user logout for both browser and API clients."""
+    username = current_user.username if current_user.is_authenticated else "unknown"
+    logout_user()
+    # Ensure all session data is cleared to fully end the user's session
+    try:
+        session.clear()
+    except Exception:
+        # Be conservative: don't crash logout if session clearing fails
+        logger.exception("Failed to clear session during logout")
+    logger.info(f"User logged out: {username}")
+    
+    # Check if client expects JSON response
+    if request.is_json or request.headers.get('Accept', '').startswith('application/json'):
+        return jsonify({"success": True, "message": "Logged out"}), 200
+    
+    return redirect(url_for("auth.login"))
 
 
-@auth_bp.route("/forgot-password", methods=["GET", "POST"], endpoint="forgot_password")
-def forgot_password():
-    """Handle forgot password requests."""
-    if current_user.is_authenticated:
-        return redirect(url_for("dashboard_bp.dashboard"))
+# API endpoints for programmatic access
+@auth_bp.route("/api/auth/register", methods=["POST"])
+def api_register():
+    """API endpoint for user registration."""
+    data = request.get_json()
 
-    if request.method == "POST":
-        email = request.form.get("email")
-        user = User.query.filter_by(email=email).first()
-        if user:
-            token = user.generate_password_reset_token()
-            send_password_reset_email(user.email, token)
-            flash(
-                "If an account with that email exists, a password reset link has been sent."
-            )
-            logger.info(f"Password reset email sent to: {email}")
-        else:
-            flash(
-                "If an account with that email exists, a password reset link has been sent."
-            )
-        return redirect(url_for("auth.login"))
+    username = data.get("username")
+    email = data.get("email")
+    password = data.get("password")
 
-    return render_template(
-        "auth/forgot_password.html", analytics=marketing_analytics_context()
-    )
+    if not username or not email or not password:
+        return jsonify({"error": "Username, email, and password are required"}), 400
 
+    # Check for existing users
+    if User.query.filter_by(username=username).first():
+        return jsonify({"error": "Username already exists"}), 409
 
-@auth_bp.route(
-    "/reset-password/<token>", methods=["GET", "POST"], endpoint="reset_password"
-)
-def reset_password(token):
-    """Handle password reset with token."""
-    if current_user.is_authenticated:
-        return redirect(url_for("dashboard_bp.dashboard"))
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Email already registered"}), 409
 
-    user = User.verify_password_reset_token(token)
-    if not user:
-        flash("Invalid or expired reset token.")
-        return redirect(url_for("auth.login"))
+    # Create user
+    user = User(username=username, email=email)
+    user.set_password(password)
 
-    if request.method == "POST":
-        password = request.form.get("password")
-        confirm_password = request.form.get("confirm_password")
-
-        if not password:
-            flash("Password is required.")
-            return redirect(request.url)
-
-        if password != confirm_password:
-            flash("Passwords do not match.")
-            return redirect(request.url)
-
-        # Validate password strength
-        is_valid, error_msg = validate_password_strength(password)
-        if not is_valid:
-            flash(error_msg)
-            return redirect(request.url)
-
-        user.set_password(password)
-        user.password_reset_token = None
-        user.password_reset_expires = None
-        db.session.commit()
-
-        flash("Password has been reset successfully. Please login.")
-        logger.info(f"Password reset successful for user: {user.username}")
-        return redirect(url_for("auth.login"))
-
-    return render_template(
-        "auth/reset_password.html", analytics=marketing_analytics_context(), token=token
-    )
-
-
-@auth_bp.route("/verify-email/<token>", endpoint="verify_email")
-def verify_email(token):
-    """Handle email verification with token."""
-    user = User.query.filter_by(email_verification_token=token).first()
-    if not user or not user.verify_email_verification_token(token):
-        flash("Invalid or expired verification token.")
-        return redirect(url_for("auth.login"))
-
-    user.email_verified = True
-    user.email_verification_token = None
-    user.email_verification_expires = None
+    db.session.add(user)
     db.session.commit()
 
-    flash("Email verified successfully! You can now log in.")
-    logger.info(f"Email verified for user: {user.username}")
-    return redirect(url_for("auth.login"))
+    logger.info(f"New user registered via API: {username} ({email})")
+
+    return jsonify({"success": True, "message": "Registration successful"}), 201
+
+
+@auth_bp.route("/api/auth/login", methods=["POST"])
+def api_login():
+    """API endpoint for user login."""
+    data = request.get_json()
+
+    username = data.get("username")
+    password = data.get("password")
+
+    if not username or not password:
+        return jsonify({"error": "Username and password are required"}), 400
+
+    user = User.query.filter_by(username=username).first()
+
+    if user and user.check_password(password) and user.is_active:
+        login_user(user)
+        logger.info(f"User logged in via API: {username}")
+        return jsonify({"success": True, "message": "Login successful"}), 200
+
+    return jsonify({"error": "Invalid credentials"}), 401
+
+
+@auth_bp.route("/api/auth/logout", methods=["GET", "POST"])
+@login_required
+def api_logout():
+    """API endpoint for user logout."""
+    username = current_user.username if current_user.is_authenticated else "unknown"
+    logout_user()
+    # Ensure session is cleared for API clients as well
+    try:
+        session.clear()
+    except Exception:
+        logger.exception("Failed to clear session during API logout")
+    logger.info(f"User logged out via API: {username}")
+    return jsonify({"success": True, "message": "Logout successful"}), 200

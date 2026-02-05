@@ -19,6 +19,11 @@ A comprehensive AI-powered cryptocurrency trading bot with advanced machine lear
 - **Quantum Fusion Momentum (QFM)**: Advanced momentum indicators with regime detection
 
 ### Safety & Risk Management
+- **RIBS Safety Rails (CLAW_BOT)**: 
+  - **Regime Awareness**: Automatic risk reduction in volatile/bear markets.
+  - **Robustness Scoring**: Segmented validation to prevent overfitting.
+  - **Mandatory Paper Gating**: Direct-to-paper isolation for all new strategies.
+  - **5% Allocation Cap**: Hard capital limits for new optimized strategies.
 - **Dynamic Position Sizing**: Risk-adjusted position management with adaptive risk multipliers
 - **Circuit Breakers**: Automatic trading halts on loss streaks
 - **Volatility Filters**: Market stress detection and regime-based adjustments

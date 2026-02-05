@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block header_title %}SUBSCRIPTION PLANS{% endblock %}
+{% block header_subtitle %}Industrial-grade algorithmic trading tiers{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+
+    <div style="text-align: center; margin-bottom: 3rem;">
+        <h2 style="font-size: 2rem; margin-bottom: 1rem;">Select Your Power Level</h2>
+        <p style="color: var(--text-secondary);">Unlock the full potential of the Quantum Fusion Engine.</p>
+
+        <!-- Billing Toggle -->
+        <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 2rem;">
+            <span style="color: var(--text-secondary);">Monthly</span>
+            <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 26px;">
+                <input type="checkbox" checked onchange="toggleBilling(this)">
+                <span
+                    style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--surface-light); transition: .4s; border-radius: 34px;"></span>
+                <span class="slider-round"
+                    style="position: absolute; content: ''; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: var(--primary); transition: .4s; border-radius: 50%;"></span>
+            </label>
+            <span style="color: var(--text-primary); font-weight: bold;">Yearly (Save 20%)</span>
+        </div>
+    </div>
+
+    <!-- Pricing Grid -->
+    <div class="dashboard-grid" style="grid-template-columns: repeat(3, 1fr); align-items: flex-start;">
+
+        <!-- Starter -->
+        <div class="dashboard-card" style="border-top: 4px solid var(--text-muted);">
+            <div class="card-header" style="justify-content: center;">
+                <h3 class="card-title" style="font-size: 1.5rem;">STARTER</h3>
+            </div>
+            <div style="text-align: center; padding: 2rem 0;">
+                <div style="font-size: 3rem; font-weight: bold;">Free</div>
+                <div style="color: var(--text-secondary);">Forever</div>
+            </div>
+            <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; color: var(--text-secondary); line-height: 2;">
+                <li>✓ 1 Active Bot</li>
+                <li>✓ Spot Trading Only</li>
+                <li>✓ Basic Indicators</li>
+                <li>✓ Daily Reporting</li>
+            </ul>
+            <button class="btn btn-sm status-neutral"
+                style="width: 100%; justify-content: center; padding: 1rem;">Current Plan</button>
+        </div>
+
+        <!-- Pro (Featured) -->
+        <div class="dashboard-card"
+            style="border: 2px solid var(--primary); transform: scale(1.05); position: relative; background: linear-gradient(180deg, rgba(0,212,170,0.05) 0%, var(--surface) 100%);">
+            <div
+                style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #000; padding: 2px 10px; border-radius: 10px; font-weight: bold; font-size: 0.8rem;">
+                MOST POPULAR</div>
+            <div class="card-header" style="justify-content: center;">
+                <h3 class="card-title" style="font-size: 1.5rem; color: var(--primary);">PRO TRADER</h3>
+            </div>
+            <div style="text-align: center; padding: 2rem 0;">
+                <div
+                    style="font-size: 3rem; font-weight: bold; display: flex; align-items: flex-start; justify-content: center;">
+                    <span style="font-size: 1.5rem; margin-top: 10px;">$</span><span id="pricePro">49</span>
+                </div>
+                <div style="color: var(--text-secondary);">per month</div>
+            </div>
+            <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; color: var(--text-primary); line-height: 2;">
+                <li>✓ <strong>5 Active Bots</strong></li>
+                <li>✓ Futures & Leverage (10x)</li>
+                <li>✓ <span style="color: var(--accent);">CRT Signal Engine</span></li>
+                <li>✓ Real-time Telemetry</li>
+                <li>✓ Priority Support</li>
+            </ul>
+            <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 1rem;">Upgrade
+                Now</button>
+        </div>
+
+        <!-- Institutional -->
+        <div class="dashboard-card" style="border-top: 4px solid var(--accent);">
+            <div class="card-header" style="justify-content: center;">
+                <h3 class="card-title" style="font-size: 1.5rem;">INSTITUTIONAL</h3>
+            </div>
+            <div style="text-align: center; padding: 2rem 0;">
+                <div
+                    style="font-size: 3rem; font-weight: bold; display: flex; align-items: flex-start; justify-content: center;">
+                    <span style="font-size: 1.5rem; margin-top: 10px;">$</span><span id="priceInst">199</span>
+                </div>
+                <div style="color: var(--text-secondary);">per month</div>
+            </div>
+            <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; color: var(--text-secondary); line-height: 2;">
+                <li>✓ Unlimited Bots</li>
+                <li>✓ Multi-Exchange Support</li>
+                <li>✓ <span style="color: var(--accent);">QFM Fusion Core</span></li>
+                <li>✓ Dedicated Server</li>
+                <li>✓ API API Access</li>
+            </ul>
+            <button class="btn btn-sm status-neutral"
+                style="width: 100%; justify-content: center; padding: 1rem;">Contact Sales</button>
+        </div>
+
+    </div>
+</section>
+
+<script>
+    function toggleBilling(el) {
+        if (el.checked) {
+            document.getElementById('pricePro').textContent = "39";
+            document.getElementById('priceInst').textContent = "159";
+        } else {
+            document.getElementById('pricePro').textContent = "49";
+            document.getElementById('priceInst').textContent = "199";
+        }
+    }
+</script>
+{% endblock %}

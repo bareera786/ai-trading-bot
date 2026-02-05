@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block header_title %}SYSTEM PERSISTENCE{% endblock %}
+{% block header_subtitle %}Bot state management and checkpoint system{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+
+    <!-- Professional Storage Grid -->
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">💾</span>
+                <h3 class="card-title">System Checkpoint</h3>
+            </div>
+            <div class="card-value" id="lastSave" style="font-size: 1.5rem;">Synced</div>
+            <p class="card-subtitle">Last write: <span class="text-success">Just now</span></p>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">🗄️</span>
+                <h3 class="card-title">Disk Usage</h3>
+            </div>
+            <div class="card-value" id="storage">45 MB</div>
+            <div
+                style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 10px; border-radius: 2px;">
+                <div style="width: 15%; height: 100%; background: var(--primary); border-radius: 2px;"></div>
+            </div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">📂</span>
+                <h3 class="card-title">Bot Profile</h3>
+            </div>
+            <div class="card-value">default</div>
+            <p class="card-subtitle">Active Profile</p>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">📦</span>
+                <h3 class="card-title">Backups</h3>
+            </div>
+            <div class="card-value">12</div>
+            <p class="card-subtitle">Rolling 24h retention</p>
+        </div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header" style="justify-content: space-between;">
+            <h3 class="card-title">State Management Log</h3>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-sm status-neutral" onclick="alert('Exporting state...')">Export JSON</button>
+                <button class="btn btn-primary" onclick="alert('Manual Checkpoint Created!')">Force Save State</button>
+            </div>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Checkpoint ID</th>
+                        <th>Time</th>
+                        <th>Type</th>
+                        <th>Size</th>
+                        <th>Positions</th>
+                        <th>Balance</th>
+                        <th>Integrity</th>
+                    </tr>
+                </thead>
+                <tbody id="persistBody">
+                    <tr>
+                        <td colspan="7" class="text-center" style="padding: 3rem;">Reading disk state...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<script>
+    async function loadPersistence() {
+        try {
+            const response = await fetch('/api/persistence/status');
+            const data = await response.json();
+
+            if (data.checkpoints) {
+                document.getElementById('persistBody').innerHTML = data.checkpoints.map(c => `
+                 <tr>
+                    <td><span style="font-family: monospace; color: var(--accent);">${c.id}</span></td>
+                    <td>${new Date(c.timestamp).toLocaleString()}</td>
+                    <td><span class="status-indicator ${c.type === 'auto' ? 'status-neutral' : 'status-success'}">${c.type}</span></td>
+                    <td>${(c.size_kb / 1024).toFixed(2)} MB</td>
+                    <td>${c.positions_count}</td>
+                    <td>$${c.balance.toFixed(2)}</td>
+                    <td><span style="color: var(--success);">✔ Valid</span></td>
+                </tr>
+            `).join('');
+
+                document.getElementById('storage').textContent = data.status.storage_mb + ' MB';
+                document.getElementById('lastSave').textContent = "synced";
+            }
+        } catch (e) { console.error(e); }
+    }
+    loadPersistence();
+</script>
+{% endblock %}

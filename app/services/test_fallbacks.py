@@ -99,6 +99,25 @@ class FallbackTrader:
         return {"enabled": bool(self.real_trading_enabled)}
 
 
+class FallbackMarketDataService:
+    """Minimal market data service for test/fallback mode."""
+    
+    def __init__(self, ultimate_trader: Any, optimized_trader: Any):
+        self.ultimate_trader = ultimate_trader
+        self.optimized_trader = optimized_trader
+        self._user_traders: Dict[int, tuple[Any, Any]] = {}
+    
+    def _get_or_create_user_traders(self, user_id: int) -> tuple[Any, Any]:
+        """Return per-user trader instances for multi-user isolation."""
+        if user_id in self._user_traders:
+            return self._user_traders[user_id]
+        
+        # In fallback mode, just return the shared traders
+        # In production, this would create isolated instances
+        self._user_traders[user_id] = (self.ultimate_trader, self.optimized_trader)
+        return self.ultimate_trader, self.optimized_trader
+
+
 def default_apply_credentials(account_type: str = "spot", creds: Optional[Dict[str, Any]] = None) -> bool:
     # Pretend we connected successfully
     return True
@@ -112,6 +131,7 @@ __all__ = [
     "InMemoryCredentialsStore",
     "SimpleLogManager",
     "FallbackTrader",
+    "FallbackMarketDataService",
     "default_apply_credentials",
     "default_get_status",
 ]

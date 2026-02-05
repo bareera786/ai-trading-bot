@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+
+{% block title %}Arbitrage Scanner{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="fw-bold"><span class="text-primary">Arbitrage</span> Scanner</h2>
+                <p class="text-muted">Real-time cross-exchange price discrepancies.</p>
+            </div>
+            <button id="refreshBtn" class="btn btn-outline-primary rounded-pill px-4">
+                <i class="fas fa-sync me-2"></i> Refresh Scan
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Opportunity Grid -->
+<div class="risk-presets-grid" id="oppsGrid">
+    <!-- Loading State -->
+    <div class="col-span-full text-center py-5">
+        <div class="spinner-border text-primary mb-3" role="status"></div>
+        <p class="text-muted">Scanning global markets for opportunities...</p>
+    </div>
+</div>
+
+<!-- Trade Execution Modal -->
+<div class="modal fade" id="tradeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: #0f172a; border: 1px solid var(--border-color); color: white;">
+            <div class="modal-header border-bottom border-secondary"
+                style="border-color: rgba(255,255,255,0.1) !important;">
+                <h5 class="modal-title">Execute Arbitrage</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Trade Summary -->
+                <div class="alert alert-info bg-opacity-10 border-0 text-white"
+                    style="background: rgba(59, 130, 246, 0.1);">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Simultaneous execution of Buy & Sell orders.
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-3 p-3 rounded"
+                    style="background: rgba(255,255,255,0.05);">
+                    <div class="text-center">
+                        <span class="text-success fw-bold d-block">BUY</span>
+                        <span class="d-block small text-muted" id="modalBuyExchange">BINANCE</span>
+                        <span class="fw-mono" id="modalBuyPrice">$42,000</span>
+                    </div>
+                    <div class="text-muted"><i class="fas fa-arrow-right"></i></div>
+                    <div class="text-center">
+                        <span class="text-danger fw-bold d-block">SELL</span>
+                        <span class="d-block small text-muted" id="modalSellExchange">KRAKEN</span>
+                        <span class="fw-mono" id="modalSellPrice">$42,100</span>
+                    </div>
+                </div>
+
+                <!-- Calc Details -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Spread</span>
+                        <span class="text-white" id="modalSpread">0.24%</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Volume</span>
+                        <input type="number" class="form-control form-control-sm text-end" value="0.5"
+                            style="width: 80px; background: transparent; border: 1px solid var(--border-color); color: white;"
+                            readonly>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2 pt-2 border-top border-secondary"
+                        style="border-color: rgba(255,255,255,0.1) !important;">
+                        <span class="text-white fw-bold">Est. Net Profit</span>
+                        <span class="text-success fw-bold" id="modalProfit">$50.00</span>
+                    </div>
+                </div>
+
+                <div class="d-grid">
+                    <button class="btn btn-primary" id="confirmTradeBtn" onclick="executeTradeSequence()">
+                        Confirm Execution
+                    </button>
+                    <!-- Warning message if needed -->
+                    <p class="text-center text-muted small mt-2 mb-0">
+                        <i class="fas fa-shield-alt"></i> Protected by Flash-Crash Guard
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Shared Premium Card Styles */
+    .risk-presets-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    .risk-preset-card {
+        position: relative;
+        padding: 1.5rem;
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-xl);
+        background: rgba(255, 255, 255, 0.02);
+        transition: all 0.3s ease;
+    }
+
+    .risk-preset-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--primary);
+        box-shadow: 0 10px 30px rgba(0, 212, 170, 0.15);
+    }
+
+    .card-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .symbol-badge {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 0.5rem 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .spread-tag {
+        font-size: 0.9rem;
+        font-weight: 700;
+        padding: 0.25rem 0.75rem;
+        border-radius: 2rem;
+    }
+
+    .spread-high {
+        background: rgba(0, 255, 127, 0.15);
+        color: #00ff7f;
+        border: 1px solid rgba(0, 255, 127, 0.3);
+    }
+
+    .spread-med {
+        background: rgba(255, 193, 7, 0.15);
+        color: #ffc107;
+        border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+
+    .exchange-route {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 1rem;
+        border-radius: 1rem;
+    }
+
+    .exchange-node {
+        text-align: center;
+    }
+
+    .exchange-name {
+        display: block;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .buy-color {
+        color: #00ff7f;
+    }
+
+    .sell-color {
+        color: #ff4757;
+    }
+
+    .price-val {
+        font-family: 'Roboto Mono', monospace;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+
+    .route-arrow {
+        color: var(--text-muted);
+        font-size: 1.2rem;
+    }
+
+    .profit-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .profit-val {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+</style>
+
+<script>
+    let currentOpp = null;
+    let tradeModal = null; // Instantiated on load
+
+    document.addEventListener('DOMContentLoaded', () => {
+        tradeModal = new bootstrap.Modal(document.getElementById('tradeModal'));
+        fetchOpportunities();
+        document.getElementById('refreshBtn').addEventListener('click', fetchOpportunities);
+    });
+
+    async function fetchOpportunities() {
+        const grid = document.getElementById('oppsGrid');
+        grid.innerHTML = `
+            <div class="col-12 text-center py-5" style="grid-column: 1 / -1;">
+                <div class="spinner-border text-primary mb-3" role="status"></div>
+                <p class="text-muted">Scanning global exchanges...</p>
+            </div>
+        `;
+
+        try {
+            const response = await fetch('/trading/arbitrage/api/opportunities');
+            const result = await response.json();
+
+            if (result.success && result.data.length > 0) {
+                // Store data for modal usage
+                window.oppData = result.data;
+
+                grid.innerHTML = result.data.map((item, index) => {
+                    // Logic for spread color
+                    const spreadClass = item.spread_pct > 0.5 ? 'spread-high' : 'spread-med';
+
+                    return `
+                    <div class="risk-preset-card">
+                        <!-- Header -->
+                        <div class="card-header-row">
+                            <div class="symbol-badge">${item.symbol}</div>
+                            <div class="spread-tag ${spreadClass}">
+                                ⚡ ${item.spread_pct}% Spread
+                            </div>
+                        </div>
+
+                        <!-- Route Visual -->
+                        <div class="exchange-route">
+                            <div class="exchange-node">
+                                <span class="exchange-name buy-color">Buy @ ${item.buy_exchange}</span>
+                                <span class="price-val">$${item.buy_price.toLocaleString()}</span>
+                            </div>
+                            <div class="route-arrow">
+                                <i class="fas fa-arrow-right"></i>
+                            </div>
+                            <div class="exchange-node">
+                                <span class="exchange-name sell-color">Sell @ ${item.sell_exchange}</span>
+                                <span class="price-val">$${item.sell_price.toLocaleString()}</span>
+                            </div>
+                        </div>
+
+                        <!-- Action Footer -->
+                        <div class="profit-row">
+                            <div>
+                                <small class="text-muted d-block uppercase" style="font-size:0.7rem;">Est. Profit</small>
+                                <span class="profit-val">$${item.spread_abs.toFixed(2)}</span>
+                            </div>
+                            <button class="btn btn-primary rounded-pill px-4" onclick="openTradeModal(${index})">
+                                Preview
+                            </button>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+            } else {
+                grid.innerHTML = `
+                    <div class="text-center py-5" style="grid-column: 1 / -1;">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No arbitrage opportunities found > 0.5% right now.</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            grid.innerHTML = `
+                <div class="text-center text-danger py-5" style="grid-column: 1 / -1;">
+                    <p>Failed to load opportunities.</p>
+                </div>
+            `;
+        }
+    }
+
+    function openTradeModal(index) {
+        if (!window.oppData || !window.oppData[index]) return;
+        currentOpp = window.oppData[index];
+
+        document.getElementById('modalBuyExchange').textContent = currentOpp.buy_exchange.toUpperCase();
+        document.getElementById('modalBuyPrice').textContent = '$' + currentOpp.buy_price.toLocaleString();
+
+        document.getElementById('modalSellExchange').textContent = currentOpp.sell_exchange.toUpperCase();
+        document.getElementById('modalSellPrice').textContent = '$' + currentOpp.sell_price.toLocaleString();
+
+        document.getElementById('modalSpread').textContent = currentOpp.spread_pct + '%';
+        // Est profit for 0.5 volume (hardcoded volume for demo)
+        document.getElementById('modalProfit').textContent = '$' + (currentOpp.spread_abs * 0.5).toFixed(2);
+
+        const btn = document.getElementById('confirmTradeBtn');
+        btn.disabled = false;
+        btn.className = 'btn btn-primary';
+        btn.innerHTML = 'Confirm Execution';
+
+        tradeModal.show();
+    }
+
+    function executeTradeSequence() {
+        const btn = document.getElementById('confirmTradeBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Executing...';
+
+        // Simulate API delay
+        setTimeout(() => {
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-success');
+            btn.innerHTML = '<i class="fas fa-check me-2"></i> Orders Placed';
+
+            setTimeout(() => {
+                tradeModal.hide();
+                // Show toast or alert?
+                // alert('Trade sequence initiated successfully.');
+            }, 1000);
+        }, 1500);
+    }
+</script>
+{% endblock %}

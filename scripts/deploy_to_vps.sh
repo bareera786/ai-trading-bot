@@ -1,38 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
-
-if [ "$#" -lt 2 ]; then
-  echo "Usage: $0 user@host /remote/path"
-  echo "Example: $0 ubuntu@1.2.3.4 /home/ubuntu/ai-bot"
-  exit 1
-fi
-
-REMOTE=$1
-REMOTE_PATH=$2
-ARCHIVE=/tmp/ai-bot-deploy.tar.gz
-
-echo "Creating archive..."
-# Prefer git archive if repository is a git repo; fallback to tar
-if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  git archive --format=tar.gz -o "$ARCHIVE" HEAD
-else
-  tar -czf "$ARCHIVE" .
-fi
-
-echo "Copying archive to $REMOTE:/tmp/"
-scp "$ARCHIVE" "$REMOTE":/tmp/
-
-echo "Extracting on remote host..."
-ssh "$REMOTE" "mkdir -p '$REMOTE_PATH' && tar -xzf /tmp/ai-bot-deploy.tar.gz -C '$REMOTE_PATH' && rm /tmp/ai-bot-deploy.tar.gz"
-
-echo "Building and starting Docker stack on remote host..."
-ssh "$REMOTE" "cd '$REMOTE_PATH' && docker compose pull || true && docker compose build --no-cache && docker compose up -d --remove-orphans"
-
-echo "Deployment complete. Cleaning up local archive."
-rm -f "$ARCHIVE"
-
-echo "Done."
-#!/usr/bin/env bash
 #
 # Deployment helper for copying the AI bot to a VPS without Git.
 # Usage:
@@ -92,6 +58,13 @@ rsync "${RSYNC_OPTS[@]}" -e "ssh -p ${VPS_PORT}" "${PROJECT_ROOT}/" "${REMOTE}:$
 
 printf "✅ Files synced to %s:%s\n" "${REMOTE}" "${VPS_PATH}"
 
+# Fix permissions if target owner is specified
+VPS_TARGET_OWNER=${VPS_TARGET_OWNER:-"1001:1001"}
+if [[ -n "${VPS_TARGET_OWNER}" ]]; then
+  printf "🔧 Fixing permissions for %s...\n" "${VPS_TARGET_OWNER}"
+  ssh -p "${VPS_PORT}" "${REMOTE}" "chown -R ${VPS_TARGET_OWNER} ${VPS_PATH}" || printf "⚠️  Could not change ownership (likely need root). Continuing...\n"
+fi
+
 REMOTE_COMMAND=$(cat <<EOF
 cd "${VPS_PATH}" && \\
 python3 -m compileall ai_ml_auto_bot_final.py
@@ -103,9 +76,22 @@ ssh -p "${VPS_PORT}" "${REMOTE}" "${REMOTE_COMMAND}"
 
 if [[ "${SKIP_RESTART}" != "1" ]]; then
   printf "🔁 Rebuilding and restarting Docker service %s on %s...\n" "${DOCKER_SERVICE}" "${VPS_HOST}"
-  ssh -tt -p "${VPS_PORT}" "${REMOTE}" "cd ${VPS_PATH} && docker compose -f ${COMPOSE_FILE} build --pull ${DOCKER_SERVICE} && docker compose -f ${COMPOSE_FILE} up -d ${DOCKER_SERVICE}"
+  ssh -tt -p "${VPS_PORT}" "${REMOTE}" "cd ${VPS_PATH} && docker compose -f ${COMPOSE_FILE} build --no-cache --pull ${DOCKER_SERVICE} && docker compose -f ${COMPOSE_FILE} up -d ${DOCKER_SERVICE}"
+
+  printf "🗄️  Running surgical database schema fix...\n"
+  # Run the python script to manually execute ALTER TABLE statements
+  ssh -tt -p "${VPS_PORT}" "${REMOTE}" "cd ${VPS_PATH} && docker compose -f ${COMPOSE_FILE} exec -e FLASK_APP=ai_ml_auto_bot_final.py ${DOCKER_SERVICE} python scripts/fix_db_schema.py || echo '⚠️ Schema fix warning (check logs)'"
+
+  printf "🔑 Ensuring Admin Access...\n"
+  ssh -tt -p "${VPS_PORT}" "${REMOTE}" "cd ${VPS_PATH} && docker compose -f ${COMPOSE_FILE} exec -e FLASK_APP=ai_ml_auto_bot_final.py ${DOCKER_SERVICE} python scripts/ensure_admin_access.py"
+
+  printf "🌐 Updating Host Nginx Configuration...\n"
+  # Copy the host config to /etc/nginx/sites-available and reload
+  # Check if site is enabled, if not link it
+  ssh -tt -p "${VPS_PORT}" "${REMOTE}" "sudo cp ${VPS_PATH}/nginx/host_nginx.conf /etc/nginx/sites-available/ai-trading-bot && sudo ln -sf /etc/nginx/sites-available/ai-trading-bot /etc/nginx/sites-enabled/ && sudo nginx -t && sudo systemctl reload nginx"
+
   printf "📜 Latest container logs (Ctrl+C to finish)...\n"
-  ssh -tt -p "${VPS_PORT}" "${REMOTE}" "docker compose -f ${COMPOSE_FILE} logs ${DOCKER_SERVICE} --tail 50"
+  ssh -tt -p "${VPS_PORT}" "${REMOTE}" "cd ${VPS_PATH} && docker compose -f ${COMPOSE_FILE} logs ${DOCKER_SERVICE} --tail 50"
 else
   printf "⏭️  SKIP_RESTART=1 set; skipping service restart.\n"
 fi

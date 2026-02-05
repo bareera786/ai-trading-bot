@@ -188,7 +188,7 @@ class BinanceMarketDataHelper:
             self._log_rest_failure(f"Trending pairs fetch failed: {exc}")
         return []
 
-    def get_real_market_data(self, symbol: str) -> dict[str, Any]:
+    def get_real_market_data(self, symbol: str, limit: int = 100) -> dict[str, Any]:
         try:
             data = self.fetch_24hr_ticker(symbol=symbol, timeout=10)
             if isinstance(data, dict) and data:
@@ -238,3 +238,76 @@ class BinanceMarketDataHelper:
             "low": price * 0.95,
             "open": price * (1 + self._random.uniform(-0.02, 0.02)),
         }
+
+    def fetch_klines(
+        self, symbol: str, interval: str = "1d", limit: int = 100
+    ) -> list[dict[str, Any]]:
+        """Fetch kline/candlestick data with host failover."""
+        last_error: Exception | None = None
+        for base_url in self._resolve_rest_hosts():
+            try:
+                url = f"{base_url}/api/v3/klines"
+                params = {"symbol": symbol, "interval": interval, "limit": limit}
+                self.logger.debug(
+                    "Requesting Binance klines host=%s symbol=%s interval=%s",
+                    base_url,
+                    symbol,
+                    interval,
+                )
+                response = self._request_client.get(url, params=params, timeout=10)
+                if response.status_code == 200:
+                    raw_klines = response.json()
+                    # Format: [Open Time, Open, High, Low, Close, Volume, Close Time, ...]
+                    candles = []
+                    for k in raw_klines:
+                        candles.append({
+                            "time": int(k[0] / 1000), # Unix timestamp (seconds)
+                            "open": self._safe_float(k[1]),
+                            "high": self._safe_float(k[2]),
+                            "low": self._safe_float(k[3]),
+                            "close": self._safe_float(k[4]),
+                            "volume": self._safe_float(k[5]),
+                        })
+                    return candles
+
+                last_error = RuntimeError(f"HTTP {response.status_code} from {base_url}")
+            except RequestException as exc:
+                last_error = exc
+        
+        if last_error:
+            self.logger.error(
+                "Binance klines failed after all hosts symbol=%s error=%s",
+                symbol,
+                last_error,
+            )
+            # Return empty list instead of crashing, or raise? 
+            # Returning empty allows UI to handle gracefully.
+            return []
+        return []
+
+# ==================== STANDALONE WRAPPER ====================
+_helper_instance: BinanceMarketDataHelper | None = None
+
+def _get_helper() -> BinanceMarketDataHelper:
+    global _helper_instance
+    if _helper_instance is None:
+        # Lazy initialization
+        def _safe_float(v: Any, d: float = 0.0) -> float:
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                return d
+                
+        _helper_instance = BinanceMarketDataHelper(
+            bot_logger=logging.getLogger("ai_trading_bot"),
+            safe_float=_safe_float
+        )
+    return _helper_instance
+
+def get_real_market_data(symbol: str, limit: int = 100) -> dict[str, Any]:
+    """Standalone wrapper for fetching market data via singleton helper."""
+    return _get_helper().get_real_market_data(symbol)
+
+def get_historical_klines(symbol: str, interval: str = "1d", limit: int = 100) -> list[dict[str, Any]]:
+    """Standalone wrapper for fetching historical klines."""
+    return _get_helper().fetch_klines(symbol, interval, limit)

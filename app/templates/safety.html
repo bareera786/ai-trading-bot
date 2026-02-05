@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}Safety Settings - AI Trading Bot{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-3">
+                <i class="fas fa-shield-alt"></i> Safety & Risk Management
+            </h1>
+            <p class="text-muted">Configure trading safety limits and risk controls</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Global Kill Switch -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-power-off"></i> Global Kill Switch</h5>
+                </div>
+                <div class="card-body">
+                    <p>Emergency stop for ALL trading activity across the platform.</p>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="globalKillSwitch">
+                        <label class="form-check-label" for="globalKillSwitch">
+                            <strong>Kill Switch Active</strong>
+                        </label>
+                    </div>
+                    <div id="killSwitchForm" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">Reason (Required)</label>
+                            <input type="text" class="form-control" id="killSwitchReason"
+                                placeholder="e.g., Market volatility, system maintenance">
+                        </div>
+                        <button class="btn btn-danger" id="applyKillSwitch">
+                            <i class="fas fa-exclamation-triangle"></i> Apply Kill Switch
+                        </button>
+                    </div>
+                    <div class="alert alert-info mt-3" id="killSwitchStatus">
+                        Status: <strong id="killSwitchStatusText">Inactive</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Position Limits -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Position Limits</h5>
+                </div>
+                <div class="card-body">
+                    <form id="positionLimitsForm">
+                        <div class="mb-3">
+                            <label class="form-label">Max Position Size (USDT)</label>
+                            <input type="number" class="form-control" id="maxPositionSize" value="1000" min="100">
+                            <small class="text-muted">Maximum value for a single position</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Max Open Positions</label>
+                            <input type="number" class="form-control" id="maxOpenPositions" value="5" min="1" max="20">
+                            <small class="text-muted">Maximum number of concurrent positions</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Max Portfolio Exposure (%)</label>
+                            <input type="number" class="form-control" id="maxExposure" value="80" min="10" max="100">
+                            <small class="text-muted">Maximum percentage of portfolio in active trades</small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Position Limits
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loss Limits -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-circle"></i> Loss Limits</h5>
+                </div>
+                <div class="card-body">
+                    <form id="lossLimitsForm">
+                        <div class="mb-3">
+                            <label class="form-label">Max Daily Loss (USDT)</label>
+                            <input type="number" class="form-control" id="maxDailyLoss" value="500" min="50">
+                            <small class="text-muted">Stop trading if daily loss exceeds this amount</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Max Daily Loss (%)</label>
+                            <input type="number" class="form-control" id="maxDailyLossPercent" value="5" min="1"
+                                max="20">
+                            <small class="text-muted">Stop trading if daily loss exceeds this percentage</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Max Drawdown (%)</label>
+                            <input type="number" class="form-control" id="maxDrawdown" value="15" min="5" max="50">
+                            <small class="text-muted">Maximum allowed drawdown from peak</small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Loss Limits
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Circuit Breaker -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-bolt"></i> Circuit Breaker</h5>
+                </div>
+                <div class="card-body">
+                    <form id="circuitBreakerForm">
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="circuitBreakerEnabled" checked>
+                                <label class="form-check-label" for="circuitBreakerEnabled">
+                                    Enable Circuit Breaker
+                                </label>
+                            </div>
+                            <small class="text-muted">Automatically pause trading during extreme market
+                                conditions</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Volatility Threshold (%)</label>
+                            <input type="number" class="form-control" id="volatilityThreshold" value="10" min="5"
+                                max="50">
+                            <small class="text-muted">Trigger if price moves more than this % in 5 minutes</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Cooldown Period (minutes)</label>
+                            <input type="number" class="form-control" id="cooldownPeriod" value="15" min="5" max="60">
+                            <small class="text-muted">Wait time before resuming trading after trigger</small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Circuit Breaker Settings
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Load current settings
+    async function loadSettings() {
+        try {
+            const response = await fetch('/api/safety/settings');
+            const data = await response.json();
+
+            if (data.success) {
+                // Kill switch status
+                document.getElementById('globalKillSwitch').checked = data.settings.kill_switch_active || false;
+                document.getElementById('killSwitchStatusText').textContent = data.settings.kill_switch_active ? 'ACTIVE' : 'Inactive';
+
+                // Position limits
+                document.getElementById('maxPositionSize').value = data.settings.max_position_size || 1000;
+                document.getElementById('maxOpenPositions').value = data.settings.max_open_positions || 5;
+                document.getElementById('maxExposure').value = data.settings.max_exposure || 80;
+
+                // Loss limits
+                document.getElementById('maxDailyLoss').value = data.settings.max_daily_loss || 500;
+                document.getElementById('maxDailyLossPercent').value = data.settings.max_daily_loss_percent || 5;
+                document.getElementById('maxDrawdown').value = data.settings.max_drawdown || 15;
+
+                // Circuit breaker
+                document.getElementById('circuitBreakerEnabled').checked = data.settings.circuit_breaker_enabled !== false;
+                document.getElementById('volatilityThreshold').value = data.settings.volatility_threshold || 10;
+                document.getElementById('cooldownPeriod').value = data.settings.cooldown_period || 15;
+            }
+        } catch (error) {
+            console.error('Error loading settings:', error);
+        }
+    }
+
+    // Kill switch toggle
+    document.getElementById('globalKillSwitch').addEventListener('change', (e) => {
+        document.getElementById('killSwitchForm').style.display = e.target.checked ? 'block' : 'none';
+        if (!e.target.checked) {
+            applyKillSwitch(false);
+        }
+    });
+
+    document.getElementById('applyKillSwitch').addEventListener('click', () => {
+        const reason = document.getElementById('killSwitchReason').value;
+        if (!reason) {
+            alert('Please provide a reason for activating the kill switch');
+            return;
+        }
+        applyKillSwitch(true, reason);
+    });
+
+    async function applyKillSwitch(active, reason = '') {
+        try {
+            const response = await fetch('/admin/protection/kill-switch/set', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ active, reason: reason || 'Deactivated via UI' })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById('killSwitchStatusText').textContent = active ? 'ACTIVE' : 'Inactive';
+                alert(`Kill switch ${active ? 'activated' : 'deactivated'} successfully`);
+                document.getElementById('killSwitchReason').value = '';
+                document.getElementById('killSwitchForm').style.display = 'none';
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error applying kill switch:', error);
+            alert('Error applying kill switch');
+        }
+    }
+
+    // Save position limits
+    document.getElementById('positionLimitsForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await saveSettings('position_limits', {
+            max_position_size: parseFloat(document.getElementById('maxPositionSize').value),
+            max_open_positions: parseInt(document.getElementById('maxOpenPositions').value),
+            max_exposure: parseFloat(document.getElementById('maxExposure').value)
+        });
+    });
+
+    // Save loss limits
+    document.getElementById('lossLimitsForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await saveSettings('loss_limits', {
+            max_daily_loss: parseFloat(document.getElementById('maxDailyLoss').value),
+            max_daily_loss_percent: parseFloat(document.getElementById('maxDailyLossPercent').value),
+            max_drawdown: parseFloat(document.getElementById('maxDrawdown').value)
+        });
+    });
+
+    // Save circuit breaker
+    document.getElementById('circuitBreakerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await saveSettings('circuit_breaker', {
+            enabled: document.getElementById('circuitBreakerEnabled').checked,
+            volatility_threshold: parseFloat(document.getElementById('volatilityThreshold').value),
+            cooldown_period: parseInt(document.getElementById('cooldownPeriod').value)
+        });
+    });
+
+    async function saveSettings(category, settings) {
+        try {
+            const response = await fetch('/api/safety/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ category, settings })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert('Settings saved successfully!');
+            } else {
+                alert('Error saving settings: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error saving settings:', error);
+            alert('Error saving settings');
+        }
+    }
+
+    // Load settings on page load
+    loadSettings();
+</script>
+{% endblock %}

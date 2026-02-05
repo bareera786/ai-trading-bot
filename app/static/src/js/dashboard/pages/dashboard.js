@@ -52,7 +52,7 @@ export async function refreshDashboardCards() {
 }
 
 // Helper: try API but return fallback data on error or timeout
-async function safeFetch(url, fallback, timeoutMs = 3000) {
+async function safeFetch(url, fallback, timeoutMs = 15000) {
   try {
     const controller = new AbortController()
     const id = setTimeout(() => controller.abort(), timeoutMs)
@@ -100,10 +100,23 @@ async function updatePerformanceChart() {
       }
     })
   } else {
-    performanceChart.data.labels = labels
-    performanceChart.data.datasets[0].data = values
-    performanceChart.update()
+    // Destroy and recreate to avoid canvas reuse issues (safest fix for "canvas already in use")
+    performanceChart.destroy()
+    performanceChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets: [dataset] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { grid: { color: 'rgba(2,6,23,0.04)' }, ticks: { callback: v => '$' + Number(v).toLocaleString() } }
+        }
+      }
+    })
   }
+
 }
 
 // Sort helper (desc by timestamp)
@@ -114,7 +127,8 @@ function sortTradesByTimestamp(trades) {
 export async function refreshRecentActivity() {
   const user = await safeFetch('/api/current_user', { is_admin: false })
   const mergeParam = user && user.is_admin ? '&merge_db=1' : ''
-  const data = await safeFetch(`/api/trades?page=1&limit=10${mergeParam}`, { trades: MOCK_TRADES })
+  // Use empty list as fallback to avoid confusing users with fake data
+  const data = await safeFetch(`/api/trades?page=1&limit=10${mergeParam}`, { trades: [] })
   if (!data || data.error || !Array.isArray(data.trades)) return
 
   const container = document.getElementById('recent-activity-container') || document.getElementById('recent-activity')
@@ -140,11 +154,11 @@ function renderRecentActivity(trades) {
     const statusClass = trade.status === 'CLOSED' ? 'status-success' : 'status-warning'
     const rowHtml = `
       <tr class="dashboard-row">
-        <td class="px-2 py-2 text-sm">${timeString}</td>
-        <td class="px-2 py-2 text-sm">${escapeHtml(trade.symbol || 'N/A')}</td>
-        <td class="px-2 py-2 text-sm">${escapeHtml(trade.side || 'N/A')}</td>
-        <td class="px-2 py-2 text-sm">$${(trade.entry_price || 0).toFixed(2)}</td>
-        <td class="px-2 py-2 text-sm"><span class="status-indicator ${statusClass}">${escapeHtml(trade.status || 'unknown')}</span></td>
+        <td class="text-muted">${timeString}</td>
+        <td><strong>${escapeHtml(trade.symbol || 'N/A')}</strong></td>
+        <td>${escapeHtml(trade.side || 'N/A')}</td>
+        <td class="text-right font-mono">$${(trade.entry_price || 0).toFixed(2)}</td>
+        <td class="text-center"><span class="status-indicator ${statusClass}">${escapeHtml(trade.status || 'unknown')}</span></td>
       </tr>
     `
     if (tableBody) tableBody.insertAdjacentHTML('beforeend', rowHtml)
@@ -176,7 +190,8 @@ async function loadUserDashboardData() {
   const portfolio = user && user.id ? await safeFetch(`/api/portfolio/user/${user.id}`, MOCK_PORTFOLIO) : MOCK_PORTFOLIO
   if (portfolio) updateUserPortfolioWidgets(portfolio)
 
-  const tradesRes = await safeFetch('/api/trades?limit=10', { trades: MOCK_TRADES })
+  // Use empty list as fallback
+  const tradesRes = await safeFetch('/api/trades?limit=10', { trades: [] })
   if (tradesRes && Array.isArray(tradesRes.trades)) updateUserTradesTable(tradesRes.trades)
 }
 
@@ -206,7 +221,7 @@ function updateUserPortfolioWidgets(portfolio) {
     riskLevelElement.className = `status-indicator ${riskClass}`
   }
 
-  setIfExists('#user-risk-details', `${totalPositions} position${totalPositions === 1 ? '' : 's'} open` )
+  setIfExists('#user-risk-details', `${totalPositions} position${totalPositions === 1 ? '' : 's'} open`)
 }
 
 function removeDuplicateTrades(trades) {
@@ -260,15 +275,15 @@ function updateUserTradesTable(trades) {
 
     if (tbody) {
       const row = document.createElement('tr')
-      row.className = 'hover:bg-slate-50'
+      row.className = 'dashboard-row'
       row.innerHTML = `
-        <td class="px-3 py-2 text-sm">${dateString}</td>
-        <td class="px-3 py-2 text-sm">${escapeHtml(trade.symbol || 'N/A')}</td>
-        <td class="px-3 py-2 text-sm">${escapeHtml(trade.side || 'N/A')}</td>
-        <td class="px-3 py-2 text-sm">${escapeHtml(String(trade.quantity || 0))}</td>
-        <td class="px-3 py-2 text-sm">$${(Number(trade.entry_price || 0)).toFixed(4)}</td>
-        <td class="px-3 py-2 text-sm ${pnlClass}">${isOpen || pnl === null ? '—' : (pnl >= 0 ? '+' : '-') + '$' + Math.abs(pnl).toFixed(2)}</td>
-        <td class="px-3 py-2 text-sm"><span class="status-indicator ${statusClass}">${escapeHtml(trade.status || 'OPEN')}</span></td>
+        <td class="text-muted">${dateString}</td>
+        <td><strong>${escapeHtml(trade.symbol || 'N/A')}</strong></td>
+        <td>${escapeHtml(trade.side || 'N/A')}</td>
+        <td class="text-right font-mono">${escapeHtml(String(trade.quantity || 0))}</td>
+        <td class="text-right font-mono">$${(Number(trade.entry_price || 0)).toFixed(4)}</td>
+        <td class="text-right font-mono ${pnlClass}">${isOpen || pnl === null ? '—' : (pnl >= 0 ? '+' : '-') + '$' + Math.abs(pnl).toFixed(2)}</td>
+        <td class="text-center"><span class="status-indicator ${statusClass}">${escapeHtml(trade.status || 'OPEN')}</span></td>
       `
 
       // details cell with disabled state for incomplete trades (keeps UI consistent)
@@ -328,7 +343,7 @@ function formatCurrency(value) {
 }
 
 // Expose a window-level debug render for manual UI checks (uses mock if API offline)
-window.__dashboard_render_debug = async function() {
+window.__dashboard_render_debug = async function () {
   await refreshDashboardCards()
   await refreshRecentActivity()
 }

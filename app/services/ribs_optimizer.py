@@ -1,7 +1,7 @@
 import ribs
 import numpy as np
 import logging
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 import json
 import pickle
 import yaml
@@ -41,7 +41,7 @@ class TradingRIBSOptimizer:
         # Try to load latest checkpoint
         self.load_latest_checkpoint()
 
-        self.logger.info("RIBS Trading Optimizer initialized")
+        self.logger.info("Evolutionary Trading Optimizer initialized")
 
     def _atomic_tmp_path(self, final_path: str) -> str:
         """Use a unique tmp file to avoid cross-thread/process clobbering."""
@@ -144,7 +144,7 @@ class TradingRIBSOptimizer:
                 "risk_multiplier": 0.5 + _unit(sol[5]) * 1.5,  # 0.5-2.0
                 "take_profit": 1.5 + _unit(sol[6]) * 3.5,  # 1.5-5.0%
                 "stop_loss": 0.5 + _unit(sol[7]) * 2.0,  # 0.5-2.5%
-                "position_size": 0.01 + _unit(sol[8]) * 0.09,  # 1-10%
+                "position_size": 0.01 + _unit(sol[8]) * 0.04,  # CLAMPED: 1-5% (Safety fix)
                 "max_positions": int(1 + _unit(sol[9]) * 4),  # 1-5
             }
             # Sanitize / clamp parameter ranges to avoid pathological values
@@ -206,29 +206,54 @@ class TradingRIBSOptimizer:
             }
 
     def evaluate_solution(
-        self, solution: np.ndarray, market_data: Dict
+        self, solution: np.ndarray, market_data: Dict, regime: str = "neutral"
     ) -> Tuple[float, List]:
-        """Evaluate a trading strategy"""
+        """Evaluate a trading strategy with robustness checks and regime awareness"""
         try:
-            # Defensive: coerce solution to numpy array (log if it's an unexpected type)
-            try:
-                sol_arr = np.asarray(solution)
-            except Exception:
-                # If conversion fails, keep original repr for logging and proceed
-                sol_arr = solution
-
             # Decode parameters
-            params = self.decode_solution(sol_arr)
+            params = self.decode_solution(solution)
 
-            # Run backtest with these parameters
-            results = self.run_backtest(params, market_data)
+            # --- OVERFITTING PREVENTION: SEGMENTED VALIDATION ---
+            raw_dt = market_data.get("ohlcv", pd.DataFrame())
+            if raw_dt.empty:
+                return -100.0, [0.0, 100.0, 0.0]
 
-            # Extract objective (total return) and behavior characteristics
-            objective = results["total_return"]
+            # Split data into 2 segments (In-Sample / Out-of-Sample crossover)
+            n = len(raw_dt)
+            mid = n // 2
+            seg1 = raw_dt.iloc[:mid]
+            seg2 = raw_dt.iloc[mid:]
+
+            res1 = self.run_backtest(params, {"ohlcv": seg1})
+            res2 = self.run_backtest(params, {"ohlcv": seg2})
+
+            # Calculate Robustness Score (consistency between segments)
+            ret_min = min(res1["total_return"], res2["total_return"])
+            ret_max = max(res1["total_return"], res2["total_return"])
+            # Penalty if performance widely differs or if one segment is very negative
+            consistency = 1.0 - (abs(res1["win_rate"] - res2["win_rate"]))
+            
+            # Final Objective Calculation
+            # We weight the lower performing segment higher to ensure robustness
+            base_objective = (res1["total_return"] + res2["total_return"]) / 2
+            robust_objective = ret_min * 0.7 + base_objective * 0.3
+            
+            # --- REGIME AWARENESS ---
+            # Penalize strategies that don't match market regime (e.g. high-risk in volatile)
+            regime_penalty = 1.0
+            if regime == "volatile":
+                if params["risk_multiplier"] > 1.2 or params["stop_loss"] > 1.5:
+                    regime_penalty = 0.8 # 20% penalty for aggressive settings in volatile markets
+            elif regime == "trending_bear":
+                 if params["risk_multiplier"] > 1.5:
+                      regime_penalty = 0.9
+
+            objective = robust_objective * regime_penalty * consistency
+
             behavior = [
-                results["sharpe_ratio"],
-                results["max_drawdown"],
-                results["win_rate"],
+                (res1["sharpe_ratio"] + res2["sharpe_ratio"]) / 2,
+                max(res1["max_drawdown"], res2["max_drawdown"]),
+                (res1["win_rate"] + res2["win_rate"]) / 2,
             ]
 
             return objective, behavior
@@ -254,15 +279,36 @@ class TradingRIBSOptimizer:
         """Run a simplified backtest for strategy evaluation"""
         try:
             # This is a simplified backtest - in production you'd use your full backtesting engine
-            df = market_data.get("ohlcv", pd.DataFrame())
-
-            if df.empty:
+            raw_df = market_data.get("ohlcv", pd.DataFrame())
+            
+            if not isinstance(raw_df, pd.DataFrame) or raw_df.empty:
                 return {
                     "total_return": -50.0,
                     "sharpe_ratio": 0.0,
                     "max_drawdown": 50.0,
                     "win_rate": 0.0,
                 }
+                
+            # Create a copy to avoid SettingWithCopy warnings and modify safely
+            df = raw_df.copy()
+            
+            # Flatten MultiIndex columns if present
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.map(lambda x: '_'.join(str(i) for i in x) if isinstance(x, tuple) else str(x))
+                
+            # Ensure 'close' column exists (handle case sensitivity)
+            if 'close' not in df.columns:
+                # Try to find a column ending in 'close'
+                close_col = next((c for c in df.columns if str(c).lower().endswith('close')), None)
+                if close_col:
+                    df['close'] = df[close_col]
+                else:
+                    return {
+                        "total_return": -50.0,
+                        "sharpe_ratio": 0.0,
+                        "max_drawdown": 50.0,
+                        "win_rate": 0.0,
+                    }
 
             # Simple RSI-based strategy for demonstration
             rsi_period = params.get("rsi_period", 14)
@@ -367,8 +413,8 @@ class TradingRIBSOptimizer:
             self.logger.exception(f"RSI calculation failed unexpectedly: {e}")
             return pd.Series([50] * len(prices), index=prices.index)
 
-    def run_optimization_cycle(self, market_data: Dict, iterations: int = 100):
-        """Run one optimization cycle
+    def run_optimization_cycle(self, market_data: Dict, iterations: int = 100, regime: str = "neutral"):
+        """Run one optimization cycle with regime context
 
         Returns a list of elite strategies as tuples: (solution, objective, behavior).
         """
@@ -405,78 +451,88 @@ class TradingRIBSOptimizer:
             for i in range(iterations):
                 # Ask for new solutions
                 solutions = self.scheduler.ask()
-
-                # Evaluate solutions in parallel
-                objectives = []
-                behaviors = []
-
-                with ThreadPoolExecutor(max_workers=min(8, len(solutions))) as executor:
-                    future_to_sol = {
-                        executor.submit(self.evaluate_solution, sol, market_data): sol
-                        for sol in solutions
-                    }
-
-                    for future in as_completed(future_to_sol):
-                        sol = future_to_sol.get(future)
-                        try:
-                            obj, beh = future.result()
-                        except Exception as e:
-                            # Log exception with full traceback and offending solution
-                            try:
-                                self.logger.exception(
-                                    "Exception during solution evaluation",
-                                    extra={
-                                        "solution_repr": repr(sol),
-                                        "solution_type": type(sol).__name__,
-                                    },
-                                )
-                            except Exception:
-                                self.logger.error(
-                                    f"Exception evaluating solution: {e} (failed to log solution repr)"
-                                )
-
-                            # Use penalized evaluation result for failed futures and continue
-                            obj, beh = -100.0, [0.0, 100.0, 0.0]
-
-                        objectives.append(obj)
-                        behaviors.append(beh)
-
-                # Tell results back to scheduler
-                # Sanitize objectives and behaviors (defensive) before telling scheduler
+                
                 try:
-                    sanitized_objectives = []
-                    sanitized_behaviors = []
-                    for o, b in zip(objectives, behaviors):
-                        # coerce objective to float
-                        try:
-                            o_safe = float(o)
-                        except Exception:
-                            self.logger.warning(
-                                "Non-numeric objective encountered during sanitize; using penalty",
-                                extra={"objective_repr": repr(o)},
-                            )
-                            o_safe = -100.0
+                    # Evaluate solutions in parallel
+                    objectives = []
+                    behaviors = []
 
-                        # coerce behavior to list of floats
-                        try:
-                            b_iter = list(b)
-                            b_safe = [float(x) for x in b_iter]
-                        except Exception:
-                            self.logger.warning(
-                                "Non-iterable or invalid behavior encountered during sanitize; using default",
-                                extra={"behavior_repr": repr(b)},
-                            )
-                            b_safe = [0.0, 100.0, 0.0]
+                    with ThreadPoolExecutor(max_workers=min(8, len(solutions))) as executor:
+                        future_to_sol = {
+                            executor.submit(self.evaluate_solution, sol, market_data, regime): sol
+                            for sol in solutions
+                        }
 
-                        sanitized_objectives.append(o_safe)
-                        sanitized_behaviors.append(b_safe)
+                        for future in as_completed(future_to_sol):
+                            sol = future_to_sol.get(future)
+                            try:
+                                obj, beh = future.result()
+                            except Exception as e:
+                                # Log exception with full traceback and offending solution
+                                try:
+                                    self.logger.exception(
+                                        "Exception during solution evaluation",
+                                        extra={
+                                            "solution_repr": repr(sol),
+                                            "solution_type": type(sol).__name__,
+                                        },
+                                    )
+                                except Exception:
+                                    self.logger.error(
+                                        f"Exception evaluating solution: {e} (failed to log solution repr)"
+                                    )
 
-                    self.scheduler.tell(sanitized_objectives, sanitized_behaviors)
+                                # Use penalized evaluation result for failed futures and continue
+                                obj, beh = -100.0, [0.0, 100.0, 0.0]
+
+                            objectives.append(obj)
+                            behaviors.append(beh)
+
+                    # Tell results back to scheduler
+                    # Sanitize objectives and behaviors (defensive) before telling scheduler
+                    try:
+                        sanitized_objectives = []
+                        sanitized_behaviors = []
+                        for o, b in zip(objectives, behaviors):
+                            # coerce objective to float
+                            try:
+                                o_safe = float(o)
+                            except Exception:
+                                self.logger.warning(
+                                    "Non-numeric objective encountered during sanitize; using penalty",
+                                    extra={"objective_repr": repr(o)},
+                                )
+                                o_safe = -100.0
+
+                            # coerce behavior to list of floats
+                            try:
+                                b_iter = list(b)
+                                b_safe = [float(x) for x in b_iter]
+                            except Exception:
+                                self.logger.warning(
+                                    "Non-iterable or invalid behavior encountered during sanitize; using default",
+                                    extra={"behavior_repr": repr(b)},
+                                )
+                                b_safe = [0.0, 100.0, 0.0]
+
+                            sanitized_objectives.append(o_safe)
+                            sanitized_behaviors.append(b_safe)
+
+                        self.scheduler.tell(sanitized_objectives, sanitized_behaviors)
+                    except Exception as e:
+                        self.logger.exception(
+                            "Failed to tell scheduler after sanitizing results",
+                            extra={"error": str(e)},
+                        )
+                        # CRITICAL: If tell() fails, we should probably stop the cycle
+                        # to avoid "ask cannot be called immediately after ask" in next iteration.
+                        break
                 except Exception as e:
-                    self.logger.exception(
-                        "Failed to tell scheduler after sanitizing results",
-                        extra={"error": str(e)},
-                    )
+                    self.logger.exception(f"Unexpected error in iteration {i}: {e}")
+                    # We MUST tell the scheduler SOMETHING or it will lock up.
+                    # If we can't even tell it, we must abort the loop.
+                    break
+
                 # Progress reporting: configurable interval
                 try:
                     progress_interval = int(self.config.get("progress_interval", 10))
@@ -492,10 +548,11 @@ class TradingRIBSOptimizer:
                     self.log_progress(i, total=iterations)
 
                 # Update best solution
-                max_obj_idx = np.argmax(objectives)
-                if objectives[max_obj_idx] > self.best_objective:
-                    self.best_objective = objectives[max_obj_idx]
-                    self.best_solution = solutions[max_obj_idx].copy()
+                if objectives:
+                    max_obj_idx = np.argmax(objectives)
+                    if objectives[max_obj_idx] > self.best_objective:
+                        self.best_objective = objectives[max_obj_idx]
+                        self.best_solution = solutions[max_obj_idx].copy()
 
                 # Save checkpoint periodically
                 if i % 50 == 0:
@@ -563,12 +620,11 @@ class TradingRIBSOptimizer:
                 except Exception:
                     # Best-effort only; do not fail the completion write if elites can't be sampled
                     pass
-                # ensure progress reflects completion
-                try:
-                    status["current_iteration"] = int(iterations)
-                    status["progress_percent"] = 100
-                except Exception:
-                    pass
+                # Include latest_checkpoint metadata to avoid false-positive monitoring alerts
+                status["latest_checkpoint"] = self._get_latest_checkpoint_metadata()
+                status["current_iteration"] = int(iterations)
+                status["progress_percent"] = 100
+
                 with open(status_tmp, "w") as sf:
                     json.dump(status, sf)
                     try:
@@ -660,21 +716,7 @@ class TradingRIBSOptimizer:
                     )
 
                 # Also include latest_checkpoint metadata if available
-                try:
-                    files = [
-                        os.path.join(self.checkpoints_dir, f)
-                        for f in os.listdir(self.checkpoints_dir)
-                        if f.endswith(".pkl")
-                    ]
-                    if files:
-                        latest_file = max(files, key=os.path.getmtime)
-                        status["latest_checkpoint"] = {
-                            "path": latest_file,
-                            "mtime": os.path.getmtime(latest_file),
-                            "size": os.path.getsize(latest_file),
-                        }
-                except Exception:
-                    pass
+                status["latest_checkpoint"] = self._get_latest_checkpoint_metadata()
 
                 with open(status_tmp, "w") as sf:
                     json.dump(status, sf)
@@ -688,6 +730,25 @@ class TradingRIBSOptimizer:
                 self.logger.exception("Failed to update ribs_status progress file")
         except Exception as e:
             self.logger.error(f"Failed to log progress: {e}")
+
+    def _get_latest_checkpoint_metadata(self) -> Optional[dict]:
+        """Helper to get metadata for the most recent .pkl checkpoint"""
+        try:
+            files = [
+                os.path.join(self.checkpoints_dir, f)
+                for f in os.listdir(self.checkpoints_dir)
+                if f.endswith(".pkl")
+            ]
+            if not files:
+                return None
+            latest_file = max(files, key=os.path.getmtime)
+            return {
+                "path": latest_file,
+                "mtime": os.path.getmtime(latest_file),
+                "size": os.path.getsize(latest_file),
+            }
+        except Exception:
+            return None
 
     def save_checkpoint(self):
         """Save optimization checkpoint"""

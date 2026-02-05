@@ -16,7 +16,12 @@ try:
     BINANCE_AVAILABLE = True
 except ImportError:
     BINANCE_AVAILABLE = False
+    BINANCE_AVAILABLE = True
+except ImportError:
+    BINANCE_AVAILABLE = False
     BinanceClient = None
+
+import ccxt.async_support as ccxt_async
 
 logger = logging.getLogger(__name__)
 
@@ -675,9 +680,206 @@ class PaperTradingAdapter(ExchangeAdapter):
                 return order
         return None
 
+class CCXTExchangeAdapter(ExchangeAdapter):
+    """Generic CCXT exchange adapter."""
+
+    def __init__(self, credentials: ExchangeCredentials, exchange_id: str):
+        super().__init__(credentials)
+        self.exchange_id = exchange_id.lower()
+        self.exchange = None
+
+    async def connect(self) -> bool:
+        """Connect to exchange via CCXT."""
+        try:
+            exchange_class = getattr(ccxt_async, self.exchange_id)
+            config = {
+                'apiKey': self.credentials.api_key,
+                'secret': self.credentials.api_secret,
+                'enableRateLimit': True,
+            }
+            if self.credentials.testnet:
+                config['sandbox'] = True
+                
+            self.exchange = exchange_class(config)
+            if self.credentials.testnet and self.exchange_id == 'binance':
+                self.exchange.set_sandbox_mode(True)
+
+            # Load markets to verify connection
+            await self.exchange.load_markets()
+            self.is_connected = True
+            logger.info(f"Connected to {self.exchange_id} (CCXT)")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to connect to {self.exchange_id}: {e}")
+            self.is_connected = False
+            return False
+
+    async def disconnect(self):
+        """Disconnect from exchange."""
+        if self.exchange:
+            await self.exchange.close()
+        self.is_connected = False
+        logger.info(f"Disconnected from {self.exchange_id}")
+
+    async def get_balance(self, asset: Optional[str] = None) -> List[AccountBalance]:
+        """Get account balance."""
+        if not self.exchange:
+            return []
+        try:
+            balance = await self.exchange.fetch_balance()
+            balances = []
+            
+            # CCXT standardized balance structure
+            items = balance['total'].items()
+            for currency, total in items:
+                if total > 0:
+                    free = balance[currency]['free'] or 0.0
+                    locked = balance[currency]['used'] or 0.0
+                    balances.append(AccountBalance(
+                        asset=currency,
+                        free=float(free),
+                        locked=float(locked),
+                        total=float(total)
+                    ))
+            
+            if asset:
+                return [b for b in balances if b.asset == asset]
+            return balances
+        except Exception as e:
+            logger.error(f"Error getting balance from {self.exchange_id}: {e}")
+            return []
+
+    async def get_ticker_price(self, symbol: str) -> Optional[float]:
+        """Get current price."""
+        if not self.exchange:
+            return None
+        try:
+            ticker = await self.exchange.fetch_ticker(symbol)
+            return float(ticker['last'])
+        except Exception as e:
+            logger.error(f"Error getting ticker for {symbol}: {e}")
+            return None
+
+    async def get_orderbook(self, symbol: str, limit: int = 100) -> Optional[OrderBook]:
+        """Get order book."""
+        if not self.exchange:
+            return None
+        try:
+            orderbook = await self.exchange.fetch_order_book(symbol, limit)
+            bids = [(float(price), float(amount)) for price, amount in orderbook['bids']]
+            asks = [(float(price), float(amount)) for price, amount in orderbook['asks']]
+            
+            return OrderBook(
+                symbol=symbol,
+                bids=bids,
+                asks=asks,
+                timestamp=datetime.utcnow()
+            )
+        except Exception as e:
+            logger.error(f"Error getting orderbook for {symbol}: {e}")
+            return None
+
+    async def get_historical_klines(self, symbol: str, interval: str, limit: int = 100) -> List[KlineData]:
+        """Get historical klines."""
+        if not self.exchange:
+            return []
+        try:
+            ohlcv = await self.exchange.fetch_ohlcv(symbol, timeframe=interval, limit=limit)
+            result = []
+            for item in ohlcv:
+                result.append(KlineData(
+                    timestamp=datetime.fromtimestamp(item[0] / 1000),
+                    open=float(item[1]),
+                    high=float(item[2]),
+                    low=float(item[3]),
+                    close=float(item[4]),
+                    volume=float(item[5])
+                ))
+            return result
+        except Exception as e:
+            logger.error(f"Error getting klines for {symbol}: {e}")
+            return []
+
+    async def place_order(self, symbol: str, side: str, order_type: str, quantity: float, price: Optional[float] = None) -> OrderStatus:
+        """Place order."""
+        if not self.exchange:
+             return OrderStatus("failed", symbol, side, order_type, quantity, price or 0, "failed", 0, 0, datetime.utcnow())
+
+        try:
+            params = {}
+            if order_type.upper() == 'LIMIT' and price:
+                 # CCXT create_order sig: symbol, type, side, amount, price, params
+                 response = await self.exchange.create_order(symbol, order_type.lower(), side.lower(), quantity, price, params)
+            else:
+                 response = await self.exchange.create_order(symbol, order_type.lower(), side.lower(), quantity, None, params)
+                 
+            return OrderStatus(
+                order_id=str(response['id']),
+                symbol=symbol,
+                side=side,
+                type=order_type,
+                quantity=float(response['amount']),
+                price=float(response.get('price') or response.get('average') or 0),
+                status=response['status'],
+                filled=float(response['filled']),
+                remaining=float(response['remaining']),
+                timestamp=datetime.utcnow()
+            )
+        except Exception as e:
+            logger.error(f"Error placing order on {self.exchange_id}: {e}")
+            return OrderStatus("failed", symbol, side, order_type, quantity, price or 0, "failed", 0, 0, datetime.utcnow())
+
+    async def cancel_order(self, symbol: str, order_id: str) -> bool:
+        if not self.exchange: return False
+        try:
+            await self.exchange.cancel_order(order_id, symbol)
+            return True
+        except Exception as e:
+            logger.error(f"Error cancelling order {order_id}: {e}")
+            return False
+
+    async def get_order_status(self, symbol: str, order_id: str) -> Optional[OrderStatus]:
+        if not self.exchange: return None
+        try:
+            order = await self.exchange.fetch_order(order_id, symbol)
+            return OrderStatus(
+                order_id=str(order['id']),
+                symbol=symbol,
+                side=order['side'],
+                type=order['type'],
+                quantity=float(order['amount']),
+                price=float(order.get('price') or order.get('average') or 0),
+                status=order['status'],
+                filled=float(order['filled']),
+                remaining=float(order['remaining']),
+                timestamp=datetime.utcnow()
+            )
+        except Exception as e:
+            logger.error(f"Error fetching order {order_id}: {e}")
+            return None
+
     async def get_open_orders(self, symbol: Optional[str] = None) -> List[OrderStatus]:
-        """Get open paper orders (paper orders are immediately filled)."""
-        return []  # No open orders in paper trading
+        if not self.exchange: return []
+        try:
+            orders = await self.exchange.fetch_open_orders(symbol)
+            result = []
+            for order in orders:
+                result.append(OrderStatus(
+                    order_id=str(order['id']),
+                    symbol=order['symbol'],
+                    side=order['side'],
+                    type=order['type'],
+                    quantity=float(order['amount']),
+                    price=float(order.get('price') or order.get('average') or 0),
+                    status=order['status'],
+                    filled=float(order['filled']),
+                    remaining=float(order['remaining']),
+                    timestamp=datetime.utcnow()
+                ))
+            return result
+        except Exception as e:
+            logger.error(f"Error fetching open orders: {e}")
+            return []
 
 
 class ExchangeFactory:
@@ -692,6 +894,8 @@ class ExchangeFactory:
             return BinanceAdapter(credentials)
         elif exchange_type == ExchangeType.PAPER:
             return PaperTradingAdapter(credentials)
+        elif exchange_type in (ExchangeType.KRAKEN, ExchangeType.COINBASE):
+            return CCXTExchangeAdapter(credentials, exchange_type.value)
         else:
             raise ValueError(f"Exchange {exchange_type.value} not supported yet")
 

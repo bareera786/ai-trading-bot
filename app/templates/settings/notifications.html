@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}Notification Settings - AI Trading Bot{% endblock %}
+{% block header_title %}Notification Settings{% endblock %}
+{% block header_subtitle %}Configure how you receive trading alerts{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+    <!-- Notification Channels -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <span class="card-icon">🔔</span>
+            <h3 class="card-title">Notification Channels</h3>
+        </div>
+
+        <div style="display: grid; gap: 1.5rem;">
+            <!-- Telegram -->
+            <div class="notification-channel">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span style="font-size: 2rem;">📱</span>
+                        <div>
+                            <h4 style="margin: 0; color: var(--text-primary);">Telegram</h4>
+                            <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">Instant
+                                notifications on your phone</p>
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="telegram-enabled">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div id="telegram-config"
+                    style="display: none; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 0.5rem;">
+                    <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        To enable Telegram notifications:
+                    </p>
+                    <ol
+                        style="font-size: 0.875rem; color: var(--text-secondary); margin-left: 1.5rem; margin-bottom: 1rem;">
+                        <li>Open Telegram and search for <code>@YourBotName</code></li>
+                        <li>Click "Start" to begin conversation</li>
+                        <li>Send <code>/register</code> to get your Chat ID</li>
+                        <li>Enter your Chat ID below</li>
+                    </ol>
+                    <div class="input-row">
+                        <input type="text" id="telegram-chat-id" placeholder="Enter your Telegram Chat ID"
+                            style="flex: 1;">
+                        <button class="btn btn-secondary" onclick="testNotification('telegram')">Test</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Discord -->
+            <div class="notification-channel">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span style="font-size: 2rem;">💬</span>
+                        <div>
+                            <h4 style="margin: 0; color: var(--text-primary);">Discord</h4>
+                            <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">Notifications in
+                                your Discord server</p>
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="discord-enabled">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div id="discord-config"
+                    style="display: none; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 0.5rem;">
+                    <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                        Discord webhook is configured by admin.
+                    </p>
+                    <button class="btn btn-secondary" onclick="testNotification('discord')">Test Discord</button>
+                </div>
+            </div>
+
+            <!-- Email -->
+            <div class="notification-channel">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span style="font-size: 2rem;">📧</span>
+                        <div>
+                            <h4 style="margin: 0; color: var(--text-primary);">Email</h4>
+                            <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">Detailed trade
+                                reports via email</p>
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="email-enabled" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div id="email-config"
+                    style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 0.5rem;">
+                    <div class="input-row">
+                        <input type="email" id="email-address" placeholder="your@email.com" style="flex: 1;">
+                        <button class="btn btn-secondary" onclick="testNotification('email')">Test</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Types -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <span class="card-icon">⚙️</span>
+            <h3 class="card-title">Notification Types</h3>
+        </div>
+
+        <div style="display: grid; gap: 1rem;">
+            <label class="checkbox-label">
+                <input type="checkbox" id="notify-on-trade" checked>
+                <span>Trade Executions</span>
+                <p style="font-size: 0.875rem; color: var(--text-secondary); margin: 0.25rem 0 0 1.75rem;">Get notified
+                    when trades are executed</p>
+            </label>
+
+            <label class="checkbox-label">
+                <input type="checkbox" id="notify-on-profit" checked>
+                <span>Profitable Trades</span>
+                <p style="font-size: 0.875rem; color: var(--text-secondary); margin: 0.25rem 0 0 1.75rem;">Celebrate
+                    your wins</p>
+            </label>
+
+            <label class="checkbox-label">
+                <input type="checkbox" id="notify-on-loss" checked>
+                <span>Loss Trades</span>
+                <p style="font-size: 0.875rem; color: var(--text-secondary); margin: 0.25rem 0 0 1.75rem;">Stay informed
+                    about losses</p>
+            </label>
+
+            <label class="checkbox-label">
+                <input type="checkbox" id="notify-on-error" checked>
+                <span>Errors & Warnings</span>
+                <p style="font-size: 0.875rem; color: var(--text-secondary); margin: 0.25rem 0 0 1.75rem;">Critical
+                    system alerts</p>
+            </label>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+        <button class="btn btn-secondary" onclick="loadPreferences()">Reset</button>
+        <button class="btn btn-primary" onclick="savePreferences()">Save Settings</button>
+    </div>
+</section>
+
+<style>
+    .notification-channel {
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 26px;
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.1);
+        transition: 0.3s;
+        border-radius: 26px;
+    }
+
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+    }
+
+    input:checked+.toggle-slider {
+        background-color: var(--primary);
+    }
+
+    input:checked+.toggle-slider:before {
+        transform: translateX(24px);
+    }
+
+    .checkbox-label {
+        display: flex;
+        flex-direction: column;
+        cursor: pointer;
+        padding: 0.75rem;
+        border-radius: var(--radius-md);
+        transition: background 0.2s;
+    }
+
+    .checkbox-label:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .checkbox-label input[type="checkbox"] {
+        margin-right: 0.75rem;
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .checkbox-label span {
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-primary);
+    }
+
+    .input-row {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .input-row input {
+        flex: 1;
+        padding: 0.75rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text-primary);
+        font-size: 0.875rem;
+    }
+
+    code {
+        background: rgba(0, 212, 170, 0.1);
+        padding: 0.125rem 0.375rem;
+        border-radius: 0.25rem;
+        color: var(--primary);
+        font-family: monospace;
+    }
+</style>
+
+<script>
+    // Load preferences on page load
+    document.addEventListener('DOMContentLoaded', loadPreferences);
+
+    // Toggle config sections
+    document.getElementById('telegram-enabled').addEventListener('change', function () {
+        document.getElementById('telegram-config').style.display = this.checked ? 'block' : 'none';
+    });
+
+    document.getElementById('discord-enabled').addEventListener('change', function () {
+        document.getElementById('discord-config').style.display = this.checked ? 'block' : 'none';
+    });
+
+    async function loadPreferences() {
+        try {
+            const response = await fetch('/api/notifications/preferences');
+            const data = await response.json();
+
+            if (data.success) {
+                const prefs = data.preferences;
+
+                // Set channel toggles
+                document.getElementById('telegram-enabled').checked = prefs.telegram_enabled;
+                document.getElementById('discord-enabled').checked = prefs.discord_enabled;
+                document.getElementById('email-enabled').checked = prefs.email_enabled;
+
+                // Set values
+                document.getElementById('telegram-chat-id').value = prefs.telegram_chat_id || '';
+                document.getElementById('email-address').value = prefs.email || '';
+
+                // Set notification types
+                document.getElementById('notify-on-trade').checked = prefs.notify_on_trade;
+                document.getElementById('notify-on-profit').checked = prefs.notify_on_profit;
+                document.getElementById('notify-on-loss').checked = prefs.notify_on_loss;
+                document.getElementById('notify-on-error').checked = prefs.notify_on_error;
+
+                // Show/hide config sections
+                document.getElementById('telegram-config').style.display = prefs.telegram_enabled ? 'block' : 'none';
+                document.getElementById('discord-config').style.display = prefs.discord_enabled ? 'block' : 'none';
+
+                showToast('Preferences loaded', 'success');
+            }
+        } catch (error) {
+            console.error('Error loading preferences:', error);
+            showToast('Failed to load preferences', 'error');
+        }
+    }
+
+    async function savePreferences() {
+        try {
+            const preferences = {
+                telegram_enabled: document.getElementById('telegram-enabled').checked,
+                telegram_chat_id: document.getElementById('telegram-chat-id').value,
+                discord_enabled: document.getElementById('discord-enabled').checked,
+                email_enabled: document.getElementById('email-enabled').checked,
+                email: document.getElementById('email-address').value,
+                notify_on_trade: document.getElementById('notify-on-trade').checked,
+                notify_on_profit: document.getElementById('notify-on-profit').checked,
+                notify_on_loss: document.getElementById('notify-on-loss').checked,
+                notify_on_error: document.getElementById('notify-on-error').checked
+            };
+
+            const response = await fetch('/api/notifications/preferences', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(preferences)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showToast('Settings saved successfully!', 'success');
+            } else {
+                showToast('Failed to save settings', 'error');
+            }
+        } catch (error) {
+            console.error('Error saving preferences:', error);
+            showToast('Failed to save settings', 'error');
+        }
+    }
+
+    async function testNotification(channel) {
+        try {
+            const chatId = document.getElementById('telegram-chat-id').value;
+
+            const response = await fetch(`/api/notifications/test/${channel}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    telegram_chat_id: chatId
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showToast(`Test notification sent to ${channel}!`, 'success');
+            } else {
+                showToast(data.error || 'Failed to send test notification', 'error');
+            }
+        } catch (error) {
+            console.error('Error sending test notification:', error);
+            showToast('Failed to send test notification', 'error');
+        }
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `
+        <span style="font-size: 1.25rem; margin-right: 0.5rem;">
+            ${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}
+        </span>
+        <span>${message}</span>
+    `;
+
+        const container = document.getElementById('toast-container');
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+</script>
+{% endblock %}

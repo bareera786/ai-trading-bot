@@ -32,18 +32,22 @@ def _get_bot_context() -> dict[str, Any]:
                 InMemoryCredentialsStore,
                 SimpleLogManager,
                 FallbackTrader,
+                FallbackMarketDataService,
                 default_apply_credentials,
                 default_get_status,
             )
 
+            ultimate_trader = FallbackTrader()
+            optimized_trader = FallbackTrader()
             fallback = {
                 "dashboard_data": {"system_status": {}, "optimized_system_status": {}},
-                "ultimate_trader": FallbackTrader(),
-                "optimized_trader": FallbackTrader(),
+                "ultimate_trader": ultimate_trader,
+                "optimized_trader": optimized_trader,
                 "binance_credentials_store": InMemoryCredentialsStore(),
                 "binance_log_manager": SimpleLogManager(),
                 "apply_binance_credentials": default_apply_credentials,
                 "get_binance_credential_status": default_get_status,
+                "market_data_service": FallbackMarketDataService(ultimate_trader, optimized_trader),
             }
             current_app.extensions["ai_bot_context"] = fallback
         return fallback
@@ -62,6 +66,29 @@ def _get_futures_manual_service(ctx: dict[str, Any]) -> Optional[FuturesManualSe
     if isinstance(service, FuturesManualService):
         return service
     return None
+
+
+def _apply_user_isolation(ctx: dict[str, Any], manual_state: dict[str, Any]) -> None:
+    """Helper: Override global manual state with per-user trader status."""
+    try:
+        from flask_login import current_user
+        if not getattr(current_user, "is_authenticated", False):
+            return
+
+        market_data_service = ctx.get("market_data_service")
+        if market_data_service and hasattr(market_data_service, "_get_or_create_user_traders"):
+            # Use cached trader if possible, effectively lightweight
+            # But _get_or_create is safe/idempotent
+            ut, _ = market_data_service._get_or_create_user_traders(current_user.id)
+            if ut:
+                user_enabled = getattr(ut, "futures_trading_enabled", False)
+                # OVERRIDE Global Flag
+                manual_state["auto_trade_enabled"] = user_enabled
+                # Also implied service status
+                if user_enabled: 
+                    manual_state["service_started"] = True
+    except Exception:
+        pass
 
 
 def _coerce_bool_with_ctx(
@@ -259,6 +286,16 @@ def api_binance_credentials():
         dashboard_data["binance_credentials"] = status
         dashboard_data["binance_logs"] = status.get("logs", [])
 
+        # Publish Credentials Update Command to Redis (Web -> Bot)
+        try:
+            import redis
+            import json
+            redis_url = current_app.config.get("REDIS_URL", "redis://redis:6379/0")
+            r = redis.from_url(redis_url)
+            r.set("credentials:updated", "true")
+        except Exception as e:
+            pass
+
         ultimate_status = status.get("ultimate_status") or (
             ultimate_trader.get_real_trading_status() if ultimate_trader else {}
         )
@@ -309,6 +346,21 @@ def api_binance_credentials():
     if account_type:
         account_type = credentials_store._normalize_account_type(account_type)
         credentials_store.clear_credentials(account_type, user_id=current_user.id)
+        
+        # SAAS-SAFE: Force disconnect active trader instances immediately
+        if account_type == "spot":
+            if ultimate_trader and getattr(ultimate_trader, "real_trader", None):
+                 if hasattr(ultimate_trader.real_trader, "disconnect"):
+                     ultimate_trader.real_trader.disconnect()
+            if optimized_trader and getattr(optimized_trader, "real_trader", None):
+                 if hasattr(optimized_trader.real_trader, "disconnect"):
+                     optimized_trader.real_trader.disconnect()
+
+        if account_type == "futures":
+             if ultimate_trader and getattr(ultimate_trader, "futures_trader", None):
+                  if hasattr(ultimate_trader.futures_trader, "disconnect"):
+                      ultimate_trader.futures_trader.disconnect()
+        
         if binance_log_manager:
             binance_log_manager.add(
                 "CREDENTIAL_CLEARED",
@@ -319,6 +371,16 @@ def api_binance_credentials():
             )
     else:
         credentials_store.clear_credentials(user_id=current_user.id)
+        # SAAS-SAFE: Disconnect ALL
+        if ultimate_trader:
+            if getattr(ultimate_trader, "real_trader", None) and hasattr(ultimate_trader.real_trader, "disconnect"):
+                ultimate_trader.real_trader.disconnect()
+            if getattr(ultimate_trader, "futures_trader", None) and hasattr(ultimate_trader.futures_trader, "disconnect"):
+                ultimate_trader.futures_trader.disconnect()
+        
+        if optimized_trader and getattr(optimized_trader, "real_trader", None) and hasattr(optimized_trader.real_trader, "disconnect"):
+             optimized_trader.real_trader.disconnect()
+
         if binance_log_manager:
             binance_log_manager.add(
                 "CREDENTIAL_CLEARED",
@@ -344,6 +406,15 @@ def api_binance_credentials():
     dashboard_data["optimized_real_trading_status"] = (
         status.get("optimized_status") or {}
     )
+
+    # Publish Credentials Update Command to Redis (Web -> Bot)
+    try:
+        import redis
+        redis_url = current_app.config.get("REDIS_URL", "redis://redis:6379/0")
+        r = redis.from_url(redis_url)
+        r.set("credentials:updated", "true")
+    except Exception as e:
+        pass
     dashboard_data["system_status"]["paper_trading"] = getattr(
         ultimate_trader, "paper_trading", True
     )
@@ -392,6 +463,103 @@ def api_binance_credentials_test():
         api_key, api_secret, testnet=testnet_flag
     )
     return jsonify(result)
+
+
+@trading_bp.route("/api/trading/paper/reset", methods=["POST"])
+@login_required
+def api_reset_paper_balance():
+    """Reset paper trading balance for simulations."""
+    ctx = _get_bot_context()
+    market_data_service = ctx.get("market_data_service")
+    
+    # CRITICAL: Multi-user isolation - NO global fallback allowed
+    if not getattr(current_user, "is_authenticated", False):
+        return jsonify({"error": "Authentication required"}), 401
+    
+    if market_data_service is None:
+        current_app.logger.error(f"[ISOLATION VIOLATION] market_data_service is None for user {current_user.id}")
+        return jsonify({
+            "error": "Trading service not initialized. Please contact support.",
+            "isolation_error": True
+        }), 503
+    
+    if not hasattr(market_data_service, "_get_or_create_user_traders"):
+        current_app.logger.error(f"[ISOLATION VIOLATION] market_data_service missing per-user method for user {current_user.id}")
+        return jsonify({
+            "error": "Multi-user trading not properly configured. Please contact support.",
+            "isolation_error": True
+        }), 503
+    
+    try:
+        ultimate_trader, optimized_trader = market_data_service._get_or_create_user_traders(
+            current_user.id
+        )
+    except Exception as e:
+        current_app.logger.error(f"[ISOLATION VIOLATION] Failed to get per-user traders for user {current_user.id}: {e}")
+        return jsonify({
+            "error": "Failed to initialize your trading session. Please try again or contact support.",
+            "isolation_error": True
+        }), 500
+
+    # Final safety check - NEVER allow None traders
+    if not ultimate_trader:
+        current_app.logger.error(f"[ISOLATION VIOLATION] Per-user ultimate_trader is None for user {current_user.id}")
+        return jsonify({
+            "error": "Your trading engine is not available. Please contact support.",
+            "isolation_error": True
+        }), 500
+        
+    try:
+        payload = request.get_json(silent=True) or {}
+        initial_balance = payload.get("initial_balance")
+        if initial_balance is not None:
+            try:
+                initial_balance = float(initial_balance)
+            except (ValueError, TypeError):
+                return jsonify({"error": "Invalid balance value"}), 400
+            
+        if hasattr(ultimate_trader, "reset_paper_balance"):
+            ultimate_trader.reset_paper_balance(initial_balance)
+            
+        if optimized_trader and hasattr(optimized_trader, "reset_paper_balance"):
+            optimized_trader.reset_paper_balance(initial_balance)
+            
+        return jsonify({
+            "success": True, 
+            "message": "Paper trading balance reset",
+            "new_balance": getattr(ultimate_trader, "balance", 0)
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@trading_bp.route("/api/trading/drawdown/reset", methods=["POST"])
+@login_required
+def api_emergency_drawdown_reset():
+    """Reset max_drawdown without clearing positions."""
+    ctx = _get_bot_context()
+    market_data_service = ctx.get("market_data_service")
+    
+    if market_data_service is None:
+        return jsonify({"error": "Trading service not initialized"}), 503
+    
+    try:
+        ultimate_trader, optimized_trader = market_data_service._get_or_create_user_traders(
+            current_user.id
+        )
+        
+        if hasattr(ultimate_trader, "emergency_reset_drawdown"):
+            ultimate_trader.emergency_reset_drawdown()
+            
+        if optimized_trader and hasattr(optimized_trader, "emergency_reset_drawdown"):
+            optimized_trader.emergency_reset_drawdown()
+            
+        return jsonify({
+            "success": True, 
+            "message": "Emergency drawdown reset complete. Safety gates recalibrated."
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @trading_bp.route("/api/binance/logs", methods=["GET"], endpoint="api_binance_logs")
@@ -462,6 +630,12 @@ def api_futures_dashboard():
         except Exception as exc:  # pragma: no cover - defensive
             current_app.logger.error("Failed to load manual futures state: %s", exc)
             snapshot["manual"] = {"error": "Manual state unavailable"}
+            snapshot["manual"] = {"error": "Manual state unavailable"}
+        
+        # ✅ ISOLATION PATCH: Override with User's Status
+        if manual_service is not None:
+             _apply_user_isolation(ctx, snapshot["manual"])
+             
         snapshot["timestamp"] = time.time()
         return jsonify(snapshot)
     except (RuntimeError, KeyError, AttributeError):
@@ -495,6 +669,9 @@ def api_futures_manual_state():
             manual = manual_service.get_manual_state(
                 include_symbols=True, update_dashboard=True
             )
+            # ✅ ISOLATION PATCH: Override with User's Status
+            _apply_user_isolation(ctx, manual)
+
             return jsonify(manual)
         except Exception as exc:  # pragma: no cover - defensive logging
             current_app.logger.error("Failed to fetch manual futures state: %s", exc)
@@ -508,6 +685,8 @@ def api_futures_manual_state():
     ensure_manual_defaults(update_dashboard=True)
     with futures_manual_lock:
         manual = deepcopy(futures_manual_settings)
+        # ✅ ISOLATION PATCH: Override with User's Status
+        _apply_user_isolation(ctx, manual)
     manual["available_symbols"] = list(futures_symbols)
     manual["timestamp"] = time.time()
     return jsonify(manual)
@@ -625,22 +804,62 @@ def api_futures_manual_toggle_trading():
     futures_manual_lock = ctx.get("futures_manual_lock")
     futures_manual_settings = ctx.get("futures_manual_settings")
     trading_config = ctx.get("trading_config")
-    ultimate_trader = ctx.get("ultimate_trader")
     dashboard_data = _get_dashboard_data(ctx)
+    market_data_service = ctx.get("market_data_service")
+    
+    # CRITICAL: Multi-user isolation - NO global fallback allowed
+    if not getattr(current_user, "is_authenticated", False):
+        return jsonify({"error": "Authentication required"}), 401
+    
+    if market_data_service is None:
+        current_app.logger.error(f"[ISOLATION VIOLATION] market_data_service is None for user {current_user.id}")
+        return jsonify({
+            "error": "Trading service not initialized. Please contact support.",
+            "isolation_error": True
+        }), 503
+    
+    if not hasattr(market_data_service, "_get_or_create_user_traders"):
+        current_app.logger.error(f"[ISOLATION VIOLATION] market_data_service missing per-user method for user {current_user.id}")
+        return jsonify({
+            "error": "Multi-user trading not properly configured. Please contact support.",
+            "isolation_error": True
+        }), 503
+    
+    try:
+        ultimate_trader, optimized_trader = market_data_service._get_or_create_user_traders(
+            current_user.id
+        )
+    except Exception as e:
+        current_app.logger.error(f"[ISOLATION VIOLATION] Failed to get per-user traders for user {current_user.id}: {e}")
+        return jsonify({
+            "error": "Failed to initialize your trading session. Please try again or contact support.",
+            "isolation_error": True
+        }), 500
 
+    # Final safety check - NEVER allow None traders
+    if not ultimate_trader:
+        current_app.logger.error(f"[ISOLATION VIOLATION] Per-user ultimate_trader is None for user {current_user.id}")
+        return jsonify({
+            "error": "Your trading engine is not available. Please contact support.",
+            "isolation_error": True
+        }), 500
+    
+    # Parse request payload
     payload = request.get_json(silent=True) or {}
     enable = payload.get("enable")
     mode = payload.get("mode")
 
+    # Try manual service first if available
     if manual_service is not None:
-        if not ultimate_trader:
-            return jsonify({"error": "Manual futures toggle unavailable"}), 500
         try:
             result = manual_service.toggle_auto_trading(
                 enable=enable,
                 mode=mode,
                 ultimate_trader=ultimate_trader,
             )
+            # ✅ ISOLATION PATCH: Ensure return value reflects USER state, not global
+            result["auto_trade_enabled"] = getattr(ultimate_trader, "futures_trading_enabled", False)
+
             return jsonify(result)
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
@@ -650,16 +869,25 @@ def api_futures_manual_toggle_trading():
             current_app.logger.error("Failed to toggle manual futures trading: %s", exc)
             return jsonify({"error": "Unable to toggle manual futures trading"}), 500
 
+    # Fallback to manual settings if manual_service not available
+    # Variables already retrieved at function start (lines 740-743)
     if not all(
         [
             callable(ensure_manual_defaults),
             futures_manual_lock,
             futures_manual_settings,
             trading_config,
-            ultimate_trader,
         ]
     ):
-        return jsonify({"error": "Manual futures toggle unavailable"}), 500
+        current_app.logger.error(
+            f"Futures manual toggle missing required context: "
+            f"ensure_manual_defaults={callable(ensure_manual_defaults)}, "
+            f"futures_manual_lock={futures_manual_lock is not None}, "
+            f"futures_manual_settings={futures_manual_settings is not None}, "
+            f"trading_config={trading_config is not None}"
+        )
+        return jsonify({"error": "Manual futures toggle unavailable. Please contact support."}), 500
+
 
     ensure_manual_defaults(update_dashboard=False)
     if enable is None:
@@ -687,24 +915,38 @@ def api_futures_manual_toggle_trading():
         dashboard_data["futures_manual"] = futures_manual_settings
 
         if enable and not getattr(ultimate_trader, "futures_trading_enabled", False):
-            futures_manual_settings["auto_trade_enabled"] = False
-            futures_manual_settings["updated_at"] = time.time()
-            trading_config["futures_manual_auto_trade"] = False
-            dashboard_data["futures_manual"] = futures_manual_settings
-            system_status = dashboard_data.get("system_status") or {}
-            system_status["futures_manual_auto_trade"] = False
-            system_status["futures_trading_ready"] = bool(
-                getattr(ultimate_trader, "futures_trading_enabled", False)
-            )
-            dashboard_data["system_status"] = system_status
-            return (
-                jsonify(
-                    {
-                        "error": "Futures trader not connected. Add futures API credentials before enabling auto trading."
-                    }
-                ),
-                400,
-            )
+            # AUTO-HEAL: Attempt to connect on demand if missing
+            print(f"DEBUG: Auto-healing Futures Connection...", flush=True)
+            try:
+                success = ultimate_trader.enable_futures_trading()
+                print(f"DEBUG: Auto-heal result: {success}", flush=True)
+                if success:
+                    # Sync dashboard state immediately
+                    futures_manual_settings["auto_trade_enabled"] = enable
+                    trading_config["futures_manual_auto_trade"] = enable
+                    system_status = dashboard_data.get("system_status") or {}
+                    system_status["futures_trading_ready"] = True
+                    dashboard_data["system_status"] = system_status
+                else:
+                    raise Exception("Connection failed during auto-heal")
+            except Exception as e:
+                print(f"DEBUG: Auto-heal failed: {e}", flush=True)
+                futures_manual_settings["auto_trade_enabled"] = False
+                futures_manual_settings["updated_at"] = time.time()
+                trading_config["futures_manual_auto_trade"] = False
+                dashboard_data["futures_manual"] = futures_manual_settings
+                system_status = dashboard_data.get("system_status") or {}
+                system_status["futures_manual_auto_trade"] = False
+                system_status["futures_trading_ready"] = False
+                dashboard_data["system_status"] = system_status
+                return (
+                    jsonify(
+                        {
+                            "error": f"Futures trader not connected. Connection failed: {str(e)}"
+                        }
+                    ),
+                    400,
+                )
 
     system_status = dashboard_data.get("system_status") or {}
     system_status["futures_manual_auto_trade"] = enable
@@ -738,25 +980,43 @@ def api_spot_toggle():
 
     ultimate_trader = None
     optimized_trader = None
-    if (
-        getattr(current_user, "is_authenticated", False)
-        and market_data_service is not None
-        and hasattr(market_data_service, "_get_or_create_user_traders")
-    ):
-        try:
-            ultimate_trader, optimized_trader = market_data_service._get_or_create_user_traders(
-                int(current_user.id)
-            )
-        except Exception:
-            ultimate_trader = None
-            optimized_trader = None
+    
+    # CRITICAL: Multi-user isolation - NO global fallback allowed
+    if not getattr(current_user, "is_authenticated", False):
+        return jsonify({"error": "Authentication required"}), 401
+    
+    if market_data_service is None:
+        current_app.logger.error(f"[ISOLATION VIOLATION] market_data_service is None for user {current_user.id}")
+        return jsonify({
+            "error": "Trading service not initialized. Please contact support.",
+            "isolation_error": True
+        }), 503
+    
+    if not hasattr(market_data_service, "_get_or_create_user_traders"):
+        current_app.logger.error(f"[ISOLATION VIOLATION] market_data_service missing per-user method for user {current_user.id}")
+        return jsonify({
+            "error": "Multi-user trading not properly configured. Please contact support.",
+            "isolation_error": True
+        }), 503
+    
+    try:
+        ultimate_trader, optimized_trader = market_data_service._get_or_create_user_traders(
+            current_user.id
+        )
+    except Exception as e:
+        current_app.logger.error(f"[ISOLATION VIOLATION] Failed to get per-user traders for user {current_user.id}: {e}")
+        return jsonify({
+            "error": "Failed to initialize your trading session. Please try again or contact support.",
+            "isolation_error": True
+        }), 500
 
-    if ultimate_trader is None or optimized_trader is None:
-        ultimate_trader = ctx.get("ultimate_trader")
-        optimized_trader = ctx.get("optimized_trader")
-
+    # Final safety check - NEVER allow None traders
     if not all([ultimate_trader, optimized_trader]):
-        return jsonify({"error": "Trading engines unavailable"}), 500
+        current_app.logger.error(f"[ISOLATION VIOLATION] Per-user traders are None for user {current_user.id}")
+        return jsonify({
+            "error": "Your trading engines are not available. Please contact support.",
+            "isolation_error": True
+        }), 500
 
     try:
         payload = request.get_json(silent=True) or {}
@@ -767,24 +1027,27 @@ def api_spot_toggle():
 
         enable = bool(enable)
 
+        # ✅ PER-USER UPDATE: Update this user's trader instances
         ultimate_trader.trading_enabled = enable
         optimized_trader.trading_enabled = enable
 
-        dashboard_data["system_status"]["trading_enabled"] = enable
-        dashboard_data["system_status"]["paper_trading"] = getattr(
-            ultimate_trader, "paper_trading", True
-        )
-        dashboard_data["system_status"]["real_trading_ready"] = bool(
-            getattr(ultimate_trader, "real_trading_enabled", False)
-        )
-        dashboard_data["optimized_system_status"]["trading_enabled"] = enable
-        dashboard_data["optimized_system_status"]["paper_trading"] = getattr(
-            optimized_trader, "paper_trading", True
-        )
-        dashboard_data["optimized_system_status"]["real_trading_ready"] = bool(
-            getattr(optimized_trader, "real_trading_enabled", False)
-        )
+        # ✅ PER-USER UPDATE: Update database record for this user
+        try:
+            from app.models import UserPortfolio
+            from app.extensions import db
+            
+            portfolio = UserPortfolio.query.filter_by(user_id=current_user.id).first()
+            if portfolio:
+                portfolio.auto_trade_enabled = enable
+                db.session.commit()
+                current_app.logger.info(f"Updated UserPortfolio.auto_trade_enabled={enable} for user {current_user.id}")
+            else:
+                current_app.logger.warning(f"No UserPortfolio found for user {current_user.id}")
+        except Exception as db_exc:
+            current_app.logger.error(f"Failed to update UserPortfolio for user {current_user.id}: {db_exc}")
+            # Don't crash - continue with trader update
 
+        # ✅ PER-USER UPDATE: Persist to this user's profile state file
         persistence_profile = getattr(ultimate_trader, "persistence_profile", None)
         _update_state_file("trading_enabled", enable, profile=persistence_profile)
 
@@ -869,16 +1132,17 @@ def api_spot_trade():
         result = user_trader.execute_manual_trade(symbol, side, quantity, price)
 
         if result.get("success"):
-            record_user_trade(
-                user_id=current_user.id,
-                symbol=symbol,
-                side=side,
-                quantity=quantity,
-                price=result.get("price", price),
-                trade_type="manual_spot",
-                signal_source=signal_source,
-                confidence_score=confidence_score,
-            )
+            # This block removed to avoid double recording
+            # record_user_trade(
+            #     user_id=current_user.id,
+            #     symbol=symbol,
+            #     side=side,
+            #     quantity=quantity,
+            #     price=result.get("price", price),
+            #     trade_type="manual_spot",
+            #     signal_source=signal_source,
+            #     confidence_score=confidence_score,
+            # )
 
             return jsonify(
                 {
@@ -913,29 +1177,45 @@ def api_futures_toggle():
 
     user_scoped = False
     persistence_profile = None
-    if (
-        getattr(current_user, "is_authenticated", False)
-        and market_data_service is not None
-        and hasattr(market_data_service, "_get_or_create_user_traders")
-    ):
-        try:
-            ultimate_trader, optimized_trader = market_data_service._get_or_create_user_traders(
-                int(current_user.id)
-            )
-            user_scoped = True
-            persistence_profile = getattr(ultimate_trader, "persistence_profile", None)
-        except Exception:
-            ultimate_trader = None
-            optimized_trader = None
-            user_scoped = False
+    
+    # CRITICAL: Multi-user isolation - NO global fallback allowed
+    if not getattr(current_user, "is_authenticated", False):
+        return jsonify({"error": "Authentication required"}), 401
+    
+    if market_data_service is None:
+        current_app.logger.error(f"[ISOLATION VIOLATION] market_data_service is None for user {current_user.id}")
+        return jsonify({
+            "error": "Trading service not initialized. Please contact support.",
+            "isolation_error": True
+        }), 503
+    
+    if not hasattr(market_data_service, "_get_or_create_user_traders"):
+        current_app.logger.error(f"[ISOLATION VIOLATION] market_data_service missing per-user method for user {current_user.id}")
+        return jsonify({
+            "error": "Multi-user trading not properly configured. Please contact support.",
+            "isolation_error": True
+        }), 503
+    
+    try:
+        ultimate_trader, optimized_trader = market_data_service._get_or_create_user_traders(
+            current_user.id
+        )
+        user_scoped = True
+        persistence_profile = getattr(ultimate_trader, "persistence_profile", None)
+    except Exception as e:
+        current_app.logger.error(f"[ISOLATION VIOLATION] Failed to get per-user traders for user {current_user.id}: {e}")
+        return jsonify({
+            "error": "Failed to initialize your trading session. Please try again or contact support.",
+            "isolation_error": True
+        }), 500
 
-    if ultimate_trader is None or optimized_trader is None:
-        ultimate_trader = ctx.get("ultimate_trader")
-        optimized_trader = ctx.get("optimized_trader")
-        user_scoped = False
-
+    # Final safety check - NEVER allow None traders
     if not all([ultimate_trader, optimized_trader]):
-        return jsonify({"error": "Trading engines unavailable"}), 500
+        current_app.logger.error(f"[ISOLATION VIOLATION] Per-user traders are None for user {current_user.id}")
+        return jsonify({
+            "error": "Your trading engines are not available. Please contact support.",
+            "isolation_error": True
+        }), 500
 
     if dashboard_data is not None:
         dashboard_data.setdefault("system_status", {})
@@ -952,13 +1232,29 @@ def api_futures_toggle():
 
         enable = bool(enable)
 
+        # ------------------------------------------------------------------
+        # CRITICAL FIX: Persist to Database for Multi-User Gating
+        # ------------------------------------------------------------------
+        if user_scoped and getattr(current_user, "is_authenticated", False):
+            try:
+                from app.models import UserPortfolio
+                from app.extensions import db
+                
+                portfolio = UserPortfolio.query.filter_by(user_id=str(current_user.id)).first()
+                if portfolio:
+                    portfolio.auto_trade_enabled = enable
+                    db.session.commit()
+                    print(f"✅ Database Updated: User {current_user.id} Auto-Trade -> {enable}")
+                else:
+                    print(f"⚠️ Warning: No UserPortfolio found for User {current_user.id}")
+            except Exception as db_exc:
+                print(f"❌ Database Update Failed: {db_exc}")
+                # Don't crash, but log error
+
+
+        # ✅ PER-USER UPDATE: Update this user's trader instances
         ultimate_trader.futures_trading_enabled = enable
         optimized_trader.futures_trading_enabled = enable
-
-        # Legacy single-user behavior: futures market-data loop is gated on
-        # TRADING_CONFIG.futures_enabled, so keep it aligned.
-        if not user_scoped and isinstance(trading_config, dict):
-            trading_config["futures_enabled"] = enable
 
         # Diagnostic: log instance ids and flags so we can compare with persistence
         try:
@@ -968,17 +1264,13 @@ def api_futures_toggle():
         except Exception:
             pass
 
-        dashboard_data["system_status"]["futures_trading_enabled"] = enable
-        dashboard_data["system_status"]["futures_trading_ready"] = enable
-        dashboard_data["optimized_system_status"]["futures_trading_enabled"] = enable
-        dashboard_data["optimized_system_status"]["futures_trading_ready"] = enable
-
-        dashboard_data["system_status"]["futures_enabled"] = bool(
-            enable if user_scoped else trading_config.get("futures_enabled", False)
-        )
-
+        # ✅ PER-USER UPDATE: Persist to this user's profile state file
         _update_state_file("futures_trading_enabled", enable, profile=persistence_profile)
-        if not user_scoped:
+        
+        # ⚠️ LEGACY SINGLE-USER MODE: Only update global config if not in multi-user mode
+        # In multi-user mode, global config should not be changed by individual users
+        if not user_scoped and isinstance(trading_config, dict):
+            trading_config["futures_enabled"] = enable
             _update_trading_config_state_file("futures_enabled", enable)
 
         # Keep the background futures loop aligned with config only in legacy
@@ -1166,3 +1458,53 @@ def api_futures_trade():
             ),
             200,
         )
+@trading_bp.route("/api/monitor/strategies", methods=["GET"])
+@login_required
+def api_monitor_strategies():
+    """Return real strategy status from the backend StrategyManager."""
+    ctx = _get_bot_context()
+    ultimate_trader = ctx.get("ultimate_trader")
+    
+    if not ultimate_trader:
+         return jsonify({"success": False, "error": "Trading engine not initialized"})
+
+    # Check if we have a strategy manager
+    strategy_manager = getattr(ultimate_trader, "strategy_manager", None)
+    if not strategy_manager:
+        # Fallback for limited mode or tests
+        return jsonify({"success": False, "strategies": []})
+
+    strategies_data = []
+    
+    # Iterate through real strategies
+    try:
+        if hasattr(strategy_manager, "strategies"):
+            for strat_id, strategy in strategy_manager.strategies.items():
+                # Get performance metrics safely
+                metrics = getattr(strategy, "performance_metrics", {})
+                
+                # Determine "symbol" - strategies might be multi-symbol
+                # If the strategy has specific active positions, we could list them
+                # For now, we label based on type or "MULTI"
+                symbol_label = "MULTI"
+                
+                strategies_data.append({
+                    "id": strat_id,
+                    "name": getattr(strategy, "name", strat_id.replace("_", " ").title()),
+                    "type": strat_id.upper(),
+                    "symbol": symbol_label,
+                    "enabled": getattr(strategy, "active", False),
+                    "win_rate": float(metrics.get("win_rate", 0.0)),
+                    "pnl": float(metrics.get("total_pnl", 0.0)),
+                    "total_trades": int(metrics.get("total_trades", 0))
+                })
+    except Exception as e:
+        current_app.logger.error(f"Error fetching strategies: {e}")
+        return jsonify({"success": False, "error": str(e)})
+
+    return jsonify({
+        "success": True,
+        "strategies": strategies_data,
+        "count": len(strategies_data),
+        "timestamp": time.time()
+    })

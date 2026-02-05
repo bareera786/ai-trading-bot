@@ -1,0 +1,575 @@
+{% extends "base.html" %}
+
+{% block title %}Partner Network - Reseller Admin{% endblock %}
+{% block header_title %}Reseller Network{% endblock %}
+{% block header_subtitle %}Manage white-label partners and distribution channels{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+
+    <!-- Hero Stats -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="hero-card">
+                <div class="hero-content">
+                    <div class="hero-icon">
+                        <span style="font-size: 2.5rem;">🤝</span>
+                    </div>
+                    <div>
+                        <h2>Partner Ecosystem</h2>
+                        <p>Manage white-label resellers, track user distribution, and configure branding override
+                            settings.</p>
+                        <div class="hero-stats">
+                            <div class="h-stat">
+                                <span class="label">Total Partners</span>
+                                <span class="value text-primary" id="total-resellers">0</span>
+                            </div>
+                            <div class="h-stat">
+                                <span class="label">Network Users</span>
+                                <span class="value text-success" id="total-network-users">0</span>
+                            </div>
+                            <div class="h-stat">
+                                <span class="label">Compliance</span>
+                                <span class="value text-info">100%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-graphic">
+                    <div class="network-map"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="dashboard-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <span class="card-icon">🏢</span>
+                <h3 class="card-title">Authorized Partners</h3>
+            </div>
+            <button class="btn btn-primary glow-effect" data-bs-toggle="modal" data-bs-target="#addResellerModal">
+                <i class="fas fa-plus mr-2"></i> Onboard Partner
+            </button>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Partner Identity</th>
+                            <th>Owner / Admin</th>
+                            <th>User Base</th>
+                            <th>Status</th>
+                            <th class="text-end">Configuration</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resellersTableBody">
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <i class="fas fa-circle-notch fa-spin text-primary fa-2x"></i>
+                                <p class="mt-3 text-muted">Loading Partner Network...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+<!-- Add Reseller Modal -->
+<div class="modal fade" id="addResellerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header border-0 pb-0">
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-5">
+                <div class="text-center mb-5">
+                    <h2 class="fw-bold mb-2">Partner Onboarding</h2>
+                    <p class="text-muted">Configure a new white-label distribution node</p>
+                </div>
+
+                <form id="addResellerForm">
+                    <div class="row">
+                        <!-- Left Column: Core Identity -->
+                        <div class="col-md-6 border-end border-secondary pe-4">
+                            <h5 class="text-primary mb-4"><i class="fas fa-id-card me-2"></i>Identity</h5>
+
+                            <div class="mb-4">
+                                <label class="input-label">Reseller Name</label>
+                                <div class="input-wrapper">
+                                    <i class="fas fa-building input-icon"></i>
+                                    <input type="text" class="form-control" id="resName" required
+                                        placeholder="e.g. Apex Capital">
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="input-label">Program Tier</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <div class="tier-card active">
+                                            <div class="tier-icon">🥈</div>
+                                            <div class="tier-name">Standard</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="tier-card">
+                                            <div class="tier-icon">🥇</div>
+                                            <div class="tier-name">Premium</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Right Column: Administration -->
+                        <div class="col-md-6 ps-4">
+                            <h5 class="text-info mb-4"><i class="fas fa-user-shield me-2"></i>Administration</h5>
+
+                            <div class="mb-4">
+                                <label class="input-label">Owner User ID</label>
+                                <div class="input-wrapper">
+                                    <i class="fas fa-key input-icon"></i>
+                                    <input type="text" class="form-control" id="resOwnerId" required
+                                        placeholder="User UUID">
+                                </div>
+                                <small class="text-muted mt-2 d-block" style="font-size: 0.75rem;">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    UUID of the existing user who will admin.
+                                </small>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="input-label">User Cap Allocation</label>
+                                <div class="range-slider-container">
+                                    <input type="range" class="custom-range" id="resMaxUsers" min="10" max="1000"
+                                        value="50" oninput="document.getElementById('capVal').innerText = this.value">
+                                    <div class="d-flex justify-content-between mt-2">
+                                        <span class="small text-muted">10</span>
+                                        <span class="badge bg-primary rounded-pill" id="capVal">50</span>
+                                        <span class="small text-muted">1000</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-5">
+                        <button type="submit" class="btn btn-primary btn-lg px-5 glow-effect" id="saveReseller">
+                            Create Partner Account
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Branding Modal -->
+<div class="modal fade" id="brandingModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title">Branding Overrides</h5>
+                    <p class="modal-subtitle">Configure white-label appearance</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="brandingResellerId">
+                <form id="brandingForm">
+                    <div class="mb-4">
+                        <label class="input-label">Logo URL</label>
+                        <div class="input-wrapper">
+                            <input type="text" class="form-control" id="brandLogo" placeholder="https://...">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="input-label">Brand Color</label>
+                        <div class="input-wrapper d-flex gap-2">
+                            <input type="color" class="form-control form-control-color" id="brandColor" value="#0d6efd"
+                                style="width: 50px;">
+                            <input type="text" class="form-control" id="brandColorText" readonly>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="input-label">Company Name</label>
+                        <div class="input-wrapper">
+                            <input type="text" class="form-control" id="brandCompany" placeholder="Display Name">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveBranding">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Premium UI Variables */
+
+    .hero-card {
+        background: radial-gradient(circle at top right, rgba(144, 238, 144, 0.05), transparent),
+            linear-gradient(135deg, rgba(16, 23, 38, 0.95) 0%, rgba(10, 15, 25, 1) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .hero-content {
+        display: flex;
+        gap: 25px;
+        align-items: flex-start;
+        position: relative;
+        z-index: 2;
+    }
+
+    .hero-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(40, 167, 69, 0.1);
+        border: 1px solid rgba(40, 167, 69, 0.2);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .hero-stats {
+        display: flex;
+        gap: 40px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .h-stat .label {
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .h-stat .value {
+        font-weight: 700;
+        font-size: 1.25rem;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Table Styles */
+    .data-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .data-table th {
+        background: rgba(255, 255, 255, 0.02);
+        padding: 15px 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        letter-spacing: 1px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .data-table td {
+        padding: 15px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        vertical-align: middle;
+    }
+
+    .data-table tr:hover td {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Modal */
+    .glass-modal {
+        background: #1a1f2e;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8);
+        border-radius: 24px;
+    }
+
+    .input-wrapper {
+        position: relative;
+    }
+
+    .input-wrapper .input-icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
+    }
+
+    .input-wrapper .form-control {
+        padding-left: 40px;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border-color);
+        color: #fff;
+        height: 48px;
+    }
+
+    .input-wrapper .form-control:not([type="color"]) {
+        /* Specific override */
+        padding-left: 40px;
+    }
+
+    .input-wrapper input[type="number"] {
+        /* Specific override */
+        padding-left: 15px;
+    }
+
+    .input-wrapper input#brandLogo,
+    .input-wrapper input#brandCompany {
+        padding-left: 15px;
+    }
+
+    .network-map {
+        width: 180px;
+        height: 120px;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+        background-size: 10px 10px;
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        opacity: 0.3;
+        transform: perspective(300px) rotateX(20deg);
+    }
+
+    .avatar-circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Tier Cards */
+    .tier-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .tier-card:hover {
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .tier-card.active {
+        border-color: var(--primary);
+        background: rgba(0, 212, 170, 0.1);
+        box-shadow: 0 0 15px rgba(0, 212, 170, 0.1);
+    }
+
+    .tier-icon {
+        font-size: 1.5rem;
+        margin-bottom: 5px;
+    }
+
+    .tier-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+</style>
+
+<script>
+    // Fetch Resellers
+    async function loadResellers() {
+        try {
+            const response = await fetch('/admin/api/resellers-list');
+            const data = await response.json();
+
+            const tbody = document.getElementById('resellersTableBody');
+
+            if (!data.resellers || data.resellers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-5">No partners onboarded yet.</td></tr>';
+                document.getElementById('total-resellers').textContent = '0';
+                document.getElementById('total-network-users').textContent = '0';
+                return;
+            }
+
+            // Update Stats
+            document.getElementById('total-resellers').textContent = data.resellers.length;
+            const totalUsers = data.resellers.reduce((acc, r) => acc + (r.user_count || 0), 0);
+            document.getElementById('total-network-users').textContent = totalUsers;
+
+            tbody.innerHTML = data.resellers.map(r => `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-circle me-3" style="background: ${r.branding?.primary_color || 'var(--primary)'}; box-shadow: 0 0 10px ${r.branding?.primary_color || 'var(--primary)'}40;">
+                                ${r.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div style="font-weight: bold; color: #fff;">${r.name}</div>
+                                <div class="small text-muted">${r.branding?.company_name || 'Standard Whitelabel'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-user-circle text-muted me-2"></i>
+                            <span class="font-monospace small text-primary">${r.owner_id.substring(0, 8)}...</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-column" style="width: 140px;">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span class="text-muted">Usage</span>
+                                <span class="text-white">${r.user_count} / ${r.limits?.max_users || 50}</span>
+                            </div>
+                            <div class="progress" style="height: 4px; background: rgba(255,255,255,0.1);">
+                                <div class="progress-bar bg-info" style="width: ${(r.user_count / (r.limits?.max_users || 50)) * 100}%"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                         <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2 py-1">
+                            <i class="fas fa-check-circle me-1"></i> Active
+                         </span>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-icon btn-outline-info" onclick="openBranding('${r.id}', '${encodeURIComponent(JSON.stringify(r.branding || {}))}')" title="Branding">
+                           <i class="fas fa-paint-brush"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+        } catch (e) {
+            console.error("Failed to load resellers", e);
+            document.getElementById('resellersTableBody').innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">Error loading partner network.</td></tr>';
+        }
+    }
+
+    // Tier Selection Logic (Visual Only for now)
+    document.querySelectorAll('.tier-card').forEach(card => {
+        card.addEventListener('click', function () {
+            document.querySelectorAll('.tier-card').forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    // Save Reseller
+    document.getElementById('addResellerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const btn = document.getElementById('saveReseller');
+        const oldHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finalizing Agreement...';
+        btn.disabled = true;
+
+        const name = document.getElementById('resName').value;
+        const ownerId = document.getElementById('resOwnerId').value;
+        const maxUsers = parseInt(document.getElementById('resMaxUsers').value);
+
+        try {
+            const res = await fetch('/admin/api/resellers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name,
+                    owner_id: ownerId,
+                    limits_config: { max_users: maxUsers }
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('addResellerModal')).hide();
+                loadResellers();
+            } else {
+                alert("Error: " + (data.error || "Creation failed"));
+            }
+        } catch (e) {
+            alert("Request failed: " + e.message);
+        } finally {
+            btn.innerHTML = oldHtml;
+            btn.disabled = false;
+        }
+    });
+
+    // Open Branding Modal
+    window.openBranding = (id, brandingEncoded) => {
+        const branding = JSON.parse(decodeURIComponent(brandingEncoded));
+        document.getElementById('brandingResellerId').value = id;
+        document.getElementById('brandLogo').value = branding.logo_url || '';
+        document.getElementById('brandColor').value = branding.primary_color || '#0d6efd';
+        document.getElementById('brandColorText').value = branding.primary_color || '#0d6efd';
+        document.getElementById('brandCompany').value = branding.company_name || '';
+
+        new bootstrap.Modal(document.getElementById('brandingModal')).show();
+    }
+
+    // Color picker sync
+    document.getElementById('brandColor').addEventListener('input', (e) => {
+        document.getElementById('brandColorText').value = e.target.value;
+    });
+
+    // Save Branding
+    document.getElementById('saveBranding').addEventListener('click', async () => {
+        const btn = document.getElementById('saveBranding');
+        const oldHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        btn.disabled = true;
+
+        const id = document.getElementById('brandingResellerId').value;
+        const config = {
+            logo_url: document.getElementById('brandLogo').value,
+            primary_color: document.getElementById('brandColor').value,
+            company_name: document.getElementById('brandCompany').value
+        };
+
+        try {
+            const res = await fetch(`/admin/api/resellers/${id}/branding`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            });
+            const data = await res.json();
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('brandingModal')).hide();
+                loadResellers();
+            } else {
+                alert("Error: " + (data.error || 'Unknown error'));
+            }
+        } catch (e) {
+            alert("Save failed: " + e.message);
+        } finally {
+            btn.innerHTML = oldHtml;
+            btn.disabled = false;
+        }
+    });
+
+    loadResellers();
+</script>
+{% endblock %}

@@ -48,11 +48,12 @@ RUN npm install --silent --no-audit --no-fund || true
 
 # Copy application code with proper ownership
 COPY --chown=trader:trader . .
+COPY --chown=trader:trader scripts/ /app/scripts/
 
 # Build frontend assets if build script exists
 RUN if [ -f package.json ] && npm run | grep -q "build:assets" ; then \
-            npm run build:assets || echo "Asset build failed, continuing"; \
-        fi
+    npm run build:assets || echo "Asset build failed, continuing"; \
+    fi
 
 # Ensure directories used at runtime exist and are writable by the non-root user
 RUN mkdir -p /app/optimized_models /app/optimized_trade_data /app/ultimate_models /app/instance && \
@@ -74,4 +75,5 @@ ENV BINANCE_API_KEY=dummy_key_for_testing
 ENV BINANCE_API_SECRET=dummy_secret_for_testing
 ENV AI_BOT_TEST_MODE=0
 
-CMD ["python", "ai_ml_auto_bot_final.py"]
+# Run with Gunicorn for production performance and modular app structure
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--threads", "2", "--timeout", "120", "wsgi:application"]

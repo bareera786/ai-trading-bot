@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}User Management - AI Trading Pro{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="padding: 2rem;">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h1 class="h2 text-white"><i class="fas fa-users-cog me-2 text-primary"></i>User Management</h1>
+            <p class="text-white-50">Manage registered users, roles, and status.</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <!-- Search Form -->
+            <form action="{{ url_for('admin_users.list_users') }}" method="GET" class="d-inline-flex">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control bg-dark border-secondary text-white"
+                        placeholder="Search user..." value="{{ search_query }}">
+                    <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i></button>
+                    {% if search_query %}
+                    <a href="{{ url_for('admin_users.list_users') }}" class="btn btn-outline-secondary"><i
+                            class="fas fa-times"></i></a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card bg-dark border-secondary shadow-lg">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0 align-middle">
+                    <thead class="bg-secondary bg-opacity-25 text-uppercase text-xs font-weight-bolder">
+                        <tr>
+                            <th class="ps-4">User</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Joined</th>
+                            <th>Last Login</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if users.items %}
+                        {% for user in users.items %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar avatar-sm rounded-circle bg-primary bg-opacity-10 text-primary me-3 d-flex align-items-center justify-content-center"
+                                        style="width: 40px; height: 40px;">
+                                        {{ user.username[0]|upper }}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 text-white">{{ user.username }}</h6>
+                                        <small class="text-white-50">{{ user.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if user.is_admin %}
+                                <span
+                                    class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3">Admin</span>
+                                {% else %}
+                                <span
+                                    class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 rounded-pill px-3">Trader</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user.is_active %}
+                                <span
+                                    class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3">Active</span>
+                                {% else %}
+                                <span
+                                    class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill px-3">Banned</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-white-50 small">{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td class="text-white-50 small">
+                                {% if user.last_login %}
+                                {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                                {% else %}
+                                Never
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="dropdown">
+                                    <button class="btn btn-link text-white-50 p-0" type="button"
+                                        data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul
+                                        class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-secondary shadow">
+                                        <li>
+                                            <h6 class="dropdown-header text-uppercase text-xs">Manage</h6>
+                                        </li>
+
+                                        <!-- Promote/Demote -->
+                                        <li>
+                                            <form action="{{ url_for('admin_users.promote_user', user_id=user.id) }}"
+                                                method="POST" class="d-inline">
+                                                <button type="submit" class="dropdown-item text-warning">
+                                                    <i class="fas fa-user-shield me-2"></i> {{ 'Revoke Admin' if
+                                                    user.is_admin else 'Make Admin' }}
+                                                </button>
+                                            </form>
+                                        </li>
+
+                                        <!-- Ban/Unban -->
+                                        <li>
+                                            <form
+                                                action="{{ url_for('admin_users.toggle_user_status', user_id=user.id) }}"
+                                                method="POST" class="d-inline">
+                                                <button type="submit"
+                                                    class="dropdown-item {{ 'text-success' if not user.is_active else 'text-danger' }}">
+                                                    <i
+                                                        class="fas {{ 'fa-check-circle' if not user.is_active else 'fa-ban' }} me-2"></i>
+                                                    {{ 'Activate User' if not user.is_active else 'Ban User' }}
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-white-50">
+                                <i class="fas fa-users fa-3x mb-3 text-secondary opacity-25"></i>
+                                <p class="mb-0">No users found matching your search.</p>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if users.pages > 1 %}
+            <div class="card-footer bg-dark border-secondary py-3">
+                <nav aria-label="User navigation">
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                        <li class="page-item {{ 'disabled' if not users.has_prev }}">
+                            <a class="page-link bg-dark border-secondary text-white"
+                                href="{{ url_for('admin_users.list_users', page=users.prev_num, q=search_query) }}"
+                                tabindex="-1">Previous</a>
+                        </li>
+                        {% for page_num in users.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2)
+                        %}
+                        {% if page_num %}
+                        <li class="page-item {{ 'active' if page_num == users.page }}">
+                            <a class="page-link {{ 'bg-primary border-primary' if page_num == users.page else 'bg-dark border-secondary text-white' }}"
+                                href="{{ url_for('admin_users.list_users', page=page_num, q=search_query) }}">{{
+                                page_num }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span
+                                class="page-link bg-dark border-secondary text-white">...</span></li>
+                        {% endif %}
+                        {% endfor %}
+                        <li class="page-item {{ 'disabled' if not users.has_next }}">
+                            <a class="page-link bg-dark border-secondary text-white"
+                                href="{{ url_for('admin_users.list_users', page=users.next_num, q=search_query) }}">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

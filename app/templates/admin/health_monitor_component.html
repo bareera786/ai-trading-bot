@@ -1,0 +1,95 @@
+<!-- PHASE 6: MODEL HEALTH MONITOR -->
+<!-- Insert this section BEFORE the "Model Registry" section in brain_dashboard.html -->
+
+<div class="dashboard-card premium-card" id="healthMonitor" style="margin-top: 2rem;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <span class="card-icon">🏥</span>
+            <h3 class="card-title">Model Health Monitor</h3>
+        </div>
+        <span class="health-badge" id="healthBadge">UNKNOWN</span>
+    </div>
+    <div style="padding: 1.5rem;">
+        <!-- Auto-Pause Warning Banner -->
+        <div class="alert alert-danger" id="autoPauseWarning"
+            style="display:none; margin-bottom: 1rem; padding: 1rem; background: rgba(225, 112, 85, 0.1); border: 1px solid var(--danger); border-radius: 8px;">
+            <strong>⚠️ AUTOMATIC PAUSE ACTIVE</strong>
+            <p id="autoPauseReason" style="margin: 0.5rem 0; color: var(--text-primary);"></p>
+            <button onclick="manualResume()" class="btn btn-warning btn-sm" style="margin-top: 0.5rem;">
+                Manual Override (Requires Confirmation)
+            </button>
+        </div>
+
+        <!-- Performance Metrics Grid -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+            <div class="metric-card"
+                style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                <span class="metric-label"
+                    style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Win
+                    Rate (7D)</span>
+                <span class="metric-value" id="winRate7d"
+                    style="display: block; font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</span>
+            </div>
+            <div class="metric-card"
+                style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                <span class="metric-label"
+                    style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Avg
+                    Confidence</span>
+                <span class="metric-value" id="avgConfidence"
+                    style="display: block; font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</span>
+            </div>
+            <div class="metric-card"
+                style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                <span class="metric-label"
+                    style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Current
+                    Drawdown</span>
+                <span class="metric-value" id="currentDrawdown"
+                    style="display: block; font-size: 1.5rem; font-weight: 700; color: var(--danger);">—</span>
+            </div>
+            <div class="metric-card"
+                style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                <span class="metric-label"
+                    style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Loss
+                    Streak</span>
+                <span class="metric-value" id="lossStreak"
+                    style="display: block; font-size: 1.5rem; font-weight: 700; color: var(--warning);">—</span>
+            </div>
+            <div class="metric-card"
+                style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                <span class="metric-label"
+                    style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Health
+                    Score</span>
+                <span class="metric-value" id="healthScore"
+                    style="display: block; font-size: 1.5rem; font-weight: 700; color: var(--success);">—</span>
+            </div>
+            <div class="metric-card"
+                style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                <span class="metric-label"
+                    style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Last
+                    Check</span>
+                <span class="metric-value small" id="lastCheck"
+                    style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-secondary);">—</span>
+            </div>
+        </div>
+
+        <!-- Signal Bias Chart -->
+        <div style="margin-top: 1.5rem;">
+            <label class="text-secondary small"
+                style="display: block; margin-bottom: 0.5rem; font-size: 0.75rem;">Signal Bias Distribution</label>
+            <div style="display: flex; gap: 2px; height: 40px; border-radius: 8px; overflow: hidden;">
+                <div id="biasLong"
+                    style="background: rgba(0, 212, 170, 0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 700; transition: all 0.3s ease;">
+                    LONG
+                </div>
+                <div id="biasShort"
+                    style="background: rgba(225, 112, 85, 0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 700; transition: all 0.3s ease;">
+                    SHORT
+                </div>
+                <div id="biasFlat"
+                    style="background: rgba(255, 193, 7, 0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 700; transition: all 0.3s ease;">
+                    FLAT
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

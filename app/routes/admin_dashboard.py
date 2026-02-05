@@ -1,10 +1,22 @@
 from flask import Blueprint, render_template, jsonify, request
 from flask_login import login_required, current_user
 from app.tasks.manager import get_self_improvement_worker
-from app.extensions import limiter
+from app.extensions import limiter, db
 from app.auth.decorators import admin_required
 
 admin_dashboard_bp = Blueprint("admin_dashboard", __name__, url_prefix="/admin")
+
+
+@admin_dashboard_bp.route("/index", methods=["GET"])
+@login_required
+@limiter.exempt
+def admin_dashboard():
+    # Check admin status manually for web routes
+    if not getattr(current_user, "is_admin", False):
+        from flask import flash, redirect, url_for
+        flash("Admin access required")
+        return redirect(url_for("dashboard_bp.dashboard"))
+    return render_template("admin_dashboard.html")
 
 
 @admin_dashboard_bp.route("/users", methods=["GET"], endpoint="user_management")
@@ -13,6 +25,111 @@ admin_dashboard_bp = Blueprint("admin_dashboard", __name__, url_prefix="/admin")
 @limiter.exempt
 def user_management():
     return render_template("admin/user_management.html")
+
+
+@admin_dashboard_bp.route("/trades", methods=["GET"], endpoint="trade_history")
+@login_required
+@admin_required
+@limiter.exempt
+def trade_history():
+    """Global Trade History page."""
+    from app.models import UserTrade
+    
+    page = request.args.get("page", 1, type=int)
+    per_page = 50
+    
+    # Query all trades, ordered by time
+    trades_pagination = UserTrade.query.order_by(UserTrade.timestamp.desc()).paginate(
+        page=page, per_page=per_page
+    )
+    
+    # Calculate global stats (simple approximation)
+    # Ideally cached or separate analytics query
+    total_trades = UserTrade.query.count()
+    if total_trades > 0:
+        total_pnl = db.session.query(db.func.sum(UserTrade.pnl)).scalar() or 0
+        wins = UserTrade.query.filter(UserTrade.pnl > 0).count()
+        win_rate = (wins / total_trades) * 100
+    else:
+        total_pnl = 0
+        win_rate = 0.0
+
+    return render_template(
+        "admin/trades.html", 
+        trades=trades_pagination,
+        active_page="trade-history",
+        total_trades=total_trades,
+        total_pnl=total_pnl,
+        win_rate=win_rate
+    )
+
+
+@admin_dashboard_bp.route("/api/users", methods=["GET"])
+@login_required
+@admin_required
+def get_users_api():
+    """API endpoint to get users list."""
+    from app.models import User
+    users = User.query.all()
+    user_list = [{
+        "id": u.id,
+        "username": u.username,
+        "email": u.email,
+        "role": "admin" if u.is_admin else "user",
+        "is_admin": u.is_admin,
+        "is_active": u.is_active,
+        "created_at": u.created_at.isoformat() if u.created_at else None
+    } for u in users]
+    return jsonify({"users": user_list})
+
+
+@admin_dashboard_bp.route("/api/audit-logs", methods=["GET"])
+@login_required
+@admin_required
+def get_audit_logs_api():
+    """API endpoint to get audit logs."""
+    # Mock data for now or fetch from DB if AuditLog model exists
+    return jsonify([])
+
+
+
+@admin_dashboard_bp.route("/plans", methods=["GET"], endpoint="saas_plans")
+@login_required
+@admin_required
+@limiter.exempt
+def saas_plans():
+    """SaaS Plans Management page."""
+    return render_template("admin/saas_plans.html", active_page="subscription-management")
+
+
+@admin_dashboard_bp.route("/symbols", methods=["GET"], endpoint="symbol_management")
+@login_required
+@admin_required
+@limiter.exempt
+def symbol_management():
+    """Symbol Management page."""
+    return render_template("symbols.html")
+
+
+@admin_dashboard_bp.route("/settings", methods=["GET"], endpoint="admin_settings")
+@login_required
+@admin_required
+@limiter.exempt
+def admin_settings():
+    """Admin Settings page."""
+    return render_template("placeholder.html",
+        page_title="Admin Settings",
+        page_subtitle="System configuration",
+        page_icon="💳",
+        page_description="Configure system-wide settings",
+        planned_features=[
+            "Global trading parameters",
+            "System limits and quotas",
+            "Email notifications",
+            "Backup configuration",
+            "Maintenance mode"
+        ]
+    )
 
 
 # Self-Improvement API Endpoints

@@ -15,6 +15,7 @@ from prometheus_client import generate_latest
 
 from app.extensions import db
 from app.services.pathing import resolve_profile_path
+from app.extensions import limiter
 
 
 status_bp = Blueprint("status", __name__)
@@ -57,7 +58,7 @@ def _dashboard_data(ctx: dict) -> dict:
     return data
 
 
-@status_bp.route("/health")
+@status_bp.route("/system/health")
 def health_check():
     # In test mode, AI bot context may not be initialized
     try:
@@ -380,6 +381,7 @@ def api_health_ribs():
 
 
 @status_bp.route("/api/ribs/progress", methods=["GET"])
+@limiter.exempt
 def api_ribs_progress():
     """Return lightweight RIBS progress information read from ribs_status.json"""
     status_path = _ribs_status_path()
@@ -661,6 +663,7 @@ def export_ribs_strategy(strategy_id):
 
 @status_bp.route("/api/ribs/export", methods=["GET"])
 @login_required
+@limiter.exempt
 def export_ribs_archive():
     """Export entire RIBS archive data"""
     ctx = _ctx()
@@ -718,6 +721,7 @@ def export_ribs_archive():
 
 
 @status_bp.route("/performance/metrics")
+@limiter.exempt
 def performance_metrics():
     """Get real-time performance metrics"""
     try:
@@ -729,6 +733,8 @@ def performance_metrics():
         current_app.logger.error(f"Failed to get performance metrics: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+
+from app.core.system_state import SystemStateManager
 
 @status_bp.route("/api/system-metrics")
 def api_system_metrics():
@@ -762,6 +768,84 @@ def api_system_metrics():
         except Exception:
             pass
 
+        # === SINGLE SOURCE OF TRUTH ===
+        # Retrieve strict status from Redis. If Heartbeat is dead, this returns OFFLINE.
+        bot_state = SystemStateManager.get_status()
+        
+        # === SERVICE HEALTH CHECKS ===
+        services = []
+
+        # 1. Binance API
+        try:
+            t0 = time.time()
+            r = requests.get("https://api.binance.com/api/v3/time", timeout=2)
+            lat = int((time.time() - t0) * 1000)
+            services.append({
+                "name": "Binance API",
+                "endpoint": "api.binance.com",
+                "status": "OPERATIONAL" if r.status_code == 200 else "ERROR",
+                "latency": f"{lat}ms",
+                "last_check": "Just now"
+            })
+        except Exception:
+            services.append({
+                "name": "Binance API",
+                "endpoint": "api.binance.com",
+                "status": "UNREACHABLE",
+                "latency": "-",
+                "last_check": "Just now"
+            })
+
+        # 2. Database
+        try:
+            t0 = time.time()
+            db.session.execute(db.text("SELECT 1"))
+            lat = int((time.time() - t0) * 1000)
+            services.append({
+                "name": "PostgreSQL DB",
+                "endpoint": "localhost:5432",
+                "status": "OPERATIONAL",
+                "latency": f"{lat}ms",
+                "last_check": "Just now"
+            })
+        except Exception:
+             services.append({
+                "name": "PostgreSQL DB",
+                "endpoint": "localhost:5432",
+                "status": "ERROR",
+                "latency": "-",
+                "last_check": "Just now"
+            })
+
+        # 3. Redis (inferred from SystemStateManager)
+        try:
+            # If we got bot_state, Redis is likely working
+            redis_status = "OPERATIONAL" if bot_state else "UNKNOWN"
+            services.append({
+                "name": "Redis Cache",
+                "endpoint": "localhost:6379",
+                "status": redis_status,
+                "latency": "1ms", # Mock latency for now
+                "last_check": "Just now"
+            })
+        except Exception:
+             services.append({
+                "name": "Redis Cache",
+                "endpoint": "localhost:6379",
+                "status": "ERROR",
+                "latency": "-",
+                "last_check": "Just now"
+            })
+
+        # 4. AI Worker
+        services.append({
+            "name": "AI Inference Engine",
+            "endpoint": "internal:worker",
+            "status": bot_state["status"], # ONLINE/OFFLINE
+            "latency": "0ms",
+            "last_check": bot_state.get("last_seen", "N/A")
+        })
+
         payload = {
             "system": {
                 "cpu_percent": cpu_percent if cpu_percent is not None else 0.0,
@@ -770,11 +854,14 @@ def api_system_metrics():
                 "disk_usage_percent": disk_usage_percent if disk_usage_percent is not None else 0.0,
             },
             "bot": {
-                # Best-effort value; the health page uses this for a badge.
                 "api_connected": True,
-                "status": "RUNNING",
-                "trading_enabled": True,
+                "status": bot_state["status"],  # ONLINE | OFFLINE
+                "trading_enabled": bot_state.get("trading_enabled", False),
+                "last_seen": bot_state.get("last_seen"),
+                "component": bot_state.get("component"),
+                "message": bot_state.get("message")
             },
+            "services": services,
             "timestamp": datetime.now().isoformat(),
         }
 

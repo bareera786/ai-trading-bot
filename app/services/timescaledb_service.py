@@ -29,11 +29,11 @@ class TimescaleDBService:
 
     def __init__(
         self,
-        host: str = "localhost",
-        port: int = int(os.getenv("TIMESCALE_PORT", "5434")),
-        database: str = "timescaledb",
-        user: str = "timescale",
-        password: str = "",
+        host: str = os.getenv("TIMESCALE_HOST", "postgres"),
+        port: int = int(os.getenv("TIMESCALE_PORT", "5432")),
+        database: str = "trading_bot",
+        user: str = os.getenv("POSTGRES_USER", "trading_user"),
+        password: str = os.getenv("POSTGRES_PASSWORD", "secure_password_123"),
         logger: Optional[logging.Logger] = None,
     ):
         # Use environment variables if password not provided

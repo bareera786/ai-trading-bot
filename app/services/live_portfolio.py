@@ -63,6 +63,17 @@ class LivePortfolioScheduler:
         while not self._stop_event.is_set():
             try:
                 current_time = time.time()
+                
+                # --- HEARTBEAT INJECTION (Phase 6 Fix) ---
+                # Signal that the main scheduler loop is alive
+                try:
+                    from app.extensions import redis_client
+                    if redis_client:
+                        redis_client.set("brain:heartbeat", current_time)
+                except Exception:
+                    pass
+                # -----------------------------------------
+
                 if current_time - self._last_update_time >= self.update_interval:
                     self._perform_update()
                     self._last_update_time = current_time

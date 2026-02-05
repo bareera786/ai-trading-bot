@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block header_title %}{{ page_title }}{% endblock %}
+{% block header_subtitle %}{{ page_subtitle }}{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+    <div style="max-width: 800px; margin: 0 auto; padding: var(--spacing-2xl) 0;">
+        <!-- Coming Soon Card -->
+        <div class="dashboard-card" style="text-align: center; padding: var(--spacing-2xl);">
+            <div style="font-size: 64px; margin-bottom: var(--spacing-lg);">{{ page_icon }}</div>
+            <h2 style="font-size: var(--font-size-2xl); margin-bottom: var(--spacing-md); color: var(--text-primary);">
+                {{ page_title }}
+            </h2>
+            <p style="font-size: var(--font-size-lg); color: var(--text-secondary); margin-bottom: var(--spacing-xl);">
+                {{ page_description }}
+            </p>
+
+            <div
+                style="background: var(--bg-secondary); border-radius: var(--border-radius); padding: var(--spacing-xl); margin-bottom: var(--spacing-xl);">
+                <div
+                    style="font-size: var(--font-size-xl); font-weight: 600; color: var(--primary); margin-bottom: var(--spacing-sm);">
+                    🚧 Coming Soon
+                </div>
+                <p style="color: var(--text-secondary);">
+                    This feature is currently under development and will be available in a future update.
+                </p>
+            </div>
+
+            {% if planned_features %}
+            <div
+                style="text-align: left; background: var(--bg-tertiary); border-radius: var(--border-radius); padding: var(--spacing-lg);">
+                <h3
+                    style="font-size: var(--font-size-md); font-weight: 600; margin-bottom: var(--spacing-md); color: var(--text-primary);">
+                    📋 Planned Features
+                </h3>
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                    {% for feature in planned_features %}
+                    <li
+                        style="padding: var(--spacing-sm) 0; color: var(--text-secondary); display: flex; align-items: start;">
+                        <span style="color: var(--primary); margin-right: var(--spacing-sm);">✓</span>
+                        <span>{{ feature }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <div style="margin-top: var(--spacing-xl);">
+                <a href="{{ url_for('dashboard_bp.dashboard') }}" class="btn btn-primary">
+                    ← Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

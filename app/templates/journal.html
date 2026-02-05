@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Trading Journal - AI Trading Bot{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-3">
+                <i class="fas fa-book"></i> Trading Journal
+            </h1>
+            <p class="text-muted">Document and analyze your trading decisions</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- New Entry Form -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">New Journal Entry</h5>
+                </div>
+                <div class="card-body">
+                    <form id="journalForm">
+                        <div class="mb-3">
+                            <label class="form-label">Trade ID (Optional)</label>
+                            <input type="text" class="form-control" id="tradeId" placeholder="Link to specific trade">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <input type="text" class="form-control" id="title" required
+                                placeholder="e.g., BTC Breakout Trade">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Entry Type</label>
+                            <select class="form-select" id="entryType">
+                                <option value="trade">Trade Analysis</option>
+                                <option value="market">Market Observation</option>
+                                <option value="lesson">Lesson Learned</option>
+                                <option value="strategy">Strategy Note</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Content</label>
+                            <textarea class="form-control" id="content" rows="8" required
+                                placeholder="Write your thoughts, analysis, or observations..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Tags (comma-separated)</label>
+                            <input type="text" class="form-control" id="tags"
+                                placeholder="e.g., breakout, btc, profitable">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save"></i> Save Entry
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Journal Entries -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Entries</h5>
+                </div>
+                <div class="card-body">
+                    <div id="entriesContainer">
+                        <div class="text-center py-5">
+                            <div class="spinner-border" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function loadEntries() {
+        try {
+            const response = await fetch('/api/journal/entries');
+            const data = await response.json();
+
+            if (data.success) {
+                displayEntries(data.entries);
+            }
+        } catch (error) {
+            console.error('Error loading entries:', error);
+        }
+    }
+
+    function displayEntries(entries) {
+        const container = document.getElementById('entriesContainer');
+
+        if (!entries || entries.length === 0) {
+            container.innerHTML = '<p class="text-center text-muted py-5">No journal entries yet. Start documenting your trades!</p>';
+            return;
+        }
+
+        container.innerHTML = entries.map(entry => `
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="mb-1">${entry.title}</h6>
+                        <small class="text-muted">
+                            ${new Date(entry.created_at).toLocaleString()} • 
+                            <span class="badge bg-secondary">${entry.entry_type}</span>
+                        </small>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="editEntry('${entry.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteEntry('${entry.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <p class="mb-2">${entry.content}</p>
+                
+                ${entry.tags ? `
+                    <div class="mb-0">
+                        ${entry.tags.split(',').map(tag => `<span class="badge bg-light text-dark me-1">${tag.trim()}</span>`).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+    }
+
+    document.getElementById('journalForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        try {
+            const response = await fetch('/api/journal/entries', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    trade_id: document.getElementById('tradeId').value || null,
+                    title: document.getElementById('title').value,
+                    entry_type: document.getElementById('entryType').value,
+                    content: document.getElementById('content').value,
+                    tags: document.getElementById('tags').value
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById('journalForm').reset();
+                loadEntries();
+            } else {
+                alert('Error saving entry');
+            }
+        } catch (error) {
+            console.error('Error saving entry:', error);
+        }
+    });
+
+    async function deleteEntry(id) {
+        if (!confirm('Delete this journal entry?')) return;
+
+        try {
+            const response = await fetch(`/api/journal/entries/${id}`, { method: 'DELETE' });
+            const data = await response.json();
+
+            if (data.success) {
+                loadEntries();
+            }
+        } catch (error) {
+            console.error('Error deleting entry:', error);
+        }
+    }
+
+    function editEntry(id) {
+        // TODO: Implement edit functionality
+        alert('Edit entry: ' + id);
+    }
+
+    loadEntries();
+</script>
+{% endblock %}

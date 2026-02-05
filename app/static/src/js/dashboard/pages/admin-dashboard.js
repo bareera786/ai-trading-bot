@@ -52,84 +52,48 @@ function setupQuickAdminActions() {
         button.dataset.bound = '1';
 
         button.addEventListener('click', (e) => {
+            // If the button itself is an anchor with a href, let it work normally.
+            if (button.tagName === 'A' && button.href) return;
+
             e.preventDefault();
             const pageId = button.getAttribute('data-page');
             if (!pageId) return;
 
-            // Trigger navigation to the page
+            // Trigger navigation to the page via sidebar link
             const navItem = document.querySelector(`.nav-item[data-page="${pageId}"]`);
-            if (navItem) {
-                navItem.click();
+            if (navItem && navItem.href) {
+                // Navigate to the link's href
+                window.location.href = navItem.href;
                 return;
             }
 
-            // Fallback: manually show the page
-            showPage(pageId);
+            console.warn('Could not find navigation target for page:', pageId);
         });
     });
 }
 
 function showPage(pageId) {
-    // Fallback page switching logic
-    const pageSections = document.querySelectorAll('.page-section');
-    const targetSection = document.getElementById(pageId);
-    
-    if (targetSection) {
-        // Hide all pages
-        pageSections.forEach(section => section.classList.remove('active'));
-        // Show target page
-        targetSection.classList.add('active');
-        
-        // Update page title
-        const pageTitles = {
-            'user-management': 'User Management',
-            'symbols': 'Symbols', 
-            'backtest-lab': 'Backtest Lab',
-            'admin-settings': 'Admin Settings'
-        };
-        
-        const pageTitle = document.getElementById('page-title');
-        const pageSubtitle = document.getElementById('page-subtitle');
-        
-        if (pageTitle && pageTitles[pageId]) {
-            pageTitle.textContent = pageTitles[pageId];
-            pageSubtitle.textContent = 'Industrial-grade overview and controls for administrators.';
-        }
-        
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        // Dispatch visibility event for other components (fallback parity with navigation.js)
-        const visibilityEvents = {
-            'user-management': 'dashboard:user-management-visible',
-            symbols: 'dashboard:symbols-visible',
-            'backtest-lab': 'dashboard:backtest-lab-visible',
-            'admin-settings': 'dashboard:admin-settings-visible',
-            'admin-dashboard': 'dashboard:admin-dashboard-visible',
-            'trade-history': 'dashboard:trade-history-visible'
-        };
-        if (visibilityEvents[pageId]) {
-            window.dispatchEvent(new CustomEvent(visibilityEvents[pageId]));
-        }
-    }
+    // Deprecated: SPA navigation removed.
+    // This function is kept to prevent reference errors but does nothing.
+    console.debug('showPage called but ignored (Server-Side Navigation enforced):', pageId);
 }
 
 async function loadAdminDashboardData() {
     try {
         const response = await apiRequest('/api/admin/dashboard');
-        
+
         // Update overview metrics
         updateAdminOverview(response.summary);
-        
+
         // Update system health
         updateSystemHealth(response.system_status);
-        
+
     } catch (error) {
         console.error('Failed to load admin dashboard data:', error);
         // Show error state for metrics
         updateAdminOverview({
             total_users: 'Error',
-            active_users: 'Error', 
+            active_users: 'Error',
             total_portfolio_value: 'Error',
             system_risk_level: 'unknown'
         });
@@ -142,12 +106,12 @@ function updateAdminOverview(summary) {
     if (totalUsersEl) {
         totalUsersEl.textContent = summary.total_users || 0;
     }
-    
+
     const activeUsersEl = document.getElementById('admin-active-users');
     if (activeUsersEl) {
         activeUsersEl.textContent = summary.active_users || 0;
     }
-    
+
     // Update revenue (total portfolio value as proxy)
     const revenueEl = document.getElementById('admin-total-revenue');
     if (revenueEl) {
@@ -158,14 +122,14 @@ function updateAdminOverview(summary) {
             revenueEl.textContent = '—';
         }
     }
-    
+
     // Update system health based on risk level
     const healthEl = document.getElementById('admin-system-health');
     if (healthEl) {
         const riskLevel = summary.system_risk_level || 'unknown';
         let healthStatus = 'ONLINE';
         let healthClass = 'status-success';
-        
+
         if (riskLevel === 'high') {
             healthStatus = 'HIGH RISK';
             healthClass = 'status-danger';
@@ -173,9 +137,33 @@ function updateAdminOverview(summary) {
             healthStatus = 'MEDIUM RISK';
             healthClass = 'status-warning';
         }
-        
+
         healthEl.textContent = healthStatus;
         healthEl.className = `status-indicator ${healthClass}`;
+    }
+
+    // Update Win Rate
+    const winRateEl = document.getElementById('admin-win-rate');
+    if (winRateEl) {
+        const winRate = Number(summary.win_rate) || 0;
+        winRateEl.textContent = `${winRate.toFixed(1)}%`;
+        // Color code win rate
+        if (winRate >= 50) {
+            winRateEl.style.color = 'var(--success)';
+        } else if (winRate > 0) {
+            winRateEl.style.color = 'var(--warning)';
+        } else {
+            winRateEl.style.color = 'var(--text-secondary)';
+        }
+    }
+
+    // Update Total P&L
+    const pnlEl = document.getElementById('admin-total-pnl');
+    if (pnlEl) {
+        const pnl = Number(summary.total_pnl) || 0;
+        const sign = pnl >= 0 ? '+' : '';
+        pnlEl.textContent = `${sign}$${pnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        pnlEl.style.color = pnl >= 0 ? 'var(--success)' : 'var(--danger)';
     }
 }
 
@@ -200,6 +188,27 @@ function initCharts() {
     const successCtx = document.getElementById('si-success-chart');
     const accuracyCtx = document.getElementById('si-accuracy-chart');
 
+    // Helper to get CSS variable value
+    const getThemeColor = (varName, alpha = 1) => {
+        const style = getComputedStyle(document.documentElement);
+        const color = style.getPropertyValue(varName).trim();
+        if (alpha < 1 && color.startsWith('#')) {
+            // Convert hex to rgba for transparency
+            const r = parseInt(color.slice(1, 3), 16);
+            const g = parseInt(color.slice(3, 5), 16);
+            const b = parseInt(color.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        return color;
+    };
+
+    const successColor = getThemeColor('--success');
+    const successBg = getThemeColor('--success', 0.1);
+    const primaryColor = getThemeColor('--secondary'); // Using secondary for ultimate model
+    const primaryBg = getThemeColor('--secondary', 0.1);
+    const accentColor = getThemeColor('--warning');
+    const accentBg = getThemeColor('--warning', 0.1);
+
     if (successCtx) {
         siCharts.successRate = new Chart(successCtx, {
             type: 'line',
@@ -208,8 +217,8 @@ function initCharts() {
                 datasets: [{
                     label: 'Success Rate %',
                     data: [],
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderColor: successColor,
+                    backgroundColor: successBg,
                     tension: 0.4,
                     fill: true
                 }]
@@ -220,12 +229,33 @@ function initCharts() {
                 scales: {
                     y: {
                         beginAtZero: true,
-                        max: 100
+                        max: 100,
+                        grid: {
+                            color: getThemeColor('--border-color')
+                        },
+                        ticks: {
+                            color: getThemeColor('--text-secondary')
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: getThemeColor('--text-secondary')
+                        }
                     }
                 },
                 plugins: {
                     legend: {
                         display: false
+                    },
+                    tooltip: {
+                        backgroundColor: getThemeColor('--bg-card'), // Assuming dark card bg
+                        titleColor: getThemeColor('--text-primary'),
+                        bodyColor: getThemeColor('--text-secondary'),
+                        borderColor: getThemeColor('--border-color'),
+                        borderWidth: 1
                     }
                 }
             }
@@ -240,14 +270,14 @@ function initCharts() {
                 datasets: [{
                     label: 'Ultimate Model',
                     data: [],
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderColor: primaryColor,
+                    backgroundColor: primaryBg,
                     tension: 0.4
                 }, {
                     label: 'Optimized Model',
                     data: [],
-                    borderColor: '#f59e0b',
-                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderColor: accentColor,
+                    backgroundColor: accentBg,
                     tension: 0.4
                 }]
             },
@@ -257,7 +287,35 @@ function initCharts() {
                 scales: {
                     y: {
                         beginAtZero: true,
-                        max: 100
+                        max: 100,
+                        grid: {
+                            color: getThemeColor('--border-color')
+                        },
+                        ticks: {
+                            color: getThemeColor('--text-secondary')
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: getThemeColor('--text-secondary')
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: getThemeColor('--text-secondary')
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: getThemeColor('--bg-card'),
+                        titleColor: getThemeColor('--text-primary'),
+                        bodyColor: getThemeColor('--text-secondary'),
+                        borderColor: getThemeColor('--border-color'),
+                        borderWidth: 1
                     }
                 }
             }

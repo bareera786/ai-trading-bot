@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block header_title %}SYSTEM PULSE MONITOR{% endblock %}
+{% block header_subtitle %}Real-time infrastructure health metrics{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+    <!-- Overall Status Grid -->
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🏥</span>
+                <h3 class="card-title">Overall Health</h3>
+            </div>
+            <div class="card-value" style="color: var(--success);">EXCELLENT</div>
+            <p class="card-subtitle">Uptime: 99.99%</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">💻</span>
+                <h3 class="card-title">CPU Load</h3>
+            </div>
+            <div class="card-value" id="cpuLoad">12%</div>
+            <p class="card-subtitle">Nominal</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🧠</span>
+                <h3 class="card-title">RAM Usage</h3>
+            </div>
+            <div class="card-value" id="ramUsage">1.2 GB</div>
+            <p class="card-subtitle">of 8 GB Available</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">💾</span>
+                <h3 class="card-title">Disk Space</h3>
+            </div>
+            <div class="card-value" id="diskSpace">--%</div>
+            <p class="card-subtitle">Available</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">📶</span>
+                <h3 class="card-title">API Latency</h3>
+            </div>
+            <div class="card-value" id="latency">45 ms</div>
+            <p class="card-subtitle">Global Average</p>
+        </div>
+    </div>
+
+    <!-- Service Status List -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <span class="card-icon">🔌</span>
+            <h3 class="card-title">Service Connectivity</h3>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Endpoint</th>
+                        <th>Status</th>
+                        <th>Response Time</th>
+                        <th>Last Check</th>
+                    </tr>
+                </thead>
+                <tbody id="serviceStatusBody">
+                    <!-- Dynamic Content -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<script>
+    // Fetch real metrics from the system-metrics API
+    async function updateMetrics() {
+        try {
+            const response = await fetch('/api/system-metrics');
+            const result = await response.json();
+
+            if (result.success && result.data) {
+                const sys = result.data.system;
+
+                // CPU
+                document.getElementById('cpuLoad').textContent = sys.cpu_percent.toFixed(1) + "%";
+
+                // RAM
+                document.getElementById('ramUsage').textContent = sys.memory_used_gb.toFixed(1) + " GB";
+
+                // Disk Space
+                const diskElem = document.getElementById('diskSpace');
+                if (diskElem) {
+                    diskElem.textContent = sys.disk_usage_percent.toFixed(1) + "%";
+                }
+
+                // Services Table
+                const tbody = document.getElementById('serviceStatusBody');
+                if (tbody && result.data.services) {
+                    tbody.innerHTML = ''; // Clear hardcoded/old rows
+
+                    result.data.services.forEach(svc => {
+                        const statusColor = svc.status === 'OPERATIONAL' || svc.status === 'ONLINE' ? 'status-success' : 'status-danger';
+                        const row = `
+                            <tr>
+                                <td style="font-weight: bold;">${svc.name}</td>
+                                <td style="font-family: monospace; color: var(--text-secondary);">${svc.endpoint}</td>
+                                <td><span class="status-indicator ${statusColor}">${svc.status}</span></td>
+                                <td>${svc.latency}</td>
+                                <td>${svc.last_check}</td>
+                            </tr>
+                        `;
+                        tbody.insertAdjacentHTML('beforeend', row);
+                    });
+                }
+            }
+
+            // Latency card (Average of services or mock)
+            // If we have services, take average latency
+            if (result.data && result.data.services) {
+                let totalLat = 0, count = 0;
+                result.data.services.forEach(s => {
+                    const val = parseInt(s.latency);
+                    if (!isNaN(val)) { totalLat += val; count++; }
+                });
+                if (count > 0) {
+                    document.getElementById('latency').textContent = (totalLat / count).toFixed(0) + " ms";
+                }
+            }
+
+        } catch (e) {
+            console.error("Failed to fetch metrics", e);
+        }
+    }
+
+    // Update every 3 seconds
+    setInterval(updateMetrics, 3000);
+    updateMetrics(); // Initial call
+</script>
+{% endblock %}

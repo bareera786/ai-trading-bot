@@ -40,36 +40,102 @@ class HealthReportService:
             if os.getenv("AI_BOT_TEST_MODE") == "1" or os.getenv("PYTEST_CURRENT_TEST"):
                 registry = CollectorRegistry()
             else:
-                registry = REGISTRY
+                # For production, use the default registry.
+                # We need to check if metrics are already registered to avoid errors
+                # when the service is re-initialized in the same process (e.g., hot-reloading).
+                # Note: This check is a workaround for Prometheus client's strictness.
+                # A better long-term solution might be to ensure only one service instance
+                # registers metrics to the global registry, or use a custom registry always.
+                is_health_check_counter_registered = any(
+                    s.name == "health_checks_total" for s in REGISTRY.collect()
+                )
+                if not is_health_check_counter_registered:
+                    registry = REGISTRY
+                else:
+                    # If metrics are already registered, we must not register them again.
+                    # We can either skip creating new metric objects (and thus not update them),
+                    # or try to retrieve existing ones (which is not directly supported by client.py
+                    # for Counter/Gauge/Histogram without re-registering).
+                    # For now, we'll use a dummy registry to prevent re-registration errors
+                    # but this means these specific metrics won't be updated by this instance.
+                    # This scenario should ideally be avoided by proper application lifecycle management.
+                    registry = CollectorRegistry() # Use a dummy registry to avoid errors, metrics won't be exposed by this instance.
+
 
         # Prometheus metrics
-        self.health_check_counter = Counter(
-            "health_checks_total",
-            "Total number of health checks",
-            registry=registry,
-        )
-        self.health_check_duration = Histogram(
-            "health_check_duration_seconds",
-            "Time spent on health checks",
-            registry=registry,
-        )
-        self.system_health_gauge = Gauge(
-            "system_health_status",
-            "Current system health status (1=healthy, 0=unhealthy)",
-            registry=registry,
-        )
+        try:
+            self.health_check_counter = Counter(
+                "health_checks",
+                "Number of health checks performed",
+                registry=registry,
+            )
+            self.state_counter = Counter(
+                "health_states",
+                "Count of health states",
+                ["state"],
+                registry=registry,
+            )
+        except ValueError:
+            # Fallback for when metrics are already registered (e.g. during reloads/tests)
+            # Use a dummy registry to avoid crashing, though these instances won't report metrics
+            dummy_registry = CollectorRegistry()
+            self.health_check_counter = Counter(
+                "health_checks",
+                "Number of health checks performed",
+                registry=dummy_registry,
+            )
+            self.state_counter = Counter(
+                "health_states",
+                "Count of health states",
+                ["state"],
+                registry=dummy_registry,
+            )
+        try:
+            self.health_check_duration = Histogram(
+                "health_check_duration_seconds",
+                "Time spent on health checks",
+                registry=registry,
+            )
+            self.system_health_gauge = Gauge(
+                "system_health_status",
+                "Current system health status (1=healthy, 0=unhealthy)",
+                registry=registry,
+            )
 
-        # Circuit breaker metrics
-        self.circuit_breaker_state = Gauge(
-            "circuit_breaker_state",
-            "Circuit breaker state (0=closed, 1=open, 2=half_open)",
-            registry=registry,
-        )
-        self.circuit_breaker_failures = Gauge(
-            "circuit_breaker_failures_total",
-            "Total circuit breaker failures",
-            registry=registry,
-        )
+            # Circuit breaker metrics
+            self.circuit_breaker_state = Gauge(
+                "circuit_breaker_state",
+                "Circuit breaker state (0=closed, 1=open, 2=half_open)",
+                registry=registry,
+            )
+            self.circuit_breaker_failures = Gauge(
+                "circuit_breaker_failures_total",
+                "Total circuit breaker failures",
+                registry=registry,
+            )
+        except ValueError:
+             # Fallback for duplicates
+            dummy_registry = CollectorRegistry()
+            self.health_check_duration = Histogram(
+                "health_check_duration_seconds",
+                "Time spent on health checks",
+                registry=dummy_registry,
+            )
+            self.system_health_gauge = Gauge(
+                "system_health_status",
+                "Current system health status (1=healthy, 0=unhealthy)",
+                registry=dummy_registry,
+            )
+            self.circuit_breaker_state = Gauge(
+                "circuit_breaker_state",
+                "Circuit breaker state (0=closed, 1=open, 2=half_open)",
+                registry=dummy_registry,
+            )
+            self.circuit_breaker_failures = Gauge(
+                "circuit_breaker_failures_total",
+                "Total circuit breaker failures",
+                registry=dummy_registry,
+            )
 
     def refresh(self, *, run_backtest: bool) -> Dict[str, Any]:
         with self.health_check_duration.time():

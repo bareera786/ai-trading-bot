@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Factor Authentication — AI Trading Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: #0a0f19;
+            color: #e5f7f3;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .auth-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .auth-box {
+            background: rgba(16, 23, 38, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 420px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .brand {
+            margin-bottom: 2rem;
+        }
+
+        .brand i {
+            font-size: 2.5rem;
+            color: #00d4aa;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #b2bec3;
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: #0a0f19;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1.2rem;
+            letter-spacing: 0.2rem;
+            text-align: center;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #00d4aa;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.9rem;
+            background: #00d4aa;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            margin-top: 1rem;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .alert {
+            padding: 0.8rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            border-left: 4px solid transparent;
+            text-align: left;
+        }
+
+        .alert-danger {
+            background: rgba(255, 118, 117, 0.1);
+            color: #ff7675;
+            border-left-color: #ff7675;
+        }
+
+        .alert-success {
+            background: rgba(0, 212, 170, 0.1);
+            color: #00d4aa;
+            border-left-color: #00d4aa;
+        }
+
+        .alert-info {
+            background: rgba(9, 132, 227, 0.1);
+            color: #74b9ff;
+            border-left-color: #0984e3;
+        }
+
+        .bg-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.4;
+            background-image: radial-gradient(circle at 15% 50%, rgba(0, 212, 170, 0.08) 0%, transparent 25%), radial-gradient(circle at 85% 30%, rgba(9, 132, 227, 0.08) 0%, transparent 25%);
+        }
+
+        .auth-footer a {
+            color: #b2bec3;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-pattern"></div>
+    <div class="auth-container">
+        <div class="auth-box">
+            <div class="brand">
+                <i class="fas fa-shield-alt"></i>
+                <h1>Two-Factor Check</h1>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <p style="color: #b2bec3; margin-bottom: 1.5rem;">Please enter the 6-digit code from your authenticator app.
+            </p>
+
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <input type="text" id="code" name="code" class="form-control" placeholder="000 000" maxlength="6"
+                        pattern="[0-9]*" inputmode="numeric" required autofocus autocomplete="one-time-code">
+                </div>
+
+                <button type="submit" class="btn-primary">Verify Identity</button>
+            </form>
+
+            <div class="auth-footer" style="margin-top: 1.5rem;">
+                <a href="{{ url_for('auth.login') }}">Back to Login</a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

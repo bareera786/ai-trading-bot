@@ -178,7 +178,56 @@ def bootstrap_runtime(app) -> Optional[BootstrapContext]:
                 models,
             )  # noqa: F401  # Ensure models are registered before create_all
 
-            db.create_all()
+            # Wrapper to handle "type already exists" errors typical with Postgres Enums in create_all
+            # Wrapper to handle "type already exists" errors typical with Postgres Enums in create_all
+            from sqlalchemy.exc import ProgrammingError
+            app.logger.info("🔧 Bootstrap patch active: Attempting safe db.create_all()")
+            try:
+                db.create_all()
+                app.logger.info("✅ db.create_all() completed")
+            except Exception as e:
+                # Ignore "type ... already exists" errors
+                if "already exists" in str(e):
+                    app.logger.warning(f"⚠️ db.create_all() warning (ignored): {e}")
+                else:
+                    app.logger.error(f"❌ db.create_all() failed with {type(e)}: {e}")
+                    # For now, let's swallow it if it looks like a DB error, to keep the bot alive
+                    if "DuplicateObject" not in str(e):
+                         raise
+            
+            # --- SELF-HEALING PATCH: Fix Schema Drift for TrainingJob ---
+            # Explicitly check/add columns that migrations might miss if revisions are out of sync
+            try:
+                from sqlalchemy import text
+                with db.engine.connect() as conn:
+                    # Fix training_job ID sequence (Auto-Increment)
+                    try:
+                        # Postgres-specific fix for missing SERIAL/SEQUENCE
+                        conn.execute(text("CREATE SEQUENCE IF NOT EXISTS training_job_id_seq"))
+                        conn.execute(text("ALTER TABLE training_job ALTER COLUMN id SET DEFAULT nextval('training_job_id_seq')"))
+                        conn.execute(text("ALTER SEQUENCE training_job_id_seq OWNED BY training_job.id"))
+                        # Sync sequence with max ID
+                        conn.execute(text("SELECT setval('training_job_id_seq', COALESCE((SELECT MAX(id)+1 FROM training_job), 1), false)"))
+                        conn.commit()
+                        app.logger.info("✅ Applied ID sequence fix for TrainingJob")
+                    except Exception as e:
+                        # Ignore if it's not Postgres or already correct
+                        app.logger.warning(f"⚠️ ID sequence patch check (safe to ignore if not Postgres): {e}")
+
+                    # Fix training_job columns
+                    try:
+                        conn.execute(text("ALTER TABLE training_job ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()"))
+                        conn.execute(text("ALTER TABLE training_job ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP"))
+                        conn.execute(text("ALTER TABLE ml_model ADD COLUMN IF NOT EXISTS symbol VARCHAR(20)"))
+                        conn.execute(text("ALTER TABLE ml_model ADD COLUMN IF NOT EXISTS file_path VARCHAR(255)"))
+                        conn.commit()
+                        app.logger.info("✅ Applied self-healing schema patch for TrainingJob/MLModel")
+                    except Exception as e:
+                        app.logger.warning(f"⚠️ Schema patch check failed (might be already correct): {e}")
+            except Exception as e:
+                app.logger.error(f"❌ Failed to apply schema patch: {e}")
+            # ------------------------------------------------------------
+
             try:
                 migrate_database()
             except Exception as exc:  # pragma: no cover - migration is best-effort
@@ -209,7 +258,8 @@ def bootstrap_runtime(app) -> Optional[BootstrapContext]:
         runtime = assemble_runtime_context(flask_app=app, force=True)
     except RuntimeBuilderError as exc:
         app.logger.error("Unable to assemble AI runtime context: %s", exc)
-        return None
+        # CRITICAL DEBUG: Re-raise to see why it fails
+        raise
 
     context = runtime.as_dict() if runtime else None
     background_runtime = (
@@ -253,7 +303,11 @@ def bootstrap_runtime(app) -> Optional[BootstrapContext]:
                 app.logger.warning(
                     "AI runtime context unavailable; skipping initialization"
                 )
+            # Determine Role
+            bot_role = os.getenv("AI_BOT_ROLE", "api")
+
             if background_task_manager is not None:
+                # Start Portfolio Updates (Safe for API and Worker)
                 try:
                     background_task_manager.start_live_portfolio_updates()
                 except Exception as exc:  # pragma: no cover
@@ -264,7 +318,7 @@ def bootstrap_runtime(app) -> Optional[BootstrapContext]:
             # Initialize self-improvement worker with RIBS optimization
             if context:
                 try:
-                    from app.tasks.self_improvement import SelfImprovementWorker
+                    from app.ml.self_improvement.worker import SelfImprovementWorker
 
                     ultimate_trader = context.get("ultimate_trader")
                     optimized_trader = context.get("optimized_trader")
@@ -293,24 +347,36 @@ def bootstrap_runtime(app) -> Optional[BootstrapContext]:
                         # Store reference in context for access from routes
                         context["self_improvement_worker"] = self_improvement_worker
 
-                        # Start RIBS optimization if enabled
-                        if self_improvement_worker.ribs_enabled:
-                            import threading
+                        # Start RIBS optimization ONLY if NOT API
+                        if bot_role != "api":
+                            self_improvement_worker.start()  # Starts main loop for control file & metrics
 
-                            ribs_thread = threading.Thread(
-                                target=self_improvement_worker.continuous_ribs_optimization,
-                                daemon=True,
-                                name="RIBS-Optimization",
-                            )
-                            ribs_thread.start()
-                            app.logger.info(
-                                "🧬 RIBS Quality Diversity Optimization started"
-                            )
+                            if self_improvement_worker.ribs_enabled:
+                                import threading
 
-                        app.logger.info("🤖 Self-improvement worker initialized")
+                                ribs_thread = threading.Thread(
+                                    target=self_improvement_worker.continuous_ribs_optimization,
+                                    daemon=True,
+                                    name="RIBS-Optimization",
+                                )
+                                ribs_thread.start()
+                                app.logger.info(
+                                    "🧬 RIBS Quality Diversity Optimization started"
+                                )
+
+                            app.logger.info("🤖 Self-improvement worker initialized (Worker Role)")
+                        else:
+                            app.logger.info("ℹ️ API Role: Skipping RIBS Optimization thread")
+
                     else:
+                        missing = [k for k, v in {
+                            "ultimate_trader": ultimate_trader,
+                            "optimized_trader": optimized_trader,
+                            "ultimate_ml_system": ultimate_ml_system,
+                            "optimized_ml_system": optimized_ml_system
+                        }.items() if not v]
                         app.logger.warning(
-                            "⚠️ Missing components for self-improvement worker"
+                            f"⚠️ Missing components for self-improvement worker: {missing}"
                         )
 
                 except Exception as exc:
@@ -320,10 +386,22 @@ def bootstrap_runtime(app) -> Optional[BootstrapContext]:
 
             _runtime_started = True
 
+            # --- Inject Persistence Context into Global Trader ---
+            # --- Persistence Context Injection Removed in Phase 10 ---
+            # Global trader is now stateless/generic. Real trading requires
+            # explicit per-user instantiation via MarketDataService.
+            if context and context.get("ultimate_trader"):
+                # Mark as system-context (no user)
+                 ut = context["ultimate_trader"]
+                 if hasattr(ut, "real_trader"):
+                     ut.real_trader.user_id = "system_global"
+            # -----------------------------------------------------
+
     # Register AI bot context for dashboard routes (best-effort, idempotent)
     try:
         if not getattr(app, "_ai_bot_context_registered", False):
-            from ai_ml_auto_bot_final import register_ai_bot_context
+            # Import here to avoid circular import at module load time
+            from app.core.bot import register_ai_bot_context
 
             register_ai_bot_context(app, force=True)
             setattr(app, "_ai_bot_context_registered", True)

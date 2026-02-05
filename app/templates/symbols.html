@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}Symbol Matrix - AI Trading Admin{% endblock %}
+{% block header_title %}Symbol Administration{% endblock %}
+{% block header_subtitle %}Configure and monitor trading pairs across exchanges{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+
+    <!-- Hero Stats -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="hero-card">
+                <div class="hero-content">
+                    <div class="hero-icon">
+                        <span style="font-size: 2.5rem;">🪙</span>
+                    </div>
+                    <div>
+                        <h2>Trading Universe</h2>
+                        <p>Manage the list of assets the AI is authorized to trade. Configure risk limits and leverage
+                            caps per symbol.</p>
+                        <div class="hero-stats">
+                            <div class="h-stat">
+                                <span class="label">Total Pairs</span>
+                                <span class="value text-primary" id="total-symbols">0</span>
+                            </div>
+                            <div class="h-stat">
+                                <span class="label">Active Traded</span>
+                                <span class="value text-success" id="active-symbols">0</span>
+                            </div>
+                            <div class="h-stat">
+                                <span class="label">Avg Leverage</span>
+                                <span class="value text-info" id="avg-leverage">0x</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-graphic">
+                    <div class="coin-stack"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="dashboard-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <span class="card-icon">📋</span>
+                <h3 class="card-title">Listed Asset Pairs</h3>
+            </div>
+            <div class="header-actions d-flex gap-3">
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="symbolSearch" class="search-input" placeholder="Search pairs..."
+                        onkeyup="filterSymbols()">
+                </div>
+                <button class="btn btn-primary glow-effect" data-bs-toggle="modal" data-bs-target="#addSymbolModal">
+                    <i class="fas fa-plus mr-2"></i> Add Pair
+                </button>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Asset Pair</th>
+                            <th>Configuration</th>
+                            <th>Risk Limits</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="symbolsBody">
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <i class="fas fa-circle-notch fa-spin text-primary fa-2x"></i>
+                                <p class="mt-3 text-muted">Syncing with Exchange Matrix...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+<!-- Add Symbol Modal -->
+<div class="modal fade" id="addSymbolModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title">New Trading Pair</h5>
+                    <p class="modal-subtitle">Register a new asset for AI execution</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addSymbolForm">
+                    <div class="form-group mb-4">
+                        <label class="input-label">Symbol Ticker</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-tag input-icon"></i>
+                            <input type="text" class="form-control" id="symbol" placeholder="e.g. BTCUSDT" required
+                                style="text-transform: uppercase;">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6 mb-4">
+                            <label class="input-label">Min Order Size</label>
+                            <div class="input-wrapper">
+                                <input type="number" class="form-control" id="minOrder" step="0.00001"
+                                    placeholder="0.001" required>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-4">
+                            <label class="input-label">Max Leverage</label>
+                            <div class="input-wrapper">
+                                <input type="number" class="form-control" id="maxLeverage" value="20" min="1" max="125">
+                                <span class="suffix">x</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-4 p-3 rounded" style="background: rgba(255,255,255,0.05);">
+                        <div class="form-check form-switch d-flex justify-content-between align-items-center ps-0">
+                            <label class="form-check-label mb-0" for="isActive">
+                                <strong>Initial Status</strong><br>
+                                <span class="text-muted small">Available for trading immediately</span>
+                            </label>
+                            <input class="form-check-input ms-3" type="checkbox" id="isActive" checked
+                                style="width: 40px; height: 20px;">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveSymbol">Register Asset</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Styling Overrides */
+
+    .hero-card {
+        background: radial-gradient(circle at top right, rgba(0, 123, 255, 0.1), transparent),
+            linear-gradient(135deg, rgba(16, 23, 38, 0.95) 0%, rgba(10, 15, 25, 1) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .hero-content {
+        display: flex;
+        gap: 25px;
+        align-items: flex-start;
+        position: relative;
+        z-index: 2;
+    }
+
+    .hero-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(0, 123, 255, 0.1);
+        border: 1px solid rgba(0, 123, 255, 0.2);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .hero-stats {
+        display: flex;
+        gap: 40px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Table Styles */
+    .data-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .data-table th {
+        background: rgba(255, 255, 255, 0.02);
+        padding: 15px 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        letter-spacing: 1px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .data-table td {
+        padding: 15px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        vertical-align: middle;
+    }
+
+    .data-table tr:hover td {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .symbol-pair {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .coin-icon {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #2c3e50, #000);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: bold;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Search */
+    .search-wrapper {
+        position: relative;
+    }
+
+    .search-wrapper i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
+    }
+
+    .search-input {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        padding: 8px 15px 8px 40px;
+        border-radius: 20px;
+        color: #fff;
+        width: 250px;
+        transition: all 0.2s;
+    }
+
+    .search-input:focus {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--primary);
+        width: 280px;
+        outline: none;
+    }
+
+    /* Modal */
+    .glass-modal {
+        background: #1a1f2e;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .input-wrapper {
+        position: relative;
+    }
+
+    .input-wrapper .input-icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
+    }
+
+    .input-wrapper .form-control {
+        padding-left: 40px;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border-color);
+        color: #fff;
+    }
+
+    .coin-stack {
+        width: 150px;
+        height: 150px;
+        background: radial-gradient(circle, rgba(255, 215, 0, 0.1), transparent 70%);
+        position: absolute;
+        right: -30px;
+        top: -30px;
+        border-radius: 50%;
+    }
+</style>
+
+<script>
+    let allSymbols = [];
+
+    async function loadSymbols() {
+        try {
+            const response = await fetch('/api/symbols');
+            const data = await response.json();
+
+            if (data.success) {
+                allSymbols = data.symbols;
+                renderSymbols(allSymbols);
+                updateStats(allSymbols);
+            }
+        } catch (error) {
+            console.error('Error loading symbols:', error);
+            document.getElementById('symbolsBody').innerHTML = `
+                <tr><td colspan="5" class="text-center text-danger py-4">Failed to load symbol matrix. Service may be offline.</td></tr>
+            `;
+        }
+    }
+
+    function updateStats(symbols) {
+        document.getElementById('total-symbols').textContent = symbols.length;
+        document.getElementById('active-symbols').textContent = symbols.filter(s => s.is_active).length;
+
+        const totalLev = symbols.reduce((acc, s) => acc + (s.max_leverage || 0), 0);
+        const avgLev = symbols.length ? Math.round(totalLev / symbols.length) : 0;
+        document.getElementById('avg-leverage').textContent = avgLev + "x";
+    }
+
+    function renderSymbols(symbols) {
+        const tbody = document.getElementById('symbolsBody');
+
+        if (!symbols || symbols.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-5">No active trading pairs configured in the universe.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = symbols.map(symbol => {
+            const base = symbol.base_asset || symbol.symbol.replace('USDT', '');
+            return `
+            <tr>
+                <td>
+                    <div class="symbol-pair">
+                        <div class="coin-icon">${base.substring(0, 3)}</div>
+                        <div>
+                            <div style="font-weight: bold; color: #fff;">${symbol.symbol}</div>
+                            <div class="small text-muted">Perpetual Contract</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex flex-column">
+                        <span class="text-muted small">Min Order</span>
+                        <span class="font-monospace">${symbol.min_order_size}</span>
+                    </div>
+                </td>
+                <td>
+                     <div class="d-flex align-items-center">
+                        <div class="progress flex-grow-1 me-2" style="height: 4px; width: 60px; background: rgba(255,255,255,0.1);">
+                            <div class="progress-bar" style="width: ${(symbol.max_leverage / 125) * 100}%; background: var(--primary);"></div>
+                        </div>
+                        <span class="small font-monospace text-primary">${symbol.max_leverage}x</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge ${symbol.is_active ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'}">
+                        ${symbol.is_active ? '● TRADING' : '○ PAUSED'}
+                    </span>
+                </td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-icon btn-outline-secondary" onclick="editSymbol('${symbol.id}')" title="Configure">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button class="btn btn-sm btn-icon btn-outline-danger" onclick="deleteSymbol('${symbol.id}')" title="Delist">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            </tr>
+        `}).join('');
+    }
+
+    function filterSymbols() {
+        const query = document.getElementById('symbolSearch').value.toLowerCase();
+        const filtered = allSymbols.filter(s => s.symbol.toLowerCase().includes(query));
+        renderSymbols(filtered);
+    }
+
+    // Save Symbol Logic
+    document.getElementById('saveSymbol').addEventListener('click', async () => {
+        const btn = document.getElementById('saveSymbol');
+        const oldHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/api/symbols', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: document.getElementById('symbol').value.toUpperCase(),
+                    min_order_size: parseFloat(document.getElementById('minOrder').value),
+                    max_leverage: parseInt(document.getElementById('maxLeverage').value),
+                    is_active: document.getElementById('isActive').checked
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('addSymbolModal')).hide();
+                document.getElementById('addSymbolForm').reset();
+                loadSymbols();
+            }
+        } catch (error) {
+            alert('Error creating symbol: ' + error.message);
+        } finally {
+            btn.innerHTML = oldHtml;
+            btn.disabled = false;
+        }
+    });
+
+    loadSymbols();
+</script>
+{% endblock %}

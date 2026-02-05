@@ -129,25 +129,34 @@ def initialize_runtime_from_context(context: Mapping[str, Any]) -> None:
             print("ℹ️ TESTING mode detected: skipping start of background tasks")
         else:
             try:
-                # If the env-based kill-switch is enabled, do not start
-                # any long-running training tasks regardless of persisted state.
-                background_task_manager.start_background_tasks(
-                    start_ultimate_training=(
-                        not getattr(ultimate_ml_system, "models", None)
-                        and not disable_continuous_training
-                    ),
-                    start_optimized_training=(
-                        not getattr(optimized_ml_system, "models", None)
-                        and not disable_continuous_training
-                    ),
-                    persistence_inputs={
-                        "trader": ultimate_trader,
-                        "ml_system": ultimate_ml_system,
-                        "config": trading_config,
-                        "symbols": top_symbols,
-                        "historical_data": historical_data,
-                    },
-                )
+                # Determine Role
+                bot_role = os.getenv("AI_BOT_ROLE", "api")
+                
+                if bot_role == "api":
+                    # API Role: Only start discovery/updates, NO EXEcUTION
+                    background_task_manager.start_api_mode_tasks()
+                    print("✅ API Mode: Discovery tasks started (Execution DISABLED)")
+                else:
+                    # Worker/Default Role: Start full background tasks
+                    # If the env-based kill-switch is enabled, do not start
+                    # any long-running training tasks regardless of persisted state.
+                    background_task_manager.start_background_tasks(
+                        start_ultimate_training=(
+                            not getattr(ultimate_ml_system, "models", None)
+                            and not disable_continuous_training
+                        ),
+                        start_optimized_training=(
+                            not getattr(optimized_ml_system, "models", None)
+                            and not disable_continuous_training
+                        ),
+                        persistence_inputs={
+                            "trader": ultimate_trader,
+                            "ml_system": ultimate_ml_system,
+                            "config": trading_config,
+                            "symbols": top_symbols,
+                            "historical_data": historical_data,
+                        },
+                    )
             except Exception as exc:
                 print(f"⚠️ Failed to start background tasks: {exc}")
 
@@ -172,21 +181,30 @@ def initialize_runtime_from_context(context: Mapping[str, Any]) -> None:
     # Don't start continuous training if the environment explicitly
     # disables it. This prevents persisted state from re-enabling
     # CPU-heavy operations unexpectedly.
-    if not disable_continuous_training and trading_config.get("continuous_training"):
-        # Check system resources before starting training
-        if not resource_manager.is_safe_for_training():
-            print("⚠️ System resources insufficient for continuous training - skipping")
-        else:
-            try:
-                ultimate_ml_system.start_continuous_training_cycle()
-                print("✅ Continuous training cycle started")
-            except Exception as exc:
-                print(f"⚠️ Failed to start ultimate continuous training: {exc}")
-            try:
-                optimized_ml_system.start_continuous_training_cycle()
-                print("✅ Optimized continuous training cycle started")
-            except Exception as exc:
-                print(f"⚠️ Failed to start optimized continuous training: {exc}")
+    # PATCH 3: DISABLE LEGACY CONTINUOUS TRAINING
+    # We strictly DISABLE the legacy threaded training loop to prevent resource
+    # starvation and conflicts with the new SaaS BrainService (RQ workers).
+    # The `continuous_training` config flag is ignored here to ensure safety.
+    
+    # if not disable_continuous_training and trading_config.get("continuous_training"):
+    #     # Check system resources before starting training
+    #     if not resource_manager.is_safe_for_training():
+    #         print("⚠️ System resources insufficient for continuous training - skipping")
+    #     else:
+    #         try:
+    #             ultimate_ml_system.start_continuous_training_cycle()
+    #             print("✅ Continuous training cycle started")
+    #         except Exception as exc:
+    #             print(f"⚠️ Failed to start ultimate continuous training: {exc}")
+    #         try:
+    #             optimized_ml_system.start_continuous_training_cycle()
+    #             print("✅ Optimized continuous training cycle started")
+    #         except Exception as exc:
+    #             print(f"⚠️ Failed to start optimized continuous training: {exc}")
+    
+    # Explicit logging to confirm safety state
+    if trading_config.get("continuous_training"):
+        print("ℹ️ Legacy continuous training threads DISABLED (Using BrainService/RQ)")
 
     if health_report_service:
         try:

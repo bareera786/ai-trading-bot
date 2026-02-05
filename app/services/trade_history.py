@@ -64,7 +64,31 @@ class ComprehensiveTradeHistory:
         logging.getLogger("ai_trading_bot").log(level, "TRADE_HISTORY: %s", message)
 
     def load_trades(self) -> list[dict[str, Any]]:
-        """Load all trades from disk."""
+        """Load all trades from SQL database, falling back to disk."""
+        try:
+            from app.models import UserTrade
+            from app.extensions import db
+            # Verify we are in an app context or can create one? 
+            # Usually strict dependency on app context. 
+            # For now try query.
+            trades_db = UserTrade.query.order_by(UserTrade.timestamp.desc()).limit(1000).all()
+            if trades_db:
+                results = []
+                for t in trades_db:
+                    d = t.to_dict()
+                    # Calculate pnl_percent if missing
+                    if d.get("pnl_percent") == 0.0 and d.get("pnl") and d.get("entry_price") and d.get("quantity"):
+                        try:
+                             invested = float(d["quantity"]) * float(d["entry_price"])
+                             if invested > 0:
+                                 d["pnl_percent"] = (float(d["pnl"]) / invested) * 100
+                        except Exception:
+                            pass
+                    results.append(d)
+                return results
+        except Exception as exc:
+            pass # Fallback to file
+
         try:
             if os.path.exists(self.trades_file):
                 with open(self.trades_file, "r") as f:
@@ -178,6 +202,11 @@ class ComprehensiveTradeHistory:
         try:
             trades = self.load_trades()
             status = self._infer_status(trade_data)
+            
+            # Extract reason and details
+            reason = trade_data.get("reason")
+            details = trade_data.get("details")
+            
             trade_record = {
                 "trade_id": len(trades) + 1,
                 "timestamp": datetime.now().isoformat(),
@@ -211,6 +240,8 @@ class ComprehensiveTradeHistory:
                 "realized_gains": float(trade_data.get("realized_gains", 0.0)),
                 "holding_period": int(trade_data.get("holding_period", 0)),
                 "tax_lot_id": trade_data.get("tax_lot_id"),
+                "reason": reason,
+                "details": details,
             }
             # Enforce lifecycle integrity for real executions.
             # Rules:
@@ -246,6 +277,87 @@ class ComprehensiveTradeHistory:
                 f"Comprehensive trade recorded: {trade_record['symbol']} {trade_record['side']} | Qty: {trade_record['quantity']:.4f} | P&L: {trade_record['pnl_percent']:+.2f}%",
                 level=logging.INFO,
             )
+            
+            # --- SQL Persist ---
+            try:
+                from app.models import UserTrade, User
+                from app.extensions import db
+                from flask import has_app_context
+                
+                # Create app context if not present (for background threads)
+                context_manager = None
+                if not has_app_context():
+                    try:
+                        from app import create_app
+                        app = create_app()
+                        context_manager = app.app_context()
+                        context_manager.__enter__()
+                        logging.getLogger("ai_trading_bot").info("Created app context for trade SQL sync")
+                    except Exception as ctx_err:
+                        logging.getLogger("ai_trading_bot").warning(f"Failed to create app context: {ctx_err}")
+                
+                try:
+                    logging.getLogger("ai_trading_bot").info(f"DEBUG: Syncing trade {trade_record['symbol']} to SQL...")
+                    # Find user ID - assume single user env or fetch from context
+                    user_id_str = trade_data.get("user_id")
+                    if not user_id_str:
+                        # Fallback: find first user
+                        u = User.query.first()
+                        if u:
+                            user_id_str = u.id
+                    
+                    # Verify user exists
+                    if user_id_str:
+                        import uuid as uuid_lib
+                        if isinstance(user_id_str, str):
+                            try:
+                                user_id_uuid = uuid_lib.UUID(user_id_str)
+                            except ValueError:
+                                user_id_uuid = None
+                        elif isinstance(user_id_str, uuid_lib.UUID):
+                            user_id_uuid = user_id_str
+                        else:
+                            user_id_uuid = None
+                        
+                        # Check if this UUID exists in DB
+                        if user_id_uuid:
+                            user_exists = User.query.filter_by(id=user_id_uuid).first()
+                            if not user_exists:
+                                logging.getLogger("ai_trading_bot").warning(f"User UUID {user_id_uuid} not in DB, using first user")
+                                first_user = User.query.first()
+                                if first_user:
+                                    user_id_str = first_user.id
+                                else:
+                                    user_id_str = None
+                    
+                    if user_id_str:
+                        # Only use columns that exist in UserTrade model
+                        ut = UserTrade(
+                            user_id=user_id_str,
+                            symbol=trade_record["symbol"],
+                            trade_type=trade_record.get("execution_mode", "paper").upper(),
+                            side=trade_record["side"],
+                            quantity=float(trade_record["quantity"]),
+                            entry_price=float(trade_record["entry_price"]),
+                            pnl=float(trade_record["pnl"]),
+                            status=trade_record["status"],
+                            signal_source=trade_record["strategy"],
+                            confidence_score=float(trade_record["confidence"]) if trade_record.get("confidence") else None,
+                            timestamp=datetime.now(),
+                            market_type=trade_data.get("market_type") or ("FUTURES" if "futures" in str(trade_data.get("strategy")).lower() else "SPOT"),
+                            profile=trade_data.get("profile") or ("ULTIMATE" if "ultimate" in str(trade_data.get("strategy")).lower() else "OPTIMIZED"),
+                        )
+                        db.session.add(ut)
+                        db.session.commit()
+                        logging.getLogger("ai_trading_bot").info(f"✅ Trade synced to SQL: {trade_record['symbol']} {trade_record['side']}")
+                finally:
+                    # Clean up context if we created it
+                    if context_manager:
+                        context_manager.__exit__(None, None, None)
+            except Exception as sql_exc:
+                logging.getLogger("ai_trading_bot").warning(f"Failed to sync trade to SQL: {sql_exc}")
+            
+            # -------------------
             # Runtime invariant: detect historical or unexpected records where
             # a trade is CLOSED for a real execution but lacks a real_order_id.
             try:

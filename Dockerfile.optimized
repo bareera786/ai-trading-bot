@@ -48,13 +48,11 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 # Copy only production code (exclude tests, docs, development files)
 COPY app/ ./app/
 COPY utils/ ./utils/
-COPY config/deploy.env.example ./config/deploy.env.example
+COPY config/ ./config/
 COPY start_server.py .
-COPY create_admin.py .
 COPY wsgi.py .
 COPY pyproject.toml .
-COPY ai_ml_auto_bot_final.py .
-COPY scripts/clear_trade_history.py ./scripts/clear_trade_history.py
+COPY scripts/ ./scripts/
 
 # Create necessary directories with proper permissions
 RUN mkdir -p bot_persistence/logs && \
@@ -84,5 +82,5 @@ CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--threads", "4", "
 
 # Labels for better container management
 LABEL maintainer="AI Trading Bot Team" \
-      version="1.0" \
-      description="Optimized AI Trading Bot for production deployment"
+    version="1.0" \
+    description="Optimized AI Trading Bot for production deployment"

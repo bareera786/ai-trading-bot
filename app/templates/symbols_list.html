@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block header_title %}ACTIVE TRADING PAIRS{% endblock %}
+{% block header_subtitle %}Managed symbols for automated execution{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+
+    <div class="dashboard-card">
+        <div class="card-header" style="justify-content: space-between;">
+            <div style="display: flex; align-items: center;">
+                <span class="card-icon">🪙</span>
+                <h3 class="card-title">Managed Symbols</h3>
+            </div>
+            <button class="btn btn-primary" onclick="alert('Admin privileges required to add symbols.')">
+                + Add Symbol
+            </button>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Base Asset</th>
+                        <th>Quote Asset</th>
+                        <th>Min Order</th>
+                        <th>Max Leverage</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="symbolsBody">
+                    <tr>
+                        <td colspan="7" class="text-center">Loading symbols...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<script>
+    async function loadSymbols() {
+        try {
+            const response = await fetch('/api/symbols');
+            const data = await response.json();
+
+            if (data.success) {
+                renderSymbols(data.symbols);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function renderSymbols(symbols) {
+        const tbody = document.getElementById('symbolsBody');
+        tbody.innerHTML = symbols.map(s => `
+        <tr>
+            <td style="font-weight:bold; color:var(--primary);">${s.symbol}</td>
+            <td>${s.base_asset}</td>
+            <td>${s.quote_asset}</td>
+            <td>${s.min_order_size}</td>
+            <td>${s.max_leverage || '20'}x</td>
+            <td><span class="status-indicator ${s.is_active ? 'status-success' : 'status-neutral'}">${s.is_active ? 'ACTIVE' : 'INACTIVE'}</span></td>
+            <td>
+                <button class="btn btn-sm status-neutral" onclick="alert('Configure ${s.symbol}')">Config</button>
+            </td>
+        </tr>
+    `).join('');
+    }
+
+    loadSymbols();
+</script>
+{% endblock %}

@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block header_title %}FUTURES AUTO-DEFENSE{% endblock %}
+{% block header_subtitle %}Automated high-frequency hedging and risk management{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+    <!-- Risk Metrics Grid (4 columns) -->
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🛡️</span>
+                <h3 class="card-title">Portfolio Risk</h3>
+            </div>
+            <div class="card-value text-info" id="futuresRiskScore">0/100</div>
+            <p class="card-subtitle" id="futuresRiskLabel">Risk Score</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">⚡</span>
+                <h3 class="card-title">Effective Leverage</h3>
+            </div>
+            <div class="card-value" id="futuresLeverage">1.0x</div>
+            <p class="card-subtitle">Max Cap: 20x</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">💰</span>
+                <h3 class="card-title">Unrealized P&L</h3>
+            </div>
+            <div class="card-value" id="futuresPnl">$0.00</div>
+            <p class="card-subtitle">Open Positions</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🤖</span>
+                <h3 class="card-title">Defense Engine</h3>
+            </div>
+            <div style="margin-top: 15px;">
+                <div class="status-indicator status-success" id="futuresEngineStatus">
+                    <span id="futuresEngineStatusText">GUARDING</span>
+                </div>
+                <p class="card-subtitle" style="margin-top: 8px;">Dynamic Hedging</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Engine Controls (Centered buttons) -->
+    <div class="dashboard-card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+            <span class="card-icon">⚙️</span>
+            <h3 class="card-title">Futures Controls</h3>
+        </div>
+        <div style="padding: 1.5rem; text-align: center;">
+            <div style="display: inline-flex; gap: 1rem; align-items: center;">
+                <button class="btn btn-success" id="btn-futures-start" onclick="futuresUI.toggleTrading(true)"
+                    style="min-width: 160px;">
+                    <i class="fas fa-play me-2"></i> START ENGINE
+                </button>
+                <button class="btn btn-danger" id="btn-futures-stop" onclick="futuresUI.toggleTrading(false)"
+                    style="min-width: 160px;">
+                    <i class="fas fa-pause me-2"></i> PAUSE ENGINE
+                </button>
+                <button class="btn btn-warning" onclick="futuresUI.panicClose()" style="min-width: 160px;">
+                    <i class="fas fa-radiation me-2"></i> PANIC CLOSE
+                </button>
+                <div style="margin-left: 2rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <span class="text-secondary small">Auto-Hedge:</span>
+                    <span class="status-indicator status-success">ENABLED</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Managed Futures Positions -->
+    <div class="dashboard-card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+            <span class="card-icon">☢️</span>
+            <h3 class="card-title">Managed Futures</h3>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Asset</th>
+                        <th>Side</th>
+                        <th>Leverage</th>
+                        <th>Entry Price</th>
+                        <th>Mark Price</th>
+                        <th>Quantity</th>
+                        <th>P&L</th>
+                        <th>AI Target</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="futuresPositionsBody">
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            No exposure. AI continues to scan for high-probability setups.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Risk Configuration (4 columns) -->
+    <div class="dashboard-grid" style="margin-top: 1.5rem;">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🎯</span>
+                <h3 class="card-title">Max Drawdown</h3>
+            </div>
+            <div class="card-value text-danger">5%</div>
+            <p class="card-subtitle">Safety Threshold</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">📊</span>
+                <h3 class="card-title">Position Size</h3>
+            </div>
+            <div class="card-value">2.5%</div>
+            <p class="card-subtitle">Per Trade</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">⚖️</span>
+                <h3 class="card-title">Allow Shorts</h3>
+            </div>
+            <div style="margin-top: 15px;">
+                <div class="status-indicator status-success">ENABLED</div>
+                <p class="card-subtitle" style="margin-top: 8px;">Bidirectional Trading</p>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🔄</span>
+                <h3 class="card-title">Auto-Close</h3>
+            </div>
+            <div style="margin-top: 15px;">
+                <div class="status-indicator status-success">ACTIVE</div>
+                <p class="card-subtitle" style="margin-top: 8px;">Risk Management</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Market Regime Analysis -->
+    <!-- Market Regime Analysis -->
+    <!-- Market Regime Analysis -->
+    <div class="dashboard-card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+            <span class="card-icon">📡</span>
+            <h3 class="card-title">Market Regime Detection</h3>
+        </div>
+
+        <!-- Status Banner -->
+        <div
+            style="padding: 1rem; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span style="font-size: 1.5rem;">📉</span>
+                <div>
+                    <h5 class="text-white m-0" style="font-size: 1.1rem;">Downtrend</h5>
+                    <span class="text-secondary small">Current Market State</span>
+                </div>
+            </div>
+            <span class="status-indicator status-danger">Strong Selling Pressure</span>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>AI Adjustment</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Entry Bias</td>
+                        <td>Prioritizing Short Entries</td>
+                        <td><span class="status-indicator status-success">ACTIVE</span></td>
+                    </tr>
+                    <tr>
+                        <td>Long Leverage</td>
+                        <td>Reduced to 1x</td>
+                        <td><span class="status-indicator status-warning">CAUTIOUS</span></td>
+                    </tr>
+                    <tr>
+                        <td>Stop Loss</td>
+                        <td>Trailing Stops Tightened</td>
+                        <td><span class="status-indicator status-success">ACTIVE</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Hedge Actions -->
+    <div class="dashboard-card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+            <span class="card-icon">📜</span>
+            <h3 class="card-title">Recent Hedge Actions</h3>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Action</th>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Reason</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            No recent hedge actions. System monitoring.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<script src="{{ url_for('static', filename='js/trading-ui.js') }}"></script>
+<script>
+    // Initialize Futures Trading UI
+    const futuresUI = new FuturesTradingUI({
+        pollInterval: 5000,
+        maxLogEntries: 50
+    });
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        futuresUI.init();
+    });
+</script>
+{% endblock %}

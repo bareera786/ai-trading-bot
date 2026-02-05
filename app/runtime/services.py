@@ -10,7 +10,8 @@ from app.services import (
     MarketDataService,
     RealtimeUpdateService,
 )
-from app.tasks import ModelTrainingWorker, SelfImprovementWorker
+from app.tasks import ModelTrainingWorker
+from app.ml.self_improvement.worker import SelfImprovementWorker
 
 from .indicators import (
     BEST_INDICATORS,

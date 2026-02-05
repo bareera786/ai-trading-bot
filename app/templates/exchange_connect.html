@@ -1,0 +1,384 @@
+{% extends 'base.html' %}
+{% set active_page = "settings" %}
+
+{% block title %}Liquidity Hub - AI Trading{% endblock %}
+{% block header_title %}Liquidity Hub{% endblock %}
+{% block header_subtitle %}Central repository for API keys and exchange connectivity{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+
+    <!-- Top Status Hero (Glass/Gradient Look) -->
+    <div class="dashboard-card mb-4"
+        style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%);">
+        <div class="card-header border-0">
+            <div class="d-flex align-items-center">
+                <span class="card-icon" style="background: rgba(124, 58, 237, 0.2); color: var(--primary);">🌐</span>
+                <div>
+                    <h3 class="card-title text-white">Global Liquidity Network</h3>
+                    <p class="small text-muted mb-0">Aggregate status of all connected order books.</p>
+                </div>
+            </div>
+            <div class="text-end">
+                <div class="h3 mb-0 text-white" id="total-balance">Loading...</div>
+                <div class="small text-muted">Total Aggregated Balance</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Connections Grid -->
+    <div class="dashboard-card" style="background: var(--bg-card);">
+        <div class="card-header">
+            <span class="card-icon">⚡</span>
+            <h3 class="card-title">Active Data Feeds</h3>
+        </div>
+
+        <div class="risk-metrics-grid" id="exchange-list-container">
+            <!-- Placeholder / Loading -->
+            <div class="risk-metric"
+                style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); padding: 40px;">
+                <i class="fas fa-satellite-dish fa-spin fa-2x mb-3 text-primary"></i>
+                <p>Scanning Liquidity Nodes...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Connection Wizard -->
+    <div class="dashboard-card" style="margin-top: 2rem; overflow: hidden; background: var(--bg-card);">
+        <div class="row g-0">
+            <!-- Left Panel: Visual Selector -->
+            <div class="col-lg-5 p-4"
+                style="background: rgba(255,255,255,0.03); border-right: 1px solid var(--border-color);">
+                <h4 class="mb-3 text-primary">Connect New Source</h4>
+                <p class="text-muted small mb-4">Select a supported exchange to integrate its liquidity and data stream
+                    into the AI core.</p>
+
+                <div class="exchange-selector-grid">
+                    <div class="risk-preset-card active" data-exch="bybit" onclick="selectExchange('bybit', this)">
+                        <img src="https://cryptologos.cc/logos/bybit-logo.png?v=035" width="32">
+                        <span>Bybit</span>
+                    </div>
+                    <div class="risk-preset-card" data-exch="binance" onclick="selectExchange('binance', this)">
+                        <img src="https://cryptologos.cc/logos/binance-coin-bnb-logo.png" width="32">
+                        <span>Binance</span>
+                    </div>
+                    <div class="risk-preset-card" data-exch="kraken" onclick="selectExchange('kraken', this)">
+                        <img src="https://cryptologos.cc/logos/kraken-logo.png?v=035" width="32">
+                        <span>Kraken</span>
+                    </div>
+                    <div class="risk-preset-card" data-exch="okx" onclick="selectExchange('okx', this)">
+                        <img src="https://cryptologos.cc/logos/okb-okb-logo.png?v=035" width="32">
+                        <span>OKX</span>
+                    </div>
+                    <div class="risk-preset-card" data-exch="coinbase" onclick="selectExchange('coinbase', this)">
+                        <img src="https://cryptologos.cc/logos/coinbase-coin-base-logo.png?v=035" width="32">
+                        <span>Coinbase</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Secure Form -->
+            <div class="col-lg-7 p-4">
+                <form id="add-exchange-form" onsubmit="event.preventDefault(); connectExchange();">
+                    <input type="hidden" id="exchange-select" value="bybit">
+
+                    <div class="d-flex align-items-center mb-4">
+                        <i class="fas fa-lock text-success me-2"></i>
+                        <span class="small text-muted">Credits are AES-256 Encrypted & Stored Locally</span>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="d-block mb-2 text-secondary small font-weight-bold">API Key</label>
+                        <input type="text" id="api-key" required class="form-control"
+                            placeholder="Paste your Read/Trade API Key">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="d-block mb-2 text-secondary small font-weight-bold">API Secret</label>
+                        <input type="password" id="api-secret" required class="form-control"
+                            placeholder="Paste your API Secret">
+                    </div>
+                    <div class="form-group mb-4">
+                        <label class="d-block mb-2 text-secondary small font-weight-bold">Subaccount / Label</label>
+                        <input type="text" id="subaccount" class="form-control" placeholder="e.g. Bot_HighFreq_01">
+                    </div>
+
+                    <div id="exchange-message" class="text-center mb-3"></div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary py-3 font-weight-bold glow-effect">
+                            <i class="fas fa-plug me-2"></i> Establish Uplink
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Styles -->
+<style>
+    .risk-metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+
+    /* Enhanced Exchange Active Card - Glass Style */
+    .risk-metric {
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.03);
+        /* Dark Glass */
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .risk-metric:hover {
+        transform: translateY(-2px);
+        border-color: var(--primary);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Glow stripe */
+    .risk-metric::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--success);
+        opacity: 0.5;
+    }
+
+    .metric-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .stat-pill {
+        background: rgba(15, 23, 42, 0.4);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+    }
+
+    /* Selector Grid */
+    .exchange-selector-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .risk-preset-card {
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.02);
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .risk-preset-card:hover {
+        border-color: var(--primary);
+        background: rgba(124, 58, 237, 0.1);
+    }
+
+    .risk-preset-card.active {
+        border-color: var(--primary);
+        background: rgba(124, 58, 237, 0.2);
+        box-shadow: 0 0 15px rgba(124, 58, 237, 0.15);
+    }
+
+    .risk-preset-card span {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    /* Form Inputs */
+    .form-control {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: rgba(0, 0, 0, 0.2);
+        /* Dark input background */
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-disconnect {
+        width: 100%;
+        color: var(--danger);
+        background: transparent;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        padding: 8px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        margin-top: 15px;
+        transition: all 0.2s;
+    }
+
+    .btn-disconnect:hover {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: var(--danger);
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadExchanges();
+        // Simulate total balance fetch
+        setTimeout(() => document.getElementById('total-balance').innerHTML = '<span class="text-success">$12,450.80</span>', 1000);
+    });
+
+    function selectExchange(exchId, el) {
+        document.getElementById('exchange-select').value = exchId;
+        document.querySelectorAll('.risk-preset-card').forEach(e => e.classList.remove('active'));
+        el.classList.add('active');
+    }
+
+    async function loadExchanges() {
+        const container = document.getElementById('exchange-list-container');
+        try {
+            const response = await fetch('/api/exchange/list');
+            const data = await response.json();
+
+            container.innerHTML = '';
+
+            if (data.exchanges && data.exchanges.length > 0) {
+                data.exchanges.forEach(exch => {
+                    const logoMap = {
+                        'binance': 'binance-coin-bnb',
+                        'bybit': 'bybit',
+                        'kraken': 'kraken',
+                        'okx': 'okb-okb',
+                        'coinbase': 'coinbase-coin-base'
+                    };
+                    const logoName = logoMap[exch.exchange_id] || 'bitcoin-btc';
+
+                    const card = `
+                    <div class="risk-metric">
+                        <div class="metric-header">
+                            <div class="d-flex align-items-center gap-2">
+                                <img src="https://cryptologos.cc/logos/${logoName}-logo.png?v=035" width="24" onerror="this.src='/static/img/generic-crypto.png'">
+                                <span style="font-weight: 700; color: var(--text-primary); text-transform: capitalize;">${exch.exchange_id}</span>
+                            </div>
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: var(--success); font-size: 0.7rem;">● LIVE</span>
+                        </div>
+                        
+                        <div class="stat-pill">
+                            <span>Account</span>
+                            <span class="text-white font-monospace">${exch.subaccount || 'Main'}</span>
+                        </div>
+                        <div class="stat-pill">
+                            <span>Latency</span>
+                            <span class="text-success">45ms</span>
+                        </div>
+                         <div class="stat-pill">
+                            <span>Uptime</span>
+                            <span class="text-info">99.9%</span>
+                        </div>
+
+                        <button class="btn-disconnect" onclick="disconnectExchange('${exch.exchange_id}', '${exch.subaccount || ''}')">
+                           <i class="fas fa-unlink me-1"></i> Terminate Link
+                        </button>
+                    </div>`;
+                    container.innerHTML += card;
+                });
+            } else {
+                container.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--border-color);">
+                        <i class="fas fa-plug fa-3x mb-3 text-secondary" style="opacity: 0.3;"></i>
+                        <h5>No Active Feeds</h5>
+                        <p class="small">Connect an exchange below to initialize the AI engine.</p>
+                    </div>
+                 `;
+            }
+        } catch (err) {
+            console.error("Failed to load exchanges", err);
+            container.innerHTML = '<p class="text-danger">Failed to load active connections.</p>';
+        }
+    }
+
+    async function disconnectExchange(exchangeId, subaccount) {
+        if (!confirm(`Are you sure you want to terminate the uplink to ${exchangeId}?`)) return;
+
+        try {
+            const response = await fetch('/api/exchange/disconnect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': "{{ csrf_token() }}" },
+                body: JSON.stringify({ exchange_id: exchangeId, subaccount: subaccount })
+            });
+            if (response.ok) {
+                loadExchanges();
+            } else {
+                alert("Failed to disconnect.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("System error.");
+        }
+    }
+
+    async function connectExchange() {
+        const exchange = document.getElementById('exchange-select').value;
+        const apiKey = document.getElementById('api-key').value;
+        const apiSecret = document.getElementById('api-secret').value;
+        const subaccount = document.getElementById('subaccount').value;
+        const msgDiv = document.getElementById('exchange-message');
+
+        msgDiv.innerHTML = '<div class="spinner-border text-primary spinner-border-sm" role="status"></div> Authenticating...';
+        msgDiv.className = "text-center mb-3 text-info";
+
+        try {
+            const response = await fetch(`/api/exchange/connect`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': "{{ csrf_token() }}" },
+                body: JSON.stringify({
+                    exchange_id: exchange,
+                    api_key: apiKey,
+                    api_secret: apiSecret,
+                    subaccount: subaccount
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) throw new Error(data.error || "Connection refused");
+
+            msgDiv.innerHTML = `✅ <b>${exchange}</b> Link Established!`;
+            msgDiv.className = "text-center mb-3 text-success font-weight-bold";
+
+            document.getElementById('add-exchange-form').reset();
+            loadExchanges();
+
+        } catch (err) {
+            msgDiv.textContent = "❌ " + err.message;
+            msgDiv.className = "text-center mb-3 text-danger";
+        }
+    }
+</script>
+{% endblock %}

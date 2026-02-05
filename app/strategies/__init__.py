@@ -10,6 +10,7 @@ from .base import (
     MLBasedStrategy,
     ScalpingStrategy,
 )
+from .grid import GridStrategy
 from .manager import StrategyManager
 from .qfm import QuantumFusionMomentumEngine
 
@@ -22,6 +23,7 @@ __all__ = [
     "ArbitrageStrategy",
     "MLBasedStrategy",
     "ScalpingStrategy",
+    "GridStrategy",
     "StrategyManager",
     "QuantumFusionMomentumEngine",
 ]

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Copy Trading - Leaderboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        <h2 class="fw-bold"><span class="text-primary">Social</span> Trading</h2>
+        <p class="text-muted">Copy the trades of top performers automatically.</p>
+    </div>
+</div>
+
+<!-- Header Stats / Filter (Optional placeholder) -->
+
+<!-- Trader Grid -->
+<div class="risk-presets-grid">
+    {% for trader in traders %}
+    <div class="risk-preset-card {% if loop.index <= 3 %}active{% endif %}"
+        onclick="window.location='{{ url_for('copy_trading.follow_trader', trader_id=trader.id) }}'">
+        <!-- Make card clickable or just visual -->
+        <!-- Rank Badge -->
+        <div class="preset-badge">
+            {% if loop.index == 1 %}👑 Champion{% elif loop.index == 2 %}🥈 2nd Place{% elif loop.index == 3 %}🥉 3rd
+            Place{% else %}Rank #{{ loop.index }}{% endif %}
+        </div>
+
+        <!-- Avatar & Name -->
+        <div class="d-flex justify-content-center mb-3">
+            <div class="avatar-circle"
+                style="width:80px;height:80px;background: linear-gradient(135deg, var(--primary), #2563eb);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;color:white;box-shadow: 0 4px 15px rgba(0,212,170,0.3);">
+                {{ trader.username[0] | upper }}
+            </div>
+        </div>
+
+        <h4 class="preset-name">{{ trader.username }}</h4>
+        <p class="preset-description">
+            Risk Score: <span
+                class="text-{{ 'success' if trader.risk_score < 4 else 'warning' if trader.risk_score < 7 else 'danger' }} fw-bold">{{
+                trader.risk_score }}/10</span>
+        </p>
+
+        <!-- Stats Grid -->
+        <div class="preset-stats">
+            <div class="stat-item">
+                <span class="stat-label">ROI</span>
+                <span class="stat-value text-success">+{{ trader.roi }}%</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Win Rate</span>
+                <span class="stat-value">{{ trader.win_rate }}%</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Copiers</span>
+                <span class="stat-value">{{ trader.copiers }}</span>
+            </div>
+        </div>
+
+        <!-- PnL (Extra Row) -->
+        <div class="text-center mt-3 pt-2 border-top border-secondary"
+            style="border-color: rgba(255,255,255,0.1) !important;">
+            <span class="stat-label">Total P&L</span>
+            <span class="stat-value text-success">+${{ trader.pnl }}</span>
+        </div>
+
+        <!-- Action Button -->
+        <div class="mt-3">
+            <form action="{{ url_for('copy_trading.follow_trader', trader_id=trader.id) }}" method="POST">
+                <button type="submit" class="btn btn-primary w-100 rounded-pill" style="font-weight: 600;">
+                    <i class="fas fa-copy me-2"></i> Copy Trader
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Styles from Risk Presets (Injected) -->
+<style>
+    .risk-presets-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .risk-preset-card {
+        position: relative;
+        padding: 1.5rem;
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-xl);
+        background: rgba(255, 255, 255, 0.02);
+        cursor: default;
+        /* Changed from pointer unless entire card is link */
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+
+    .risk-preset-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--primary);
+        box-shadow: 0 10px 30px rgba(0, 212, 170, 0.15);
+    }
+
+    .risk-preset-card.active {
+        border-color: var(--primary);
+        background: rgba(0, 212, 170, 0.03);
+        box-shadow: 0 4px 16px rgba(0, 212, 170, 0.1);
+    }
+
+    .preset-name {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        text-align: center;
+        margin-bottom: 0.25rem;
+        letter-spacing: -0.5px;
+    }
+
+    .preset-description {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        text-align: center;
+        margin-bottom: 1.5rem;
+        font-family: 'Roboto Mono', monospace;
+        /* Tech feel for numbers */
+    }
+
+    .preset-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-label {
+        display: block;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-secondary);
+        margin-bottom: 0.25rem;
+        font-weight: 600;
+    }
+
+    .stat-value {
+        display: block;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        font-family: 'Roboto Mono', monospace;
+    }
+
+    .preset-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.35rem 0.85rem;
+        background: rgba(0, 212, 170, 0.1);
+        color: var(--primary);
+        font-size: 0.7rem;
+        font-weight: 800;
+        border-radius: 2rem;
+        text-transform: uppercase;
+        border: 1px solid rgba(0, 212, 170, 0.2);
+        letter-spacing: 0.5px;
+        backdrop-filter: blur(4px);
+    }
+
+    /* Active/Top 3 special styling overrides */
+    .risk-preset-card.active .preset-badge {
+        background: var(--primary);
+        color: #000;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0, 212, 170, 0.4);
+    }
+</style>
+{% endblock %}

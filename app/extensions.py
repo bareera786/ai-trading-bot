@@ -46,9 +46,12 @@ mail: Any = Mail()
 
 # Configure Redis storage for rate limiting
 redis_client = None  # Will be initialized in init_extensions
+
+# Disable rate limiting in development to avoid blocking dashboard polling
+# Production should use Redis-backed rate limiting
 limiter = Limiter(
     get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
+    default_limits=[] if os.getenv("FLASK_ENV") == "development" else ["10000 per day", "1000 per hour"],
 )  # Storage will be set in init_extensions
 
 # Initialize CSRF protection
@@ -96,6 +99,11 @@ def init_extensions(app):
     # Flask-Login
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"  # type: ignore[assignment]
+    login_manager.login_message = 'Please log in to access this page.'
+    login_manager.login_message_category = 'info'
+    login_manager.session_protection = 'strong'
+
+
 
     @login_manager.unauthorized_handler
     def _unauthorized():
@@ -124,9 +132,15 @@ def init_extensions(app):
     # credentials are enabled; use explicit origins from config.
     try:
         cors_origins = app.config.get("CORS_ALLOWED_ORIGINS") or []
-        CORS(app, origins=cors_origins, supports_credentials=app.config.get("CORS_SUPPORTS_CREDENTIALS", True))
+        CORS(app, 
+             supports_credentials=True,
+             origins=['http://localhost:5173', 'http://127.0.0.1:5173'] + cors_origins,
+             allow_headers=['Content-Type', 'Authorization'],
+             expose_headers=['Set-Cookie'],
+             methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
         # Fallback: ensure explicit ACAO/ACAC headers are emitted when origins are configured.
         allowed_origins = set(o.strip() for o in (cors_origins or []) if o and o.strip())
+        allowed_origins.update(['http://localhost:5173', 'http://127.0.0.1:5173'])
 
         @app.after_request
         def _ensure_cors_headers(response):
@@ -145,25 +159,31 @@ def init_extensions(app):
 
     # Configure Redis for rate limiting (fall back to memory if Redis unavailable)
     global redis_client
-    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+    redis_url = os.getenv("REDIS_URL")
+    if not redis_url:
+        host = os.getenv("REDIS_HOST", "localhost")
+        port = os.getenv("REDIS_PORT", "6379")
+        redis_url = f"redis://{host}:{port}/0"
+        
     try:
         redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
         try:
             redis_client.ping()
         except Exception as exc:
-            redis_client = None
-            limiter.storage_uri = "memory://"  # type: ignore[attr-defined]
+            # Redis might be starting up. Don't nullify client, just fallback limiter.
+            # RQ and other services can retry connection later.
             app.logger.warning(
-                "Redis unavailable for rate limiting (%s); falling back to in-memory limiter storage",
+                "Redis unavailable at startup (%s); falling back to in-memory limiter. Client kept for retries.",
                 exc,
             )
+            limiter.storage_uri = "memory://"  # type: ignore[attr-defined]
         else:
             limiter.storage_uri = redis_url  # type: ignore[attr-defined]
     except Exception as exc:
         redis_client = None
         limiter.storage_uri = "memory://"  # type: ignore[attr-defined]
         app.logger.warning(
-            "Failed to initialize Redis client for rate limiting (%s); using in-memory limiter storage",
+            "Failed to initialize Redis client structure (%s); using in-memory limiter storage",
             exc,
         )
 

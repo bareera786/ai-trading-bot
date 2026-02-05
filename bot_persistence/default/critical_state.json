@@ -1,23 +1,23 @@
 {
   "positions": {},
   "balance": 1000,
-  "trading_enabled": false,
+  "trading_enabled": true,
   "models_loaded": [
-    "MATICUSDT",
-    "LINKUSDT",
-    "ETHUSDT",
-    "SOLUSDT",
-    "LTCUSDT",
-    "XLMUSDT",
-    "BNBUSDT",
-    "DOGEUSDT",
     "DOTUSDT",
+    "LTCUSDT",
+    "ETHUSDT",
+    "AVAXUSDT",
+    "SOLUSDT",
+    "LINKUSDT",
+    "BCHUSDT",
+    "DOGEUSDT",
+    "ETCUSDT",
     "XRPUSDT",
     "ADAUSDT",
-    "BCHUSDT",
-    "AVAXUSDT",
-    "ETCUSDT",
-    "BTCUSDT"
+    "BNBUSDT",
+    "BTCUSDT",
+    "XLMUSDT",
+    "MATICUSDT"
   ],
   "futures_manual_settings": {
     "mode": "manual",
@@ -44,6 +44,6 @@
     "entry_price": null,
     "pending_order": null,
     "order_history": [],
-    "updated_at": 1768398835.887229
+    "updated_at": 1769205629.679182
   }
 }

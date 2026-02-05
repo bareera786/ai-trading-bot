@@ -39,13 +39,13 @@ def _extract_price(market_payload: Any) -> float | None:
 
 
 def _get_user_traders_from_market_service(
-    ctx: dict[str, Any], user_id: int
+    ctx: dict[str, Any], user_id: int | str
 ) -> tuple[Any | None, Any | None]:
     market_service = ctx.get("market_data_service")
     getter = getattr(market_service, "_get_or_create_user_traders", None)
     if callable(getter):
         try:
-            ultimate, optimized = getter(int(user_id))
+            ultimate, optimized = getter(user_id)
             return ultimate, optimized
         except Exception:
             return None, None
@@ -207,9 +207,27 @@ def _get_ai_bot_context() -> dict[str, Any]:
 
 
 def _get_dashboard_data(ctx: dict[str, Any]) -> dict[str, Any]:
+    # Try fetching from Redis first (Process Isolation Fix)
+    try:
+        redis_client = ctx.get("redis_client")
+        if not redis_client:
+            # Try getting from extensions or app config
+            import redis
+            redis_url = current_app.config.get("REDIS_URL", "redis://redis:6379/0")
+            redis_client = redis.from_url(redis_url)
+        
+        if redis_client:
+            cached_summ = redis_client.get("dashboard:global_state")
+            if cached_summ:
+                return json.loads(cached_summ)
+    except Exception as e:
+        # print(f"Redis fetch error: {e}")
+        pass
+
     data = ctx.get("dashboard_data")
     if data is None:
-        raise RuntimeError("Dashboard data is unavailable")
+        # Return empty dict instead of raising to prevent 500s during startup
+        return {} 
     return data
 
 
@@ -288,9 +306,16 @@ def ribs_dashboard():
     # a cross-process status file so the dashboard can show archive/progress
     # information even when the optimizer runs in another process.
     if not ribs_optimization:
-        status_path = os.path.join(
-            "bot_persistence", "ribs_checkpoints", "ribs_status.json"
-        )
+        from app.services.pathing import resolve_profile_path
+        
+        # Try profile-aware path first (where worker writes)
+        persistence_dir = resolve_profile_path("bot_persistence")
+        status_path = os.path.join(persistence_dir, "ribs_checkpoints", "ribs_status.json")
+        
+        # Fallback to legacy path if not found
+        if not os.path.exists(status_path):
+             status_path = os.path.join("bot_persistence", "ribs_checkpoints", "ribs_status.json")
+             
         try:
             if os.path.exists(status_path):
                 with open(status_path, "r") as sf:
@@ -330,7 +355,320 @@ def ribs_dashboard():
     return response
 
 
+@dashboard_bp.route("/market-data", endpoint="market_data")
+@login_required
+def market_data():
+    """Market Data page showing real-time prices, order book, and execution phases."""
+    ctx = _get_ai_bot_context()
+    version_label = (
+        ctx.get("version_label") or ctx.get("ai_bot_version") or "Ultimate AI Bot"
+    )
+    
+    response = make_response(
+        render_template(
+            "market_data.html",
+            version_label=version_label,
+            current_time=int(time.time()),
+        )
+    )
+    response.headers[
+        "Cache-Control"
+    ] = "no-cache, no-store, must-revalidate, max-age=0, private, no-transform"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+# Placeholder pages for navigation items
+@dashboard_bp.route("/symbols", endpoint="symbols_list")
+@login_required
+def symbols_list():
+    """Symbols list page."""
+    return render_template("symbols_list.html")
+
+
+@dashboard_bp.route("/analytics/statistics", endpoint="statistics")
+@login_required
+def statistics():
+    """Statistics page."""
+    return render_template("statistics.html")
+
+
+@dashboard_bp.route("/analytics/qfm", endpoint="qfm_analytics")
+@login_required
+def qfm_analytics():
+    """QFM Analytics page."""
+    return render_template("qfm_analytics.html")
+
+
+@dashboard_bp.route("/analytics/ml-telemetry", endpoint="ml_telemetry")
+@login_required
+def ml_telemetry():
+    """ML Telemetry page."""
+    return render_template("ml_telemetry.html")
+
+
+@dashboard_bp.route("/analytics/model-comparison", endpoint="model_comparison")
+@login_required
+def model_comparison():
+    """ML Model Comparison page."""
+    return render_template("analytics/model_comparison.html", active_page="model-comparison")
+
+
+@dashboard_bp.route("/trading/spot", endpoint="spot_trading")
+@login_required
+def spot_trading():
+    """Spot Trading page."""
+    return render_template("spot_trading.html")
+
+
+@dashboard_bp.route("/trading/futures", endpoint="futures_trading")
+@login_required
+def futures_trading():
+    """Futures Trading page."""
+    return render_template("futures_trading.html")
+
+
+@dashboard_bp.route("/trading/strategies", endpoint="strategies")
+@login_required
+def strategies():
+    """Strategies page."""
+    return render_template("strategies.html")
+
+
+@dashboard_bp.route("/trading/crt-signals", endpoint="crt_signals")
+@login_required
+def crt_signals():
+    """CRT Signals page."""
+    return render_template("crt_signals.html")
+
+
+@dashboard_bp.route("/trades/history", endpoint="trade_history")
+@login_required
+def trade_history():
+    """Trade History page."""
+    return render_template("trade_history.html")
+
+
+@dashboard_bp.route("/trading/journal", endpoint="trade_journal")
+@login_required
+def trade_journal():
+    """Trade Journal page."""
+    return render_template("analytics/trade_journal.html", active_page="trade-journal")
+
+
+@dashboard_bp.route("/api/trades", endpoint="api_recent_trades")
+@login_required
+def api_recent_trades():
+    """Return paginated trade history for the current user."""
+    # Import here to avoid circular dependencies if any
+    from app.models import UserTrade
+    from app.routes.user_api import normalize_trade_to_canonical
+    from datetime import datetime, timedelta
+
+    try:
+        page = request.args.get("page", 1, type=int)
+        per_page = request.args.get("limit", 20, type=int)
+        symbol = request.args.get("symbol")
+        days = request.args.get("days", type=int)
+        execution_mode = request.args.get("execution_mode")
+
+        query = UserTrade.query.filter_by(user_id=current_user.id)
+        if symbol:
+            query = query.filter(UserTrade.symbol == symbol)
+        if days:
+            cutoff = datetime.now() - timedelta(days=days)
+            query = query.filter(UserTrade.timestamp >= cutoff)
+        if execution_mode:
+            query = query.filter(UserTrade.execution_mode == execution_mode)
+
+        # Sort by timestamp desc
+        query = query.order_by(UserTrade.timestamp.desc())
+        
+        # Optimize count queries
+        total_trades = query.with_entities(UserTrade.id).count()
+        trades = query.offset((page - 1) * per_page).limit(per_page).all()
+
+        trades_data = [normalize_trade_to_canonical(trade) for trade in trades]
+
+        return jsonify(
+            {
+                "trades": trades_data,
+                "total_trades": total_trades,
+                "current_page": page,
+                "total_pages": max(1, (total_trades + per_page - 1) // per_page),
+                "per_page": per_page,
+                "user_id": current_user.id,
+                "timestamp": time.time(),
+            }
+        )
+    except Exception as exc:
+        print(f"Error in /api/trades: {exc}")
+        # Return empty list instead of 500 to keep UI alive
+        return jsonify({"trades": [], "error": str(exc), "total_trades": 0})
+
+
+
+@dashboard_bp.route("/backtest", endpoint="backtest_lab")
+@login_required
+def backtest_lab():
+    """Backtest Lab page."""
+    return render_template("backtest_lab.html")
+
+
+@dashboard_bp.route("/backtesting", endpoint="backtesting")
+@login_required
+def backtesting():
+    """Enhanced Backtesting page."""
+    return render_template("backtesting.html", active_page="backtesting")
+
+
+@dashboard_bp.route("/settings/safety", endpoint="safety_settings")
+@login_required
+def safety_settings():
+    """Safety Settings page."""
+    return render_template("safety_settings.html")
+
+
+@dashboard_bp.route("/settings/api-keys", endpoint="api_keys")
+@login_required
+def api_keys():
+    """Unified Exchange & Assets page."""
+    return render_template("settings/exchange_assets.html")
+
+
+@dashboard_bp.route("/settings/notifications", endpoint="notification_settings")
+@login_required
+def notification_settings():
+    """Notification Settings page."""
+    return render_template("settings/notifications.html")
+
+
+@dashboard_bp.route("/settings/risk-presets", endpoint="risk_presets_settings")
+@login_required
+def risk_presets_settings():
+    """Risk Presets Settings page."""
+    return render_template("settings/risk_presets.html", active_page="risk-presets")
+
+
+@dashboard_bp.route("/settings/subscription", endpoint="user_subscription")
+@login_required
+def user_subscription():
+    """User Subscription Management page."""
+    from app.models import UserTrade
+    from datetime import datetime, timedelta
+    
+    # 1. Get Subscription Details
+    sub = current_user.active_subscription
+    plan = sub.plan if sub else None
+    
+    # 2. Get Quota/Limits
+    quota = current_user.quota
+    limits = {
+        "max_bots": quota.get("max_concurrent_bots", 1),
+        "max_trades": quota.get("max_trades_daily", 50)
+    }
+    
+    # 3. Calculate Usage
+    # Daily trades (UTC)
+    start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    daily_trades_count = UserTrade.query.filter(
+        UserTrade.user_id == current_user.id,
+        UserTrade.timestamp >= start_of_day
+    ).count()
+    
+    # Active bots (Approximation from dashboard data or DB)
+    # For now, we'll assume 0 or fetch from context if available
+    ctx = _get_ai_bot_context()
+    dashboard_data = _get_dashboard_data(ctx)
+    # This is a bit tricky as dashboard_data is global or specific? 
+    # Let's rely on a simple placeholder or the dashboard's system status for now
+    system_status = dashboard_data.get("system_status", {})
+    # If the user is running bots locally, this might be accurate. 
+    # If multi-user, we need a better way. 
+    # Let's just use 0 as placeholder or try to infer.
+    active_bots_count = 0 
+    
+    usage = {
+        "active_bots": active_bots_count,
+        "daily_trades": daily_trades_count
+    }
+
+    return render_template(
+        "settings/user_subscription.html", 
+        active_page="settings",
+        subscription=sub,
+        plan=plan,
+        limits=limits,
+        usage=usage
+    )
+
+
+@dashboard_bp.route("/dashboard/subscription/confirm", endpoint="confirm_subscription_change")
+@login_required
+def confirm_subscription_change():
+    """Handle plan switch confirmation (Mock Payment Flow)."""
+    from app.models import SubscriptionPlan
+    from app.subscriptions.helpers import assign_subscription_to_user
+    from app.extensions import db
+
+    plan_code = request.args.get("plan")
+    if not plan_code:
+        return redirect(url_for("marketing.pricing"))
+        
+    plan = SubscriptionPlan.query.filter_by(code=plan_code).first()
+    if not plan:
+        # Flash error here if we had msg flashing
+        return redirect(url_for("marketing.pricing"))
+        
+    # In a real app, this would redirect to Stripe/PayPal
+    # Here we just instantly assign the plan (Free/Mock)
+    try:
+        assign_subscription_to_user(
+            current_user,
+            plan,
+            cancel_existing=True,
+            notes="User switched via Dashboard"
+        )
+        db.session.commit()
+    except Exception as e:
+        print(f"Error switching plan: {e}")
+        
+    return redirect(url_for("dashboard_bp.user_subscription"))
+
+
+@dashboard_bp.route("/journal", endpoint="trading_journal")
+@login_required
+def trading_journal():
+    """Trading Journal page."""
+    return render_template("trading_journal.html")
+
+
+@dashboard_bp.route("/system/persistence", endpoint="persistence_dashboard")
+@login_required
+def persistence_dashboard():
+    """Persistence Dashboard page."""
+    return render_template("persistence_dashboard.html")
+
+
+@dashboard_bp.route("/admin/settings", endpoint="admin_settings")
+@login_required
+def admin_settings():
+    """Admin Settings page."""
+    return render_template("admin_settings.html")
+
+
+@dashboard_bp.route("/health", endpoint="health_monitor")
+@login_required
+def health_monitor():
+    """System Health Monitor page."""
+    return render_template("health.html")
+
+
 @dashboard_bp.route("/dashboard", endpoint="dashboard_redirect")
+
 @login_required
 def dashboard_redirect():
     return redirect(url_for("dashboard_bp.dashboard"))
@@ -557,10 +895,10 @@ def api_dashboard_overview():
     # sensitive dashboard sections from the current user's trader instances.
     ultimate_trader = None
     optimized_trader = None
-    try:
-        user_id = int(getattr(current_user, "id", 0) or 0)
-    except Exception:
-        user_id = 0
+    ultimate_trader = None
+    optimized_trader = None
+    user_id = getattr(current_user, "id", None)
+    
     if user_id:
         ultimate_trader, optimized_trader = _get_user_traders_from_market_service(
             ctx, user_id
@@ -696,16 +1034,20 @@ def api_performance_metrics():
     win_rate = (successful_trades / total_trades) * 100 if total_trades else 0
     portfolio_value = 10000.0 + total_profit
 
+    # === SINGLE SOURCE OF TRUTH ===
+    from app.core.system_state import SystemStateManager
+    bot_state = SystemStateManager.get_status()
+
     return jsonify(
         {
             "portfolio_value": round(portfolio_value, 2),
             "total_profit": round(total_profit, 2),
-            "daily_change": 2.5,
+            "daily_change": 2.5, # TODO: Calculate real daily change
             "win_rate": round(win_rate, 1),
             "active_trades": active_trades,
             "total_trades": total_trades,
             "successful_trades": successful_trades,
-            "system_status": "ONLINE" if any(traders) else "OFFLINE",
+            "system_status": bot_state["status"], # ONLINE | OFFLINE (Real)
         }
     )
 
@@ -888,13 +1230,26 @@ def api_crt_status():
 @dashboard_bp.route("/api/ml/status", endpoint="api_ml_status")
 @login_required
 def api_ml_status():
+    ctx = _get_ai_bot_context()
+    ml_system = _ctx_ml_system(ctx, "ultimate_ml_system")
+    
+    status = "inactive"
+    models_loaded = 0
+    accuracy = 0.0
+    
+    if ml_system:
+        status = "active"
+        # Try to get real stats if available
+        models_loaded = len(getattr(ml_system, "models", {}))
+        accuracy = getattr(ml_system, "last_accuracy", 0.0)
+
     return jsonify(
         {
-            "status": "active",
-            "models_loaded": 17,
-            "training_status": "completed",
-            "prediction_accuracy": 0.87,
-            "active_strategies": ["QFM", "CRT", "ICT", "SMC"],
+            "status": status,
+            "models_loaded": models_loaded,
+            "training_status": "idle", # TODO: check worker status
+            "prediction_accuracy": accuracy,
+            "active_strategies": ["QFM", "CRT", "Ensemble"],
         }
     )
 
@@ -902,13 +1257,143 @@ def api_ml_status():
 @dashboard_bp.route("/api/trading/status", endpoint="api_trading_status")
 @login_required
 def api_trading_status():
+    from app.core.system_state import SystemStateManager
+    bot_state = SystemStateManager.get_status()
+    
+    # Get Real Portfolio Data
+    ctx = _get_ai_bot_context()
+    trader = _ctx_trader(ctx, "ultimate_trader")
+    
+    open_positions = 0
+    total_trades = 0
+    success_rate = 0.0
+    daily_pnl = 0.0
+    
+    if trader:
+        open_positions = len(getattr(trader, "positions", {}) or {})
+        eff = getattr(trader, "bot_efficiency", {})
+        total_trades = eff.get("total_trades", 0)
+        success_trades = eff.get("successful_trades", 0)
+        if total_trades > 0:
+            success_rate = success_trades / total_trades
+        daily_pnl = getattr(trader, "daily_pnl", 0.0)
+
     return jsonify(
         {
-            "status": "active",
-            "mode": "paper_trading",
-            "open_positions": 0,
-            "total_trades": 42,
-            "success_rate": 0.78,
-            "daily_pnl": 245.67,
+            "status": "active" if bot_state["status"] == "ONLINE" else "inactive",
+            "mode": "paper_trading", # TODO: Check config for real/paper
+            "open_positions": open_positions,
+            "total_trades": total_trades,
+            "success_rate": round(success_rate, 2),
+            "daily_pnl": round(daily_pnl, 2),
         }
     )
+    
+@dashboard_bp.route("/api/market-data/history/<symbol>", endpoint="api_market_history")
+@login_required
+def api_market_history(symbol):
+    """Get historical OHLCV data for charting (REAL)."""
+    try:
+        from app.services.binance_market import get_historical_klines
+        
+        # Fetch real daily candles
+        candles = get_historical_klines(symbol, interval="1d", limit=100)
+        
+        return jsonify({"success": True, "symbol": symbol, "candles": candles})
+    except Exception as e:
+        print(f"Error fetching history for {symbol}: {e}")
+        return jsonify({"success": False, "error": str(e), "dataset": []})
+
+@dashboard_bp.route("/api/dashboard/stats", methods=["GET"])
+@login_required
+def api_dashboard_stats():
+    """Get dashboard header stats (Real)."""
+    try:
+        from app.models import UserPortfolio, UserTrade
+        from app.extensions import db
+        
+        ctx = _get_ai_bot_context()
+        user_id = getattr(current_user, "id", None)
+        
+        # 1. Get Portfolio Data
+        portfolio = UserPortfolio.query.filter_by(user_id=user_id).first()
+        
+        portfolio_value = 10000.0  # Default
+        daily_change_percent = 0.0
+        
+        if portfolio:
+            portfolio_value = portfolio.total_balance or 0.0
+            daily_pnl = portfolio.daily_pnl or 0.0
+            
+            # Calculate approx percentage change
+            # If current is 10000 and daily PnL is 100, open was 9900. 100/9900
+            start_balance = portfolio_value - daily_pnl
+            if start_balance > 0:
+                daily_change_percent = (daily_pnl / start_balance) * 100
+            elif start_balance == 0 and daily_pnl > 0:
+                daily_change_percent = 100.0
+                
+        # 2. Get Active Trades (Runtime preferred, DB fallback)
+        active_trades = 0
+        
+        # Try runtime first
+        ultimate_trader = _ctx_trader(ctx, "ultimate_trader")
+        if ultimate_trader:
+             # Check if we have user-specific trader (isolation)
+             market_service = ctx.get("market_data_service")
+             if market_service and hasattr(market_service, "_get_or_create_user_traders"):
+                  try:
+                      ut, _ = market_service._get_or_create_user_traders(user_id)
+                      if ut:
+                          ultimate_trader = ut
+                  except:
+                      pass
+             
+             positions = getattr(ultimate_trader, "positions", {})
+             if positions:
+                 active_trades = len(positions)
+        
+        # DB Fallback if runtime 0 (maybe restarted)
+        if active_trades == 0 and portfolio and portfolio.open_positions:
+            # Check if json implies keys
+             try:
+                 if isinstance(portfolio.open_positions, dict):
+                     active_trades = len(portfolio.open_positions)
+             except:
+                 pass
+
+        # 3. Calculate Win Rate (Historical)
+        win_rate = 0.0
+        total_closed = 0
+        wins = 0
+        
+        # Query DB for closed trades
+        # status="closed" or exit_price > 0? Schema has 'status'.
+        trades = UserTrade.query.filter_by(
+            user_id=user_id, 
+            status="closed"
+        ).order_by(UserTrade.timestamp.desc()).limit(100).all()
+        
+        if trades:
+            total_closed = len(trades)
+            # Count wins (pnl > 0)
+            wins = sum(1 for t in trades if (t.pnl or 0) > 0)
+            if total_closed > 0:
+                win_rate = (wins / total_closed) * 100
+
+        return jsonify({
+            "portfolio_value": round(portfolio_value, 2),
+            "daily_change": round(daily_change_percent, 2),
+            "active_trades": active_trades,
+            "win_rate": round(win_rate, 1)
+        })
+        
+    except Exception as exc:
+        current_app.logger.error(f"Error fetching dashboard stats: {exc}")
+        # Return safe defaults on error
+        return jsonify({
+            "portfolio_value": 0.00,
+            "daily_change": 0.0,
+            "active_trades": 0,
+            "win_rate": 0
+        })

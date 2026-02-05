@@ -17,28 +17,11 @@ DEFAULT_TOP_SYMBOLS: Sequence[str] = (
     "ETHUSDT",
     "BNBUSDT",
     "ADAUSDT",
-    "XRPUSDT",
     "SOLUSDT",
-    "DOTUSDT",
-    "DOGEUSDT",
-    "AVAXUSDT",
-    "MATICUSDT",
-    "LINKUSDT",
-    "LTCUSDT",
-    "BCHUSDT",
-    "XLMUSDT",
-    "ETCUSDT",
 )
 
 DEFAULT_FUTURES_SYMBOLS: Sequence[str] = (
     "BTCUSDT",
-    "ETHUSDT",
-    "BNBUSDT",
-    "SOLUSDT",
-    "XRPUSDT",
-    "ADAUSDT",
-    "DOGEUSDT",
-    "AVAXUSDT",
 )
 
 DEFAULT_MARKET_CAP_WEIGHTS: dict[str, float] = {
@@ -100,6 +83,7 @@ TOP_SYMBOLS: list[str] = list(DEFAULT_TOP_SYMBOLS)
 FUTURES_SYMBOLS: list[str] = list(DEFAULT_FUTURES_SYMBOLS)
 MARKET_CAP_WEIGHTS: dict[str, float] = dict(DEFAULT_MARKET_CAP_WEIGHTS)
 DISABLED_SYMBOLS: set[str] = set(DEFAULT_DISABLED_SYMBOLS)
+BINANCE_MIN_NOTIONAL_OVERRIDES: dict[str, float] = {}
 
 SYMBOL_STATE_LOCK = Lock()
 _dashboard_accessor: DashboardAccessor | None = None
@@ -385,6 +369,7 @@ __all__ = [
     "DEFAULT_FUTURES_SYMBOLS",
     "DEFAULT_MARKET_CAP_WEIGHTS",
     "DEFAULT_HEALTH_SYMBOLS",
+    "BINANCE_MIN_NOTIONAL_OVERRIDES",
     "DEFAULT_DISABLED_SYMBOLS",
     "DISABLED_SYMBOLS",
     "FUTURES_SYMBOLS",
@@ -406,4 +391,26 @@ __all__ = [
     "parse_symbol_env",
     "refresh_symbol_counters",
     "save_symbol_state",
+    "INDICATOR_SIGNAL_OPTIONS",
+    "is_indicator_enabled",
 ]
+
+# ==================== INDICATOR HELPERS ====================
+
+INDICATOR_SIGNAL_OPTIONS: dict[str, Any] = {
+    "CRT": {"enabled": True, "weight": 1.5, "min_confidence": 60},
+    "ICT": {"enabled": True, "weight": 1.2, "min_confidence": 50},
+    "SMC": {"enabled": True, "weight": 1.3, "min_confidence": 55},
+    "RSI": {"enabled": True, "weight": 1.0},
+    "MACD": {"enabled": True, "weight": 1.0},
+    "BB": {"enabled": True, "weight": 0.8},
+}
+
+def is_indicator_enabled(profile_key: str, indicator: str) -> bool:
+    """Check if a specific indicator is enabled for the given profile."""
+    # Simplified: usage profile_key could select different configs
+    # For now, use global defaults
+    cfg = INDICATOR_SIGNAL_OPTIONS.get(indicator)
+    if not cfg:
+        return False
+    return bool(cfg.get("enabled", False))

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Setup Two-Factor Authentication{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Setup 2FA</h4>
+            </div>
+            <div class="card-body">
+                <p>Scan the QR code below with your Authenticator App (Google Authenticator, Authy, etc.).</p>
+
+                <div class="text-center mb-4">
+                    <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="img-fluid border p-2">
+                </div>
+
+                <div class="alert alert-warning">
+                    <strong>Secret Key:</strong> <code>{{ secret }}</code>
+                    <br>
+                    <small>If you can't scan the code, enter this key manually.</small>
+                </div>
+
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label for="code" class="form-label">Enter 6-digit Code</label>
+                        <input type="text" class="form-control" id="code" name="code" placeholder="123456" required
+                            autocomplete="off" autofocus>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">Verify & Enable</button>
+                    <a href="{{ url_for('dashboard_bp.dashboard') }}" class="btn btn-link w-100 mt-2">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

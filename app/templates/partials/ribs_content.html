@@ -1,0 +1,694 @@
+<style>
+    /* Enhanced RIBS Dashboard Styles */
+    .ribs-dashboard-container {
+        /* Container is handled by base.html content-body, but we can add specific spacing */
+        gap: 24px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .ribs-card {
+        background: var(--bg-card, #ffffff);
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: var(--radius-lg, 12px);
+        padding: 24px;
+        box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+    }
+
+    /* Progress Overview */
+    .progress-overview {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+        align-items: center;
+    }
+
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .progress-stats {
+        display: flex;
+        gap: 24px;
+        margin-bottom: 16px;
+    }
+
+    .stat-badge {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: var(--bg-tertiary, #f1f5f9);
+        border-radius: 8px;
+        font-size: 14px;
+    }
+
+    .stat-badge .label {
+        color: var(--text-secondary, #64748b);
+        text-transform: uppercase;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-badge .value {
+        font-weight: 700;
+        color: var(--text-primary, #1e293b);
+    }
+
+    .progress-track {
+        height: 12px;
+        background: var(--bg-tertiary, #f1f5f9);
+        border-radius: 6px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+        border-radius: 6px;
+        transition: width 0.5s ease;
+        position: relative;
+    }
+
+    .progress-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+        0% {
+            transform: translateX(-100%);
+        }
+
+        100% {
+            transform: translateX(100%);
+        }
+    }
+
+    /* Toolbar Actions */
+    .toolbar-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+
+    /* Stat Cards Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+    }
+
+    .mini-stat-card {
+        padding: 20px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        text-align: center;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .mini-stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .mini-stat-card h4 {
+        color: var(--text-secondary);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+
+    .mini-stat-card .value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -1px;
+    }
+
+    .mini-stat-card .subtext {
+        color: var(--text-secondary);
+        font-size: 12px;
+        margin-top: 4px;
+    }
+
+    .text-success {
+        color: #10b981;
+    }
+
+    .text-danger {
+        color: #ef4444;
+    }
+
+    /* Performance Metrics */
+    .perf-metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 16px;
+    }
+
+    .perf-item {
+        background: var(--bg-tertiary);
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .perf-item .label {
+        display: block;
+        font-size: 11px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+    }
+
+    .perf-item .val {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--primary, #2563eb);
+    }
+
+    /* Logs */
+    .logs-container {
+        font-family: 'Monaco', 'Menlo', monospace;
+        font-size: 12px;
+        background: #0f172a;
+        /* Dark background for logs */
+        color: #e2e8f0;
+        padding: 16px;
+        border-radius: 8px;
+        height: 300px;
+        overflow-y: auto;
+        line-height: 1.5;
+    }
+
+    .log-line {
+        margin-bottom: 4px;
+        border-left: 2px solid transparent;
+        padding-left: 8px;
+    }
+
+    .log-line.info {
+        border-left-color: #3b82f6;
+    }
+
+    .log-line.success {
+        border-left-color: #10b981;
+        color: #d1fae5;
+    }
+
+    .log-line.warning {
+        border-left-color: #f59e0b;
+        color: #fef3c7;
+    }
+
+    .log-line.error {
+        border-left-color: #ef4444;
+        color: #fee2e2;
+    }
+
+    /* Tables */
+    .table-container {
+        overflow-x: auto;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table th {
+        background: var(--bg-tertiary);
+        padding: 12px 16px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        text-align: left;
+    }
+
+    .table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 14px;
+        color: var(--text-primary);
+    }
+
+    .table tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* Main Grid Responsiveness */
+    .ribs-main-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+    }
+
+    @media (max-width: 1024px) {
+        .ribs-main-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .progress-overview {
+            grid-template-columns: 1fr;
+        }
+
+        .toolbar-actions {
+            justify-content: flex-start;
+            flex-wrap: wrap;
+        }
+    }
+</style>
+
+<div class="ribs-dashboard-container">
+
+    <!-- Top Section: Controls & Progress -->
+    <div class="ribs-card">
+        <div class="progress-header">
+            <div>
+                <h3 style="margin: 0; font-size: 1.25rem; margin-bottom: 4px;">Optimization Status</h3>
+                <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem;">
+                    Status: <strong id="status-indicator" class="text-secondary">Idle</strong>
+                    • Runtime: <span id="runtime-indicator">00:00:00</span>
+                </p>
+            </div>
+            <div class="toolbar-actions">
+                <button class="btn btn-primary" id="start-btn" onclick="startRIBS();">
+                    <span>▶️</span> Start
+                </button>
+                <button class="btn btn-warning" id="pause-btn" onclick="pauseRIBS();" disabled>
+                    <span>⏸️</span> Pause
+                </button>
+                <button class="btn btn-danger" onclick="resetRIBSArchive();">
+                    <span>🔄</span> Reset
+                </button>
+            </div>
+        </div>
+
+        <div class="progress-track">
+            <div class="progress-fill" id="main-progress-fill" style="width: 0%"></div>
+        </div>
+        <div
+            style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
+            <span id="progress-description">Ready to start</span>
+            <span id="progress-percentage">0%</span>
+        </div>
+    </div>
+
+    <!-- KPI Stats -->
+    <div class="stats-grid">
+        <div class="mini-stat-card">
+            <h4>Archive Coverage</h4>
+            <div class="value" id="coverage-stat">{{ "%.1f"|format(ribs_optimization.get('coverage', 0) * 100) }}%</div>
+            <div class="subtext">Explored Space</div>
+        </div>
+        <div class="mini-stat-card">
+            <h4>QD Score</h4>
+            <div class="value" id="qd-score-stat">{{ "%.0f"|format(ribs_optimization.get('qd_score', 0)) }}</div>
+            <div class="subtext">Quality-Diversity</div>
+        </div>
+        <div class="mini-stat-card">
+            <h4>Elites Found</h4>
+            <div class="value" id="elites-stat">{{ ribs_optimization.get('num_elites', 0) }}</div>
+            <div class="subtext">Strategies</div>
+        </div>
+        <div class="mini-stat-card">
+            <h4>Best Return</h4>
+            <div class="value text-success" id="best-return-stat">{{
+                "%.2f"|format(ribs_optimization.get('best_objective', 0)) }}%</div>
+            <div class="subtext">Global Max</div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="ribs-main-grid">
+
+        <!-- Left: Visualization -->
+        <div class="ribs-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h4 style="margin: 0;">Archive Visualization (3D)</h4>
+                <button class="btn btn-sm btn-secondary" onclick="update3DPlot();">🔄 Redraw</button>
+            </div>
+            <div id="ribs-3d-plot"
+                style="width: 100%; height: 450px; background: var(--bg-tertiary); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <div class="text-center text-muted">
+                    <div style="font-size: 24px; margin-bottom: 8px;">📊</div>
+                    Loading Visualization...
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Metrics & Config -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- Performance Metrics -->
+            <div class="ribs-card">
+                <h4 style="margin: 0 0 16px 0;">System Performance</h4>
+                <div class="perf-metrics-grid">
+                    <div class="perf-item">
+                        <span class="label">Pred/Sec</span>
+                        <span class="val" id="predictions-per-sec">-</span>
+                    </div>
+                    <div class="perf-item">
+                        <span class="label">Cache Hit</span>
+                        <span class="val" id="cache-hit-rate">-</span>
+                    </div>
+                    <div class="perf-item">
+                        <span class="label">CPU</span>
+                        <span class="val" id="cpu-usage">-</span>
+                    </div>
+                    <div class="perf-item">
+                        <span class="label">Mem</span>
+                        <span class="val" id="memory-usage">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parameters Summary -->
+            <div class="ribs-card">
+                <h4 style="margin: 0 0 16px 0;">Config Summary</h4>
+                <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span class="text-muted">Algorithm</span>
+                        <span style="font-weight: 600;">Evolutionary Strategy (CMA-MAE)</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span class="text-muted">Emitters</span>
+                        <span style="font-weight: 600;">5</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span class="text-muted">Resolution</span>
+                        <span style="font-weight: 600;">1h</span>
+                    </div>
+                    <hr style="border-top: 1px solid var(--border-color); margin: 4px 0;">
+                    <button class="btn btn-sm btn-outline" style="width: 100%;"
+                        data-url="{{ url_for('admin_dashboard.ribs_admin_page') }}"
+                        onclick="window.location.href=this.dataset.url;">
+                        ⚙️ Full Configuration
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Elite Strategies Table -->
+    <div class="ribs-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h4 style="margin: 0;">Top Elite Strategies</h4>
+            <button class="btn btn-sm btn-secondary" onclick="exportRIBSData();">💾 Export All</button>
+        </div>
+        <div class="data-table-container">
+            <table class="table" id="elite-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Return</th>
+                        <th>Sharpe</th>
+                        <th>Drawdown</th>
+                        <th>Win Rate</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="elite-table-body">
+                    {% for elite in ribs_optimization.get('elite_strategies', [])[:5] %}
+                    <tr>
+                        <td>#{{ loop.index }}</td>
+                        <td class="text-success">{{ "%.2f"|format(elite.objective) }}%</td>
+                        <td>{{ "%.2f"|format(elite.behavior[0] if elite.behavior|length > 0 else 0) }}</td>
+                        <td>{{ "%.2f"|format(elite.behavior[1] if elite.behavior|length > 1 else 0) }}%</td>
+                        <td>{{ "%.1f"|format((elite.behavior[2] if elite.behavior|length > 2 else 0) * 100) }}%</td>
+                        <td>
+                            <button class="btn btn-sm btn-success" data-id="{{ elite.id }}"
+                                onclick="deployStrategy(this.dataset.id);">Deploy</button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 24px;">No
+                            elite strategies found yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- System Logs -->
+    <div class="ribs-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h4 style="margin: 0;">Optimization Logs</h4>
+            <button class="btn btn-sm btn-secondary" onclick="refreshRIBSLogs()">Refresh</button>
+        </div>
+        <div class="logs-container" id="logs-container">
+            <div class="log-line info">Connecting to RIBS logger...</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Plotly.js -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<script>
+    // RIBS Dashboard Logic
+    document.addEventListener('DOMContentLoaded', () => {
+        refreshAll();
+        // Poll every 5 seconds
+        setInterval(refreshAll, 5000);
+    });
+
+    function refreshAll() {
+        refreshStats();
+        refreshPerformance();
+        refreshLogs();
+    }
+
+    // --- API Calls & UI Updates ---
+
+    function startRIBS() {
+        setBtnLoading('start-btn', true);
+        fetch('/api/ribs/start', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) showToast('Optimization Started', 'success');
+                else showToast('Error: ' + d.error, 'error');
+            })
+            .finally(() => setBtnLoading('start-btn', false));
+    }
+
+    function pauseRIBS() {
+        setBtnLoading('pause-btn', true);
+        fetch('/api/ribs/pause', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) showToast('Optimization Paused', 'warning');
+            })
+            .finally(() => setBtnLoading('pause-btn', false));
+    }
+
+    function resetRIBSArchive() {
+        if (!confirm("Are you sure you want to reset the archive? ALL DATA WILL BE LOST.")) return;
+        fetch('/api/ribs/reset', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) { showToast('Archive Reset', 'success'); refreshAll(); }
+            });
+    }
+
+    function deployStrategy(id) {
+        if (!confirm(`Deploy strategy ${id}?`)) return;
+        fetch(`/api/ribs/deploy/${id}`, { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) showToast('Strategy Deployed', 'success');
+                else showToast('Deployment Failed', 'error');
+            });
+    }
+
+    function refreshStats() {
+        fetch('/api/ribs/progress')
+            .then(r => r.json())
+            .then(d => {
+                // Update Progress UI
+                const running = d.running;
+                const statusEl = document.getElementById('status-indicator');
+                if (statusEl) {
+                    statusEl.textContent = running ? 'Running' : 'Idle';
+                    statusEl.className = running ? 'text-success' : 'text-secondary';
+                }
+
+                const startBtn = document.getElementById('start-btn');
+                if (startBtn) startBtn.disabled = running;
+
+                const pauseBtn = document.getElementById('pause-btn');
+                if (pauseBtn) pauseBtn.disabled = !running;
+
+                if (d.progress_percent !== undefined && d.progress_percent !== null) {
+                    const fill = document.getElementById('main-progress-fill');
+                    if (fill) fill.style.width = d.progress_percent + '%';
+                    const pct = document.getElementById('progress-percentage');
+                    if (pct) pct.textContent = d.progress_percent.toFixed(1) + '%';
+                }
+
+                if (d.runtime_seconds) {
+                    const h = Math.floor(d.runtime_seconds / 3600).toString().padStart(2, '0');
+                    const m = Math.floor((d.runtime_seconds % 3600) / 60).toString().padStart(2, '0');
+                    const s = Math.floor(d.runtime_seconds % 60).toString().padStart(2, '0');
+                    const timeEl = document.getElementById('runtime-indicator');
+                    if (timeEl) timeEl.textContent = `${h}:${m}:${s}`;
+                }
+
+                if (d.archive_stats) {
+                    const stats = d.archive_stats;
+                    if (stats.coverage !== null && stats.coverage !== undefined) {
+                        const cov = document.getElementById('coverage-stat');
+                        if (cov) cov.textContent = (stats.coverage * 100).toFixed(1) + '%';
+                    }
+                    if (stats.num_elites !== null && stats.num_elites !== undefined) {
+                        const el = document.getElementById('elites-stat');
+                        if (el) el.textContent = stats.num_elites;
+                    }
+                    if (stats.qd_score !== null && stats.qd_score !== undefined) {
+                        const qd = document.getElementById('qd-score-stat');
+                        if (qd) qd.textContent = Math.round(stats.qd_score);
+                    }
+                    if (stats.best_objective !== null && stats.best_objective !== undefined) {
+                        const best = document.getElementById('best-return-stat');
+                        if (best) best.textContent = stats.best_objective.toFixed(2) + '%';
+                    }
+                }
+            })
+            .catch(e => console.error('Stats fetch error:', e));
+    }
+
+    function refreshPerformance() {
+        fetch('/performance/metrics')
+            .then(r => r.json())
+            .then(data => {
+                const m = data.metrics || {};
+                const pred = document.getElementById('predictions-per-sec');
+                if (pred) pred.textContent = m.predictions_per_second ? m.predictions_per_second.toFixed(1) : '0.0';
+
+                const cache = document.getElementById('cache-hit-rate');
+                if (cache) cache.textContent = m.cache_hit_rate ? Math.round(m.cache_hit_rate) + '%' : '0%';
+
+                const cpu = document.getElementById('cpu-usage');
+                if (cpu) cpu.textContent = m.cpu_usage ? Math.round(m.cpu_usage) + '%' : '0%';
+
+                const mem = document.getElementById('memory-usage');
+                if (mem) mem.textContent = m.memory_usage ? Math.round(m.memory_usage) + '%' : '0%';
+            })
+            .catch(e => console.error('Perf metrics error:', e));
+    }
+
+    function refreshLogs() {
+        fetch('/api/ribs/logs')
+            .then(r => r.json())
+            .then(d => {
+                const container = document.getElementById('logs-container');
+                if (!container) return;
+
+                if (d.logs && d.logs.length) {
+                    container.innerHTML = d.logs.map(log => {
+                        // assume log is string or object. if string try to parse level
+                        let text = typeof log === 'string' ? log : log.message;
+                        let cls = 'info';
+                        if (text.toLowerCase().includes('error')) cls = 'error';
+                        else if (text.toLowerCase().includes('success')) cls = 'success';
+                        else if (text.toLowerCase().includes('warning')) cls = 'warning';
+                        return `<div class="log-line ${cls}">${text}</div>`;
+                    }).join('');
+                    container.scrollTop = container.scrollHeight;
+                }
+            });
+    }
+
+    function update3DPlot() {
+        const plotEl = document.getElementById('ribs-3d-plot');
+        if (!plotEl) return;
+
+        fetch('/api/ribs/visualization')
+            .then(r => r.json())
+            .then(d => {
+                if (d.data) {
+                    Plotly.newPlot('ribs-3d-plot', d.data, d.layout, { responsive: true, displayModeBar: false });
+                }
+            });
+    }
+
+    // Helpers
+    function setBtnLoading(id, isLoading) {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        if (isLoading) {
+            btn.dataset.originalText = btn.innerHTML;
+            btn.innerHTML = '...';
+            btn.disabled = true;
+        } else {
+            if (btn.dataset.originalText) btn.innerHTML = btn.dataset.originalText;
+            btn.disabled = false;
+        }
+    }
+
+    function showToast(msg, type = 'info') {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            // fallback if toast container is missing in include context
+            // but ribs_content assumes it exists or creates one?
+            // dashboard.html has a toast container, but better safe:
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.style.position = 'fixed';
+            container.style.top = '20px';
+            container.style.right = '20px';
+            container.style.zIndex = '9999';
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.gap = '10px';
+            document.body.appendChild(container);
+        }
+
+        const el = document.createElement('div');
+        el.style.padding = '12px 24px';
+        el.style.borderRadius = '8px';
+        el.style.color = '#fff';
+        el.style.fontWeight = '500';
+        el.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+        el.style.animation = 'fadeIn 0.3s ease';
+
+        if (type === 'success') el.style.background = '#10b981';
+        else if (type === 'error') el.style.background = '#ef4444';
+        else if (type === 'warning') el.style.background = '#f59e0b';
+        else el.style.background = '#3b82f6';
+
+        el.textContent = msg;
+        container.appendChild(el);
+        setTimeout(() => {
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 300);
+        }, 3000);
+    }
+
+    // CSS for toast fade
+    const style = document.createElement('style');
+    style.innerHTML = `@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }`;
+    document.head.appendChild(style);
+
+    function exportRIBSData() {
+        window.location.href = '/api/ribs/export';
+    }
+
+</script>

@@ -14,3 +14,9 @@ admin_views_bp = Blueprint("admin_views", __name__)
 def admin_leads_page():
     leads = Lead.query.order_by(Lead.created_at.desc()).limit(100).all()
     return render_template("admin/leads.html", leads=leads)
+
+@admin_views_bp.route("/admin/brain")
+@admin_required
+def admin_brain_dashboard():
+    """Render the main Brain Dashboard."""
+    return render_template("admin/brain_dashboard.html")

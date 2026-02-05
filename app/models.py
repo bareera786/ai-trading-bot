@@ -18,7 +18,7 @@ from functools import wraps
 
 from .extensions import db, login_manager
 
-Base = declarative_base()
+# Base = declarative_base() # REMOVED: Causing registry conflicts with db.Model
 
 
 class RoleEnum(enum.Enum):
@@ -30,10 +30,10 @@ class RoleEnum(enum.Enum):
 # DEPRECATED: Keeping for migration compatibility, but not used in new User model
 
 
-class User(Base, UserMixin, db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = "user"
 
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(150), nullable=False)
@@ -44,15 +44,31 @@ class User(Base, UserMixin, db.Model):
     selected_symbols = db.Column(db.Text, default="[]")
     custom_symbols = db.Column(db.Text, default="[]")
     
+    # Reseller fields
+    reseller_id = db.Column(db.Integer, db.ForeignKey("reseller.id"), nullable=True)
+    reseller_role = db.Column(db.String(20), default="user")
+
     # Additional fields for compatibility
     failed_login_count = db.Column(db.Integer, default=0)
     locked_until = db.Column(db.DateTime, nullable=True)
+
+    # Relationships
+    following = db.relationship(
+        "CopyRelationship",
+        foreign_keys="CopyRelationship.follower_id",
+        backref="follower_user",
+        lazy="dynamic"
+    )
+
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password, method="pbkdf2:sha256", salt_length=16)
 
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.password_hash, password)
+
+    def get_id(self):
+        return str(self.id)  # Ensure this returns string
 
     def get_selected_symbols(self) -> list[str]:
         try:
@@ -73,9 +89,9 @@ class User(Base, UserMixin, db.Model):
         self.custom_symbols = json.dumps(symbols)
 
     @property
-    def is_premium(self) -> bool:
-        # For simplified model, admins are considered premium
-        return self.is_admin
+    def role(self) -> str:
+        """Map is_admin to role for backward compatibility."""
+        return "admin" if self.is_admin else "viewer"
 
     @property
     def is_active(self) -> bool:  # type: ignore[override]
@@ -112,7 +128,7 @@ class User(Base, UserMixin, db.Model):
         self.failed_login_count = value
 
 
-class UserTrade(Base, db.Model):
+class UserTrade(db.Model):
     __tablename__ = "user_trade"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -134,9 +150,14 @@ class UserTrade(Base, db.Model):
     realized_gains = db.Column(db.Float, default=0.0)
     holding_period = db.Column(db.Integer, default=0)
     tax_lot_id = db.Column(db.String(50))
+    
+    # Trade classification for UI filtering
+    market_type = db.Column(db.String(20), default="SPOT")  # SPOT | FUTURES
+    profile = db.Column(db.String(20), default="OPTIMIZED")  # ULTIMATE | OPTIMIZED
 
 
-class UserPortfolio(Base, db.Model):
+
+class UserPortfolio(db.Model):
     __tablename__ = "user_portfolio"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -163,7 +184,7 @@ class UserPortfolio(Base, db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-class SubscriptionPlan(Base, db.Model):
+class SubscriptionPlan(db.Model):
     __tablename__ = "subscription_plan"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -202,7 +223,7 @@ class SubscriptionPlan(Base, db.Model):
         }
 
 
-class UserSubscription(Base, db.Model):
+class UserSubscription(db.Model):
     __tablename__ = "user_subscription"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -285,7 +306,7 @@ class UserSubscription(Base, db.Model):
         }
 
 
-class Lead(Base, db.Model):
+class Lead(db.Model):
     __tablename__ = "lead"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -316,7 +337,7 @@ class Lead(Base, db.Model):
         }
 
 
-class PaymentSettings(Base, db.Model):
+class PaymentSettings(db.Model):
     __tablename__ = "payment_settings"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -352,7 +373,198 @@ class AuditLog(db.Model):
     timestamp = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
     details = db.Column(db.Text, nullable=True)
 
-    user = db.relationship("User", backref="audit_logs")
+    user = db.relationship("User", backref="audit_logs", foreign_keys=[user_id])
+
+
+class SystemSetting(db.Model):
+    __tablename__ = "system_setting"
+
+    key = db.Column(db.String(100), primary_key=True)
+    value = db.Column(db.Text)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    @classmethod
+    def get_value(cls, key, default=None):
+        setting = db.session.get(cls, key)
+        return setting.value if setting else default
+
+    @classmethod
+    def set_value(cls, key, value):
+        setting = db.session.get(cls, key)
+        if not setting:
+            setting = cls(key=key)
+            db.session.add(setting)
+        setting.value = str(value)
+        db.session.commit()
+
+
+class Strategy(db.Model):
+    __tablename__ = "strategy"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    type = db.Column(db.String(50), default="directional")
+    risk_profile = db.Column(db.String(50), default="balanced")
+    status = db.Column(db.String(20), default="active")
+    capital_weight = db.Column(db.Float, default=0.0)
+    consecutive_losses = db.Column(db.Integer, default=0)
+    parameters = db.Column(db.JSON, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "type": self.type,
+            "risk_profile": self.risk_profile,
+            "status": self.status,
+            "capital_weight": self.capital_weight,
+        }
+
+
+class MLModel(db.Model):
+    __tablename__ = "ml_model"
+
+    id = db.Column(db.Integer, primary_key=True)
+    version = db.Column(db.String(50), unique=True, nullable=False)
+    type = db.Column(db.String(50), default="ensemble")
+    status = db.Column(db.String(20), default="shadow")  # shadow, active, archived
+    strategy_id = db.Column(db.Integer, db.ForeignKey("strategy.id"), nullable=True)
+    metrics = db.Column(db.JSON, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Phase 6: Health & Watchdog Fields
+    auto_paused = db.Column(db.Boolean, default=False)
+    auto_pause_reason = db.Column(db.Text, nullable=True)
+    health_state = db.Column(db.String(20), default="HEALTHY")
+    health_score = db.Column(db.Float, default=1.0)
+    last_health_check = db.Column(db.DateTime, nullable=True)
+    
+    # Missing Fields from Audit Logs
+    symbol = db.Column(db.String(20), nullable=True)
+    file_path = db.Column(db.String(255), nullable=True)
+
+    strategy = db.relationship("Strategy", backref="models")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "version": self.version,
+            "type": self.type,
+            "status": self.status,
+            "metrics": self.metrics,
+            "auto_paused": self.auto_paused,
+            "strategy_id": self.strategy_id,
+            "strategy_name": self.strategy.name if self.strategy else None,
+            "symbol": self.symbol,
+            "file_path": self.file_path,
+        }
+
+# Phase 6 Models import
+from .models_phase6 import ModelPerformanceMetric, WatchdogEvent
+
+class ShadowPrediction(db.Model):
+    __tablename__ = "shadow_prediction"
+    id = db.Column(db.Integer, primary_key=True)
+    model_id = db.Column(db.Integer, db.ForeignKey("ml_model.id"), nullable=False)
+    symbol = db.Column(db.String(20))
+    prediction = db.Column(db.String(10)) # LONG/SHORT
+    confidence = db.Column(db.Float)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class TrainingJob(db.Model):
+    __tablename__ = "training_job"
+
+    id = db.Column(db.Integer, primary_key=True)  # Using Integer ID to match service usage str(job.id)
+    status = db.Column(db.String(20), default="pending")
+    progress = db.Column(db.Integer, default=0)
+    logs = db.Column(db.Text, default="")
+    result_metrics = db.Column(db.JSON, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "status": self.status,
+            "progress": self.progress,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+
+
+class Reseller(db.Model):
+    __tablename__ = "reseller"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    owner_id = db.Column(UUID(as_uuid=True), db.ForeignKey("user.id"), nullable=False)
+    limits_config = db.Column(db.JSON, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    owner = db.relationship("User", foreign_keys=[owner_id], backref="owned_reseller")
+    users = db.relationship("User", foreign_keys="User.reseller_id", backref="reseller")
+
+
+    owner = db.relationship("User", foreign_keys=[owner_id], backref="owned_reseller")
+    users = db.relationship("User", foreign_keys="User.reseller_id", backref="reseller")
+
+
+class MarketplaceStrategy(db.Model):
+    __tablename__ = "marketplace_strategy"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    author_id = db.Column(UUID(as_uuid=True), db.ForeignKey("user.id"), nullable=False)
+    price = db.Column(db.Float, default=0.0)
+    status = db.Column(db.String(20), default="active")
+    metrics = db.Column(db.JSON, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    author = db.relationship("User", backref="published_strategies")
+
+
+
+
+
+class ExchangeCredential(db.Model):
+    __tablename__ = "exchange_credential"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey("user.id"), nullable=False)
+    exchange_id = db.Column(db.String(50), nullable=False)
+    subaccount = db.Column(db.String(100), nullable=True)
+    api_key_enc = db.Column(db.LargeBinary, nullable=False)
+    api_secret_enc = db.Column(db.LargeBinary, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Notification(db.Model):
+    __tablename__ = "notification"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey("user.id"), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(20), default="system")
+    read = db.Column(db.Boolean, default=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+
+
+
+class CopyRelationship(db.Model):
+    __tablename__ = "copy_relationship"
+    id = db.Column(db.Integer, primary_key=True)
+    leader_id = db.Column(UUID(as_uuid=True), db.ForeignKey("user.id"), nullable=False)
+    follower_id = db.Column(UUID(as_uuid=True), db.ForeignKey("user.id"), nullable=False)
+    status = db.Column(db.String(20), default="active")
+    allocation_percent = db.Column(db.Float, default=100.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    leader = db.relationship("User", foreign_keys=[leader_id], backref="copy_followers")
+    follower = db.relationship("User", foreign_keys=[follower_id], backref="copy_leaders")
 
 
 def get_model_by_id(model_cls, identity, *, coerce_fn=int):
@@ -425,3 +637,32 @@ def requires_any_role(allowed_roles):
             return func(*args, **kwargs)
         return wrapper
     return decorator
+
+class StrategyPerformance(db.Model):
+    __tablename__ = "strategy_performance"
+
+    id = db.Column(db.Integer, primary_key=True)
+    strategy_id = db.Column(db.Integer, db.ForeignKey("strategy.id"), nullable=False)
+    # PHASE 6 REFACTOR: User Isolation
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey("user.id"), nullable=True) # Nullable for system trades
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    pnl = db.Column(db.Float, default=0.0)
+    win = db.Column(db.Boolean)
+    confidence = db.Column(db.Float)
+    parameters_snapshot = db.Column(db.JSON, default=dict)
+    qfm_features = db.Column(db.JSON, default=dict)
+    
+    strategy = db.relationship("Strategy", backref="performance_history_db")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "strategy_id": self.strategy_id,
+            "user_id": str(self.user_id) if self.user_id else None,
+            "timestamp": self.timestamp.isoformat(),
+            "pnl": self.pnl,
+            "win": self.win,
+            "confidence": self.confidence,
+            "parameters": self.parameters_snapshot,
+            "qfm_features": self.qfm_features
+        }

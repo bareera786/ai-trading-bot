@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block header_title %}SPOT TRADING AUTOPILOT{% endblock %}
+{% block header_subtitle %}ML-driven spot accumulation with automated execution{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+    <!-- Performance Metrics Grid (4 columns) -->
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">💰</span>
+                <h3 class="card-title">Session Alpha</h3>
+            </div>
+            <div class="card-value text-success" id="sessionAlpha">+$0.00</div>
+            <p class="card-subtitle">vs BTC Baseline</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🎯</span>
+                <h3 class="card-title">Win Rate (24h)</h3>
+            </div>
+            <div class="card-value text-info" id="winRate">0%</div>
+            <p class="card-subtitle">14/18 Trades</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">📊</span>
+                <h3 class="card-title">Asset Exposure</h3>
+            </div>
+            <div class="card-value text-warning" id="assetExposure">0%</div>
+            <p class="card-subtitle">Capital Deployed</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🤖</span>
+                <h3 class="card-title">Engine Status</h3>
+            </div>
+            <div style="margin-top: 15px;">
+                <div class="status-indicator status-success" id="engineStatus">
+                    <span id="engineStatusText">ONLINE</span>
+                </div>
+                <p class="card-subtitle" style="margin-top: 8px;">Smart Accumulation v3</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Engine Controls (Centered buttons) -->
+    <div class="dashboard-card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+            <span class="card-icon">⚙️</span>
+            <h3 class="card-title">Trading Controls</h3>
+        </div>
+        <div style="padding: 1.5rem; text-align: center;">
+            <div style="display: inline-flex; gap: 1rem; align-items: center;">
+                <button class="btn btn-success" id="btn-start" onclick="tradingUI.toggleTrading(true)"
+                    style="min-width: 180px;">
+                    <i class="fas fa-play me-2"></i> START TRADING
+                </button>
+                <button class="btn btn-danger" id="btn-stop" onclick="tradingUI.toggleTrading(false)"
+                    style="min-width: 180px;">
+                    <i class="fas fa-pause me-2"></i> PAUSE TRADING
+                </button>
+                <div style="margin-left: 2rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <span class="text-secondary small">Last Signal:</span>
+                    <span class="text-white" id="lastSignal">2 minutes ago</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Positions Table -->
+    <div class="dashboard-card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+            <span class="card-icon">💼</span>
+            <h3 class="card-title">Active Positions</h3>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Strategy</th>
+                        <th>Entry Price</th>
+                        <th>Current Price</th>
+                        <th>Quantity</th>
+                        <th>Target</th>
+                        <th>Current P&L</th>
+                        <th>AI Action</th>
+                    </tr>
+                </thead>
+                <tbody id="positionsBody">
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            <div
+                                style="display: inline-block; animation: spin 1s infinite linear; border: 2px solid var(--text-muted); border-top-color: transparent; border-radius: 50%; width: 20px; height: 20px;">
+                            </div>
+                            Scanning portfolio for active trades...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- AI Decision Log -->
+    <div class="dashboard-card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+            <span class="card-icon">📡</span>
+            <h3 class="card-title">AI Decision Stream</h3>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Event</th>
+                        <th>Symbol</th>
+                        <th>Confidence</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="ai-logs">
+                    <tr>
+                        <td style="color: var(--text-secondary); font-size: 0.85rem;">10:42:05</td>
+                        <td>Market Scan</td>
+                        <td>BTC/USDT</td>
+                        <td><span class="status-indicator status-success">85%</span></td>
+                        <td style="color: var(--text-muted);">Analyzing...</td>
+                    </tr>
+                    <tr>
+                        <td style="color: var(--text-secondary); font-size: 0.85rem;">10:42:08</td>
+                        <td>RSI Divergence</td>
+                        <td>ETH/USDT</td>
+                        <td><span class="status-indicator status-success">85%</span></td>
+                        <td style="color: var(--text-muted);">Signal Found</td>
+                    </tr>
+                    <tr>
+                        <td style="color: var(--text-secondary); font-size: 0.85rem;">10:42:15</td>
+                        <td>Volume Check</td>
+                        <td>ETH/USDT</td>
+                        <td><span class="status-indicator status-warning">60%</span></td>
+                        <td style="color: var(--text-muted);">Waiting...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Confidence Matrix (4 columns) -->
+    <div class="dashboard-grid" style="margin-top: 1.5rem;">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">📈</span>
+                <h3 class="card-title">Technical Analysis</h3>
+            </div>
+            <div class="card-value text-success">85%</div>
+            <p class="card-subtitle">Confidence Level</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">💭</span>
+                <h3 class="card-title">Market Sentiment</h3>
+            </div>
+            <div class="card-value text-warning">60%</div>
+            <p class="card-subtitle">Bullish Bias</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🛡️</span>
+                <h3 class="card-title">Risk Assessment</h3>
+            </div>
+            <div class="card-value text-info">Low</div>
+            <p class="card-subtitle">20/100 Risk Score</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">⏱️</span>
+                <h3 class="card-title">Next Scan</h3>
+            </div>
+            <div class="card-value">45s</div>
+            <p class="card-subtitle">Auto-refresh Active</p>
+        </div>
+    </div>
+</section>
+
+<script src="{{ url_for('static', filename='js/trading-ui.js') }}"></script>
+<script>
+    // Initialize Spot Trading UI
+    const tradingUI = new SpotTradingUI({
+        pollInterval: 5000,
+        maxLogEntries: 50
+    });
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        tradingUI.init();
+    });
+</script>
+
+<style>
+    @keyframes spin {
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+{% endblock %}

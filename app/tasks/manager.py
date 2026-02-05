@@ -6,6 +6,10 @@ import os
 
 # Global reference to the background task manager
 _background_task_manager: BackgroundTaskManager | None = None
+from app.ml.self_improvement.worker import SelfImprovementWorker
+from app.tasks.strategy_worker import StrategyExecutionWorker
+from app.runtime.symbols import get_active_trading_universe
+
 
 
 def set_background_task_manager(manager: BackgroundTaskManager) -> None:
@@ -52,10 +56,23 @@ class BackgroundTaskManager:
         self.persistence_scheduler = persistence_scheduler
         self.self_improvement_worker = self_improvement_worker
         self.model_training_worker = model_training_worker
+        self.model_training_worker = model_training_worker
         self.live_portfolio_scheduler = live_portfolio_scheduler
         self.trading_config = dict(trading_config or {})
         self.bot_logger = bot_logger
         self._persistence_active = False
+        
+        # Phase 7: Strategy Execution Worker
+        # We need access to ultimate_trader. It is usually global in app.core.bot
+        # We'll import it lazily or assume it's passed? 
+        # Actually, let's import it here.
+        from app.core.bot import ultimate_trader
+        self.strategy_worker = StrategyExecutionWorker(
+            ultimate_trader=ultimate_trader,
+            get_active_universe=get_active_trading_universe,
+            interval=10.0
+        )
+
 
     # ------------------------------------------------------------------
     # Startup helpers
@@ -68,6 +85,7 @@ class BackgroundTaskManager:
         persistence_inputs: Mapping[str, Any] | None = None,
     ) -> None:
         """Start all long-running background services with consistent logging."""
+        self._log(f"🚀 start_background_tasks called on manager ID={id(self)}")
         self._start_service(self.market_data_service, "Market data service")
 
         if (
@@ -97,6 +115,14 @@ class BackgroundTaskManager:
                 try:
                     self.self_improvement_worker.start()
                     self._log("✅ Self-improvement worker started")
+                    
+                    # Explicitly start RIBS optimization if enabled
+                    if self.self_improvement_worker.ribs_enabled:
+                        started = self.self_improvement_worker.start_ribs_optimization()
+                        if started:
+                            self._log("🧬 RIBS optimization thread started")
+                        else:
+                            self._log("ℹ️ RIBS optimization already running or managed externally")
                 except Exception as exc:  # pragma: no cover - defensive logging
                     self._log(
                         f"⚠️ Failed to start self-improvement worker: {exc}",
@@ -139,6 +165,21 @@ class BackgroundTaskManager:
                 )
 
         self._start_service(self.realtime_update_service, "Real-time update service")
+        
+        # Start Strategy Worker (Phase 7)
+        if self.trading_config.get("auto_trade_enabled"):
+             try:
+                 self.strategy_worker.start()
+                 self._log("✅ Multi-Strategy Engine Started")
+             except Exception as e:
+                 self._log(f"⚠️ Failed to start Strategy Worker: {e}", warning=True)
+
+    def start_api_mode_tasks(self) -> None:
+        """Start ONLY services required for the API/Dashboard (Read-Only)."""
+        self._start_service(self.market_data_service, "Market data service (API Mode)")
+        self._start_service(self.realtime_update_service, "Real-time update service (API Mode)")
+        self._log("✅ API Mode background tasks started (No Execution)")
+
 
     def start_live_portfolio_updates(self) -> None:
         if not self.live_portfolio_scheduler:
@@ -174,6 +215,15 @@ class BackgroundTaskManager:
                 self._log("ℹ️ Real-time update service stopped")
             except Exception as exc:  # pragma: no cover
                 self._log(f"⚠️ Failed to stop real-time service: {exc}", warning=True)
+
+        # Stop Strategy Worker
+        if self.strategy_worker:
+            try:
+                self.strategy_worker.stop()
+                self._log("ℹ️ Multi-Strategy Engine Stopped")
+            except Exception as e:
+                self._log(f"⚠️ Failed to stop Strategy Worker: {e}", warning=True)
+
         if self._persistence_active and self.persistence_scheduler:
             try:
                 self.persistence_scheduler.stop_automatic_saving()

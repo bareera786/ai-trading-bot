@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block header_title %}ADVANCED STATISTICS{% endblock %}
+{% block header_subtitle %}Deep dive into algorithmic performance{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+    <!-- Stat Cards -->
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">🎯</span>
+                <h3 class="card-title">Sharpe Ratio</h3>
+            </div>
+            <div class="card-value">2.45</div>
+            <p class="card-subtitle">Excellent (Top 5%)</p>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">📉</span>
+                <h3 class="card-title">Max Drawdown</h3>
+            </div>
+            <div class="card-value" style="color:var(--danger);">-4.2%</div>
+            <p class="card-subtitle">Conservative Risk</p>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">🔄</span>
+                <h3 class="card-title">Turnover</h3>
+            </div>
+            <div class="card-value">$452K</div>
+            <p class="card-subtitle">30-Day Volume</p>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">⏱️</span>
+                <h3 class="card-title">Avg Hold Time</h3>
+            </div>
+            <div class="card-value">4h 12m</div>
+            <p class="card-subtitle">Intraday Swing</p>
+        </div>
+    </div>
+
+    <!-- Charts Layout -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-xl);">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Cumulative P&L</h3>
+            </div>
+            <div
+                style="height: 300px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); border-radius: var(--radius-md);">
+                <div style="color: var(--text-muted);">[PnL Chart Placeholder]</div>
+            </div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Trade Distribution</h3>
+            </div>
+            <div
+                style="height: 300px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); border-radius: var(--radius-md);">
+                <div style="color: var(--text-muted);">[Distribution Chart Placeholder]</div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

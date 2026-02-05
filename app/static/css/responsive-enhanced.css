@@ -1,0 +1,584 @@
+/* ============================================
+   PHASE 1: ENHANCED MOBILE RESPONSIVENESS
+   Adds advanced mobile support without touching existing styles
+   ============================================ */
+
+/* ============================================
+   MOBILE-FIRST ENHANCEMENTS
+   ============================================ */
+
+/* Touch-friendly improvements */
+@media (max-width: 767px) {
+
+    /* Ensure all interactive elements are touch-friendly (min 44px) */
+    .btn,
+    button,
+    .nav-item,
+    a.btn,
+    input[type="submit"],
+    input[type="button"],
+    .mobile-menu-toggle {
+        min-height: 44px;
+        min-width: 44px;
+        touch-action: manipulation;
+        padding: 12px 20px;
+    }
+
+    /* Improve form inputs on mobile */
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    select,
+    textarea {
+        font-size: 16px;
+        /* Prevents iOS zoom on focus */
+        padding: 12px;
+        min-height: 44px;
+    }
+
+    /* Stack header actions vertically on small screens */
+    .header-actions {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .header-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Improve dashboard grid spacing on mobile */
+    .dashboard-grid {
+        gap: 1rem;
+        padding: 0;
+    }
+
+    /* Make cards more compact on mobile */
+    .dashboard-card {
+        padding: 1rem;
+    }
+
+    .card-value {
+        font-size: 1.75rem;
+        /* Slightly smaller on mobile */
+    }
+
+    /* Content body padding adjustment */
+    .content-body {
+        padding: 1rem;
+    }
+
+    /* Page sections more compact */
+    .page-section {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Section headers stack on mobile */
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .section-header .btn {
+        width: 100%;
+    }
+}
+
+/* ============================================
+   TABLET OPTIMIZATIONS (768px - 1023px)
+   ============================================ */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .content-body {
+        padding: 1.5rem;
+    }
+
+    .sidebar {
+        width: 240px;
+        /* Slightly narrower on tablet */
+    }
+
+    .main-content {
+        margin-left: 240px;
+    }
+}
+
+/* ============================================
+   MOBILE OVERLAY FOR SIDEBAR
+   ============================================ */
+.mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    z-index: 1999;
+    /* Just below sidebar */
+    opacity: 0;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    visibility: hidden;
+}
+
+.mobile-overlay.active {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+}
+
+body.sidebar-active {
+    overflow: hidden !important;
+}
+
+@media (max-width: 1024px) {
+
+    /* Force Sidebar Collapse on Tablets and Mobile */
+    .sidebar {
+        transform: translateX(-100%);
+        width: 280px !important;
+        z-index: 2000 !important;
+        box-shadow: none;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sidebar.active {
+        transform: translateX(0) !important;
+        box-shadow: var(--shadow-xl) !important;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding-left: 0 !important;
+    }
+
+    .mobile-menu-toggle {
+        display: flex !important;
+    }
+}
+
+/* ============================================
+   RESPONSIVE TABLES - SCROLLABLE WRAPPER
+   ============================================ */
+.table-responsive {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+}
+
+.table-responsive .data-table {
+    margin-bottom: 0;
+}
+
+@media (max-width: 767px) {
+    /* ... (rest of mobile card view logic if needed) */
+}
+
+/* ============================================
+   IMPROVED SCROLLING ON MOBILE
+   ============================================ */
+@media (max-width: 767px) {
+
+    /* Smooth scrolling */
+    html {
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Improve horizontal scroll for tables */
+    .data-table-container {
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+
+    /* Hide scrollbar but keep functionality */
+    .data-table-container::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .data-table-container::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .data-table-container::-webkit-scrollbar-thumb {
+        background: var(--primary);
+        border-radius: 2px;
+    }
+}
+
+/* ============================================
+   MOBILE NAVIGATION ENHANCEMENTS
+   ============================================ */
+@media (max-width: 767px) {
+
+    /* Improve sidebar scrolling on mobile */
+    .sidebar {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Larger tap targets for nav items */
+    .nav-item {
+        padding: 1rem 1.5rem;
+        font-size: 1rem;
+    }
+
+    .nav-icon {
+        font-size: 1.5rem;
+    }
+
+    /* Section titles more prominent */
+    .nav-section-title {
+        padding: 1rem 1.5rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* ============================================
+   MODAL IMPROVEMENTS FOR MOBILE
+   ============================================ */
+@media (max-width: 767px) {
+    .modal-dialog {
+        margin: 0;
+        max-width: 100%;
+        height: 100%;
+    }
+
+    .modal-content {
+        height: 100%;
+        border-radius: 0;
+        border: none;
+    }
+
+    .modal-header,
+    .modal-footer {
+        flex-shrink: 0;
+    }
+
+    .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ============================================
+   FORM IMPROVEMENTS FOR MOBILE
+   ============================================ */
+@media (max-width: 767px) {
+
+    /* Stack form groups */
+    .form-row {
+        flex-direction: column;
+    }
+
+    .form-group {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+
+    /* Full-width buttons in forms */
+    .form-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-actions .btn {
+        width: 100%;
+    }
+
+    /* Improve select dropdowns */
+    select {
+        background-size: 16px;
+        padding-right: 40px;
+    }
+}
+
+/* ============================================
+   CHART RESPONSIVENESS
+   ============================================ */
+@media (max-width: 767px) {
+
+    /* Make charts responsive */
+    canvas,
+    .chart-container {
+        max-width: 100%;
+        height: auto !important;
+    }
+
+    /* Reduce chart height on mobile */
+    .chart-wrapper {
+        height: 250px;
+    }
+}
+
+/* ============================================
+   TOAST NOTIFICATIONS - MOBILE OPTIMIZED
+   ============================================ */
+#toast-container {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+/* Desktop: top-right */
+@media (min-width: 768px) {
+    #toast-container {
+        top: 20px;
+        right: 20px;
+        max-width: 400px;
+    }
+}
+
+/* Mobile: bottom, full-width */
+@media (max-width: 767px) {
+    #toast-container {
+        bottom: 80px;
+        /* Raised above bottom nav/safe area */
+        left: 10px;
+        right: 10px;
+        max-width: none;
+    }
+}
+
+.toast {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    box-shadow: var(--shadow-lg);
+    pointer-events: auto;
+    animation: slideIn 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.toast-success {
+    border-left: 4px solid var(--success);
+}
+
+.toast-error {
+    border-left: 4px solid var(--danger);
+}
+
+.toast-warning {
+    border-left: 4px solid var(--warning);
+}
+
+.toast-info {
+    border-left: 4px solid var(--secondary);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ============================================
+   LANDSCAPE ORIENTATION FIXES
+   ============================================ */
+@media (max-width: 767px) and (orientation: landscape) {
+
+    /* Reduce header height in landscape */
+    .content-header {
+        padding: 0.75rem 1rem;
+    }
+
+    .content-header h1 {
+        font-size: 1.25rem;
+    }
+
+    /* Compact sidebar in landscape */
+    .sidebar-header {
+        padding: 1rem;
+    }
+
+    .sidebar-header h1 {
+        font-size: 1rem;
+    }
+}
+
+/* ============================================
+   ACCESSIBILITY IMPROVEMENTS
+   ============================================ */
+
+/* Focus visible for keyboard navigation */
+*:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Skip to content link for screen readers */
+.skip-to-content {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--primary);
+    color: white;
+    padding: 8px;
+    text-decoration: none;
+    z-index: 10000;
+}
+
+.skip-to-content:focus {
+    top: 0;
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+@media print {
+
+    .sidebar,
+    .mobile-menu-toggle,
+    .header-actions,
+    .mobile-overlay {
+        display: none !important;
+    }
+
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .page-section {
+        page-break-inside: avoid;
+    }
+
+    .dashboard-card {
+        page-break-inside: avoid;
+    }
+}
+
+/* ============================================
+   LOADING STATES - MOBILE OPTIMIZED
+   ============================================ */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Mobile: larger spinner */
+@media (max-width: 767px) {
+    .loading-spinner {
+        width: 30px;
+        height: 30px;
+        border-width: 4px;
+    }
+}
+
+/* ============================================
+   SAFE AREA INSETS (iPhone notch support)
+   ============================================ */
+@supports (padding: max(0px)) {
+
+    .content-header,
+    .sidebar-header {
+        padding-left: max(var(--spacing-xl), env(safe-area-inset-left));
+        padding-right: max(var(--spacing-xl), env(safe-area-inset-right));
+    }
+
+    .content-body {
+        padding-left: max(var(--spacing-lg), env(safe-area-inset-left));
+        padding-right: max(var(--spacing-lg), env(safe-area-inset-right));
+        padding-bottom: max(var(--spacing-2xl), env(safe-area-inset-bottom));
+    }
+
+    .sidebar {
+        padding-top: max(0px, env(safe-area-inset-top));
+        padding-left: max(0px, env(safe-area-inset-left));
+        padding-bottom: max(0px, env(safe-area-inset-bottom));
+    }
+}
+
+/* ============================================
+   PWA INSTALL BANNER
+   ============================================ */
+.pwa-install-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border-color);
+    padding: 1rem;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    z-index: 1000;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.pwa-install-banner.show {
+    display: flex;
+}
+
+.pwa-install-content {
+    flex: 1;
+}
+
+.pwa-install-title {
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.pwa-install-subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.pwa-install-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+@media (max-width: 767px) {
+    .pwa-install-banner {
+        flex-direction: column;
+        align-items: stretch;
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+
+    .pwa-install-actions {
+        width: 100%;
+    }
+
+    .pwa-install-actions .btn {
+        flex: 1;
+    }
+}

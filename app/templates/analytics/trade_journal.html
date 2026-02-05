@@ -1,0 +1,700 @@
+{% extends "base.html" %}
+
+{% block title %}Trade Journal - AI Trading Bot{% endblock %}
+{% block header_title %}Trade Journal{% endblock %}
+{% block header_subtitle %}Complete trade history with advanced analytics{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+    <!-- Summary Cards -->
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <span class="card-icon">📊</span>
+            <div class="card-value" id="total-trades">--</div>
+            <p class="card-subtitle">Total Trades</p>
+        </div>
+        <div class="dashboard-card">
+            <span class="card-icon">✅</span>
+            <div class="card-value" id="wins">--</div>
+            <p class="card-subtitle">Wins</p>
+        </div>
+        <div class="dashboard-card">
+            <span class="card-icon">❌</span>
+            <div class="card-value" id="losses">--</div>
+            <p class="card-subtitle">Losses</p>
+        </div>
+        <div class="dashboard-card">
+            <span class="card-icon">🎯</span>
+            <div class="card-value" id="win-rate">--</div>
+            <p class="card-subtitle">Win Rate</p>
+        </div>
+        <div class="dashboard-card">
+            <span class="card-icon">💰</span>
+            <div class="card-value" id="total-pnl">--</div>
+            <p class="card-subtitle">Total P&L</p>
+        </div>
+        <div class="dashboard-card">
+            <span class="card-icon">📈</span>
+            <div class="card-value" id="avg-pnl">--</div>
+            <p class="card-subtitle">Avg P&L/Trade</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <span class="card-icon">🔍</span>
+            <h3 class="card-title">Filters</h3>
+            <button class="btn btn-secondary btn-sm" onclick="resetFilters()">Reset</button>
+        </div>
+
+        <div class="filter-grid">
+            <div class="filter-item">
+                <label>Start Date</label>
+                <input type="date" id="start-date" onchange="applyFilters()">
+            </div>
+            <div class="filter-item">
+                <label>End Date</label>
+                <input type="date" id="end-date" onchange="applyFilters()">
+            </div>
+            <div class="filter-item">
+                <label>Symbol</label>
+                <select id="symbol-filter" multiple onchange="applyFilters()">
+                    <option value="">All Symbols</option>
+                    <option value="BTCUSDT">BTCUSDT</option>
+                    <option value="ETHUSDT">ETHUSDT</option>
+                    <option value="BNBUSDT">BNBUSDT</option>
+                    <option value="ADAUSDT">ADAUSDT</option>
+                    <option value="DOGEUSDT">DOGEUSDT</option>
+                    <option value="XRPUSDT">XRPUSDT</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>Strategy</label>
+                <select id="strategy-filter" multiple onchange="applyFilters()">
+                    <option value="">All Strategies</option>
+                    <option value="ML-Based">ML-Based</option>
+                    <option value="Trend Following">Trend Following</option>
+                    <option value="Mean Reversion">Mean Reversion</option>
+                    <option value="Breakout">Breakout</option>
+                    <option value="Scalping">Scalping</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>Outcome</label>
+                <select id="outcome-filter" onchange="applyFilters()">
+                    <option value="all">All</option>
+                    <option value="win">Wins Only</option>
+                    <option value="loss">Losses Only</option>
+                    <option value="breakeven">Breakeven</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>Side</label>
+                <select id="side-filter" onchange="applyFilters()">
+                    <option value="all">All</option>
+                    <option value="BUY">Buy</option>
+                    <option value="SELL">Sell</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>Market Type</label>
+                <select id="market-type-filter" onchange="applyFilters()">
+                    <option value="all">All Markets</option>
+                    <option value="SPOT">Spot</option>
+                    <option value="FUTURES">Futures</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>Profile</label>
+                <select id="profile-filter" onchange="applyFilters()">
+                    <option value="all">All Profiles</option>
+                    <option value="ULTIMATE">Ultimate</option>
+                    <option value="OPTIMIZED">Optimized</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="dashboard-card">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('trades')">Trade History</button>
+            <button class="tab-btn" onclick="switchTab('analytics')">Analytics</button>
+            <button class="tab-btn" onclick="switchTab('best-worst')">Best/Worst</button>
+        </div>
+
+        <!-- Trade History Tab -->
+        <div id="trades-tab" class="tab-content active">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div id="showing-text" style="color: var(--text-secondary); font-size: 0.875rem;"></div>
+                <button class="btn btn-primary btn-sm" onclick="exportCSV()">
+                    📥 Export CSV
+                </button>
+            </div>
+
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Symbol</th>
+                            <th>Side</th>
+                            <th>Entry</th>
+                            <th>Exit</th>
+                            <th>Amount</th>
+                            <th>P&L</th>
+                            <th>P&L %</th>
+                            <th>Market</th>
+                            <th>Profile</th>
+                            <th>Strategy</th>
+                            <th>Hold Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trades-tbody">
+                        <!-- Trades will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" id="pagination">
+                <!-- Pagination buttons will be populated -->
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analytics-tab" class="tab-content">
+            <div style="display: grid; gap: 2rem;">
+                <div>
+                    <h4 style="margin-bottom: 1rem;">Performance by Time of Day</h4>
+                    <canvas id="time-chart" style="max-height: 250px;"></canvas>
+                </div>
+
+                <div>
+                    <h4 style="margin-bottom: 1rem;">Performance by Symbol</h4>
+                    <canvas id="symbol-chart" style="max-height: 300px;"></canvas>
+                </div>
+
+                <div>
+                    <h4 style="margin-bottom: 1rem;">Performance by Strategy</h4>
+                    <canvas id="strategy-chart" style="max-height: 250px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Best/Worst Tab -->
+        <div id="best-worst-tab" class="tab-content">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <div>
+                    <h4 style="margin-bottom: 1rem; color: #00d4aa;">🏆 Top 10 Best Trades</h4>
+                    <div id="best-trades-list"></div>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 1rem; color: #ff6b6b;">💔 Top 10 Worst Trades</h4>
+                    <div id="worst-trades-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+        align-items: start;
+    }
+
+    .filter-item label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        font-weight: var(--font-weight-semibold);
+    }
+
+    .filter-item input,
+    .filter-item select {
+        width: 100%;
+        padding: 0.75rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text-primary);
+        font-size: 0.875rem;
+    }
+
+    .filter-item select[multiple] {
+        height: 100px;
+    }
+
+    .tabs {
+        display: flex;
+        gap: 0.5rem;
+        border-bottom: 2px solid var(--border-color);
+        margin-bottom: 1.5rem;
+    }
+
+    .tab-btn {
+        padding: 0.75rem 1.5rem;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-weight: var(--font-weight-semibold);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        transition: all 0.3s ease;
+    }
+
+    .tab-btn:hover {
+        color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .pagination button {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text-primary);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .pagination button:hover:not(:disabled) {
+        background: var(--primary);
+        border-color: var(--primary);
+    }
+
+    .pagination button.active {
+        background: var(--primary);
+        border-color: var(--primary);
+    }
+
+    .pagination button:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .trade-card {
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        margin-bottom: 0.75rem;
+    }
+
+    .trade-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .trade-card-symbol {
+        font-weight: var(--font-weight-bold);
+        color: var(--text-primary);
+    }
+
+    .trade-card-pnl {
+        font-weight: var(--font-weight-bold);
+        font-size: 1.125rem;
+    }
+
+    .pnl-positive {
+        color: #00d4aa;
+    }
+
+    .pnl-negative {
+        color: #ff6b6b;
+    }
+
+    .trade-card-details {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    let currentPage = 1;
+    let currentFilters = {};
+    let timeChart, symbolChart, strategyChart;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadTrades();
+        loadAnalytics();
+    });
+
+    function switchTab(tabName) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+
+        // Update tab content
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(`${tabName}-tab`).classList.add('active');
+
+        // Load analytics if switching to analytics tab
+        if (tabName === 'analytics') {
+            loadAnalytics();
+        } else if (tabName === 'best-worst') {
+            loadBestWorst();
+        }
+    }
+
+    async function loadTrades(page = 1) {
+        try {
+            currentPage = page;
+
+            // Build query string
+            const params = new URLSearchParams({
+                page: page,
+                limit: 50,
+                ...currentFilters
+            });
+
+            const response = await fetch(`/api/trades/journal?${params}`);
+            const data = await response.json();
+
+            if (data.success) {
+                // Update summary cards
+                document.getElementById('total-trades').textContent = data.summary.total_trades;
+                document.getElementById('wins').textContent = data.summary.wins;
+                document.getElementById('losses').textContent = data.summary.losses;
+                document.getElementById('win-rate').textContent = data.summary.win_rate + '%';
+                document.getElementById('total-pnl').textContent = '$' + data.summary.total_pnl.toFixed(2);
+                document.getElementById('avg-pnl').textContent = '$' + data.summary.avg_pnl_per_trade.toFixed(2);
+
+                // Color code P&L
+                const pnlEl = document.getElementById('total-pnl');
+                pnlEl.style.color = data.summary.total_pnl >= 0 ? '#00d4aa' : '#ff6b6b';
+
+                // Render trades table
+                renderTrades(data.trades);
+
+                // Render pagination
+                renderPagination(data.pagination);
+
+                // Update showing text
+                const start = (page - 1) * data.pagination.limit + 1;
+                const end = Math.min(page * data.pagination.limit, data.pagination.total);
+                document.getElementById('showing-text').textContent =
+                    `Showing ${start}-${end} of ${data.pagination.total} trades`;
+            }
+        } catch (error) {
+            console.error('Error loading trades:', error);
+            showToast('Failed to load trades', 'error');
+        }
+    }
+
+    function renderTrades(trades) {
+        const tbody = document.getElementById('trades-tbody');
+        tbody.innerHTML = '';
+
+        trades.forEach(trade => {
+            const row = document.createElement('tr');
+            const pnlClass = trade.pnl >= 0 ? 'pnl-positive' : 'pnl-negative';
+
+            row.innerHTML = `
+            <td>${new Date(trade.timestamp).toLocaleString()}</td>
+            <td><strong>${trade.symbol}</strong></td>
+            <td><span class="badge badge-${trade.side.toLowerCase()}">${trade.side}</span></td>
+            <td>$${trade.entry_price.toLocaleString()}</td>
+            <td>$${trade.exit_price.toLocaleString()}</td>
+            <td>${trade.amount.toFixed(6)}</td>
+            <td class="${pnlClass}"><strong>$${trade.pnl.toFixed(2)}</strong></td>
+            <td class="${pnlClass}">${trade.pnl_percent > 0 ? '+' : ''}${trade.pnl_percent.toFixed(2)}%</td>
+            <td><span class="badge badge-secondary">${trade.market_type || 'SPOT'}</span></td>
+            <td><span class="badge badge-outline">${trade.profile || 'OPTIMIZED'}</span></td>
+            <td>${trade.strategy}</td>
+            <td>${trade.hold_time}</td>
+        `;
+
+            tbody.appendChild(row);
+        });
+    }
+
+    function renderPagination(pagination) {
+        const container = document.getElementById('pagination');
+        container.innerHTML = '';
+
+        // Previous button
+        const prevBtn = document.createElement('button');
+        prevBtn.textContent = '← Previous';
+        prevBtn.disabled = pagination.page === 1;
+        prevBtn.onclick = () => loadTrades(pagination.page - 1);
+        container.appendChild(prevBtn);
+
+        // Page numbers
+        for (let i = 1; i <= Math.min(pagination.pages, 10); i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.textContent = i;
+            pageBtn.className = i === pagination.page ? 'active' : '';
+            pageBtn.onclick = () => loadTrades(i);
+            container.appendChild(pageBtn);
+        }
+
+        // Next button
+        const nextBtn = document.createElement('button');
+        nextBtn.textContent = 'Next →';
+        nextBtn.disabled = pagination.page === pagination.pages;
+        nextBtn.onclick = () => loadTrades(pagination.page + 1);
+        container.appendChild(nextBtn);
+    }
+
+    function applyFilters() {
+        currentFilters = {
+            start_date: document.getElementById('start-date').value,
+            end_date: document.getElementById('end-date').value,
+            symbols: Array.from(document.getElementById('symbol-filter').selectedOptions).map(o => o.value).join(','),
+            strategies: Array.from(document.getElementById('strategy-filter').selectedOptions).map(o => o.value).join(','),
+            outcome: document.getElementById('outcome-filter').value,
+            side: document.getElementById('side-filter').value,
+            market_type: document.getElementById('market-type-filter').value,
+            profile: document.getElementById('profile-filter').value
+        };
+
+        loadTrades(1);
+    }
+
+    function resetFilters() {
+        document.getElementById('start-date').value = '';
+        document.getElementById('end-date').value = '';
+        document.getElementById('symbol-filter').selectedIndex = -1;
+        document.getElementById('strategy-filter').selectedIndex = -1;
+        document.getElementById('outcome-filter').value = 'all';
+        document.getElementById('side-filter').value = 'all';
+        document.getElementById('market-type-filter').value = 'all';
+        document.getElementById('profile-filter').value = 'all';
+        currentFilters = {};
+        loadTrades(1);
+    }
+
+    async function loadAnalytics() {
+        try {
+            const response = await fetch('/api/trades/analytics');
+            const data = await response.json();
+
+            if (data.success) {
+                renderTimeChart(data.by_time_of_day);
+                renderSymbolChart(data.by_symbol);
+                renderStrategyChart(data.by_strategy);
+            }
+        } catch (error) {
+            console.error('Error loading analytics:', error);
+        }
+    }
+
+    function renderTimeChart(data) {
+        const ctx = document.getElementById('time-chart').getContext('2d');
+        if (timeChart) timeChart.destroy();
+
+        const labels = Object.keys(data);
+        const winRates = labels.map(k => data[k].win_rate);
+
+        timeChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Win Rate (%)',
+                    data: winRates,
+                    backgroundColor: 'rgba(0, 212, 170, 0.8)',
+                    borderColor: '#00d4aa',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { color: '#b2bec3' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    },
+                    x: {
+                        ticks: { color: '#b2bec3' },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderSymbolChart(data) {
+        const ctx = document.getElementById('symbol-chart').getContext('2d');
+        if (symbolChart) symbolChart.destroy();
+
+        const symbols = Object.keys(data);
+        const winRates = symbols.map(s => data[s].win_rate);
+
+        symbolChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: symbols,
+                datasets: [{
+                    label: 'Win Rate (%)',
+                    data: winRates,
+                    backgroundColor: winRates.map(r => r >= 50 ? 'rgba(0, 212, 170, 0.8)' : 'rgba(255, 107, 107, 0.8)'),
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { color: '#b2bec3' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    },
+                    y: {
+                        ticks: { color: '#b2bec3' },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderStrategyChart(data) {
+        const ctx = document.getElementById('strategy-chart').getContext('2d');
+        if (strategyChart) strategyChart.destroy();
+
+        const strategies = Object.keys(data);
+        const winRates = strategies.map(s => data[s].win_rate);
+
+        strategyChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: strategies,
+                datasets: [{
+                    data: winRates,
+                    backgroundColor: [
+                        'rgba(0, 212, 170, 0.8)',
+                        'rgba(255, 215, 0, 0.8)',
+                        'rgba(138, 43, 226, 0.8)',
+                        'rgba(255, 107, 107, 0.8)',
+                        'rgba(52, 152, 219, 0.8)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: '#b2bec3' }
+                    }
+                }
+            }
+        });
+    }
+
+    async function loadBestWorst() {
+        try {
+            const response = await fetch('/api/trades/analytics');
+            const data = await response.json();
+
+            if (data.success) {
+                renderTradeList('best-trades-list', data.best_trades);
+                renderTradeList('worst-trades-list', data.worst_trades);
+            }
+        } catch (error) {
+            console.error('Error loading best/worst trades:', error);
+        }
+    }
+
+    function renderTradeList(containerId, trades) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+
+        trades.forEach(trade => {
+            const card = document.createElement('div');
+            card.className = 'trade-card';
+            const pnlClass = trade.pnl >= 0 ? 'pnl-positive' : 'pnl-negative';
+
+            card.innerHTML = `
+            <div class="trade-card-header">
+                <span class="trade-card-symbol">${trade.symbol} - ${trade.side}</span>
+                <span class="trade-card-pnl ${pnlClass}">$${trade.pnl.toFixed(2)}</span>
+            </div>
+            <div class="trade-card-details">
+                <div>Entry: $${trade.entry_price.toLocaleString()}</div>
+                <div>Exit: $${trade.exit_price.toLocaleString()}</div>
+                <div>Strategy: ${trade.strategy}</div>
+                <div>Hold: ${trade.hold_time}</div>
+            </div>
+        `;
+
+            container.appendChild(card);
+        });
+    }
+
+    async function exportCSV() {
+        try {
+            window.location.href = '/api/trades/export/csv';
+            showToast('Exporting trades to CSV...', 'success');
+        } catch (error) {
+            console.error('Error exporting CSV:', error);
+            showToast('Failed to export CSV', 'error');
+        }
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `
+        <span style="font-size: 1.25rem; margin-right: 0.5rem;">
+            ${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}
+        </span>
+        <span>${message}</span>
+    `;
+
+        const container = document.getElementById('toast-container');
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+</script>
+{% endblock %}

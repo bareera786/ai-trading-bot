@@ -53,6 +53,30 @@ class QuantumFusionMomentumEngine:
 
         return features
 
+    def generate_signal(self, symbol, market_data=None):
+        """Generate trading signal based on QFM features."""
+        if market_data:
+            features = self.compute_realtime_features(symbol, market_data)
+        else:
+            features = self.get_latest_features(symbol)
+        
+        if not features:
+            return {"signal": "NEUTRAL", "confidence": 0.0}
+            
+        regime_score = features.get("regime_score", 0.5)
+        trend_confidence = features.get("trend_confidence", 0.5)
+        velocity = features.get("velocity", 0)
+        
+        # Simple logic mapping QFM features to signals
+        # Use simple thresholds for now to align with existing logic
+        if regime_score > 0.6 and trend_confidence > 0.6:
+            if velocity > 0.001:
+                return {"signal": "BUY", "confidence": min(0.9, trend_confidence)}
+            elif velocity < -0.001:
+                return {"signal": "SELL", "confidence": min(0.9, trend_confidence)}
+                
+        return {"signal": "HOLD", "confidence": 0.0}
+
     def _calculate_qfm_features(self, symbol, price, volume, high, low):
         """Calculate comprehensive QFM features."""
         features = {}
@@ -103,7 +127,7 @@ class QuantumFusionMomentumEngine:
             return 0.0
 
         # Use exponential moving average for smoother velocity
-        prices = [h["price"] for h in history[-10:]]  # Last 10 points
+        prices = [h["price"] for h in list(history)[-10:]]  # Last 10 points
 
         if len(prices) < 2:
             return 0.0
@@ -156,7 +180,7 @@ class QuantumFusionMomentumEngine:
             return 0.0
 
         # Average volume over last 5 periods
-        avg_volume = np.mean([h["volume"] for h in history[-5:]])
+        avg_volume = np.mean([h["volume"] for h in list(history)[-5:]])
 
         if avg_volume == 0:
             return 0.0
@@ -182,7 +206,7 @@ class QuantumFusionMomentumEngine:
             return 0.5
 
         # Check consistency of directional movement
-        recent_velocities = velocities[-10:]
+        recent_velocities = list(velocities)[-10:]
 
         # Count directional consistency
         positive_count = sum(1 for v in recent_velocities if v > 0)
@@ -225,7 +249,7 @@ class QuantumFusionMomentumEngine:
             return 0.5
 
         # Calculate price return distribution
-        prices = [h["price"] for h in history[-20:]]
+        prices = [h["price"] for h in list(history)[-20:]]
         returns = []
 
         for i in range(1, len(prices)):
@@ -266,7 +290,7 @@ class QuantumFusionMomentumEngine:
         # Historical volatility
         history = self.feature_history.get(symbol, [])
         if len(history) >= 5:
-            recent_prices = [h["price"] for h in history[-5:]]
+            recent_prices = [h["price"] for h in list(history)[-5:]]
             price_std = np.std(recent_prices)
             price_mean = np.mean(recent_prices)
 
@@ -306,7 +330,7 @@ class QuantumFusionMomentumEngine:
         if not history:
             return {}
 
-        return history[-1]["features"]
+        return list(history)[-1]["features"]
 
     def get_feature_history(self, symbol, limit=100):
         """Get historical QFM features for analysis."""
@@ -418,3 +442,49 @@ class QuantumFusionMomentumEngine:
         }
 
         return cycle_info
+
+    def compute_training_features(self, df):
+        """Compute QFM features for an entire DataFrame (training mode)."""
+        if df is None or df.empty:
+            import pandas as pd
+            return pd.DataFrame()
+
+        try:
+            import pandas as pd
+            
+            # Create a copy to avoid SettingWithCopy warnings
+            data = df.copy()
+            close = data["close"]
+            volume = data["volume"]
+            
+            # Velocity: Percentage change in price (Momentum)
+            velocity = close.pct_change(fill_method=None).fillna(0)
+            
+            # Acceleration: Rate of change of velocity
+            acceleration = velocity.diff().fillna(0)
+            
+            # Jerk: Rate of change of acceleration
+            jerk = acceleration.diff().fillna(0)
+            
+            # Volume Pressure
+            vol_mean = volume.rolling(window=20).mean()
+            vol_pressure = ((volume - vol_mean) / vol_mean).fillna(0)
+            price_direction = close.diff().apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0))
+            vol_pressure = vol_pressure * price_direction
+            
+            # Construct feature set
+            features = pd.DataFrame(index=df.index)
+            features["qfm_velocity"] = velocity
+            features["qfm_acceleration"] = acceleration
+            features["qfm_jerk"] = jerk
+            features["qfm_volume_pressure"] = vol_pressure
+            
+            # Market Regime (simplified vectorized approximation)
+            # Higher velocity + acceleration = stronger trend
+            features["qfm_regime_score"] = (velocity.abs() + acceleration.abs()).rolling(window=10).mean().fillna(0)
+            
+            return features
+            
+        except Exception:
+            import pandas as pd
+            return pd.DataFrame(index=df.index)

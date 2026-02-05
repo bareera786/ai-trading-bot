@@ -34,8 +34,7 @@ docs/
 !README.md
 
 # Development and legacy files
-scripts/*
-!scripts/clear_trade_history.py
+# scripts/ allowed for maintenance
 notebooks/
 *.ipynb
 ai_ml_auto_bot_final_backup.py
@@ -51,6 +50,7 @@ bot_persistence/
 logs/
 *.csv
 *.json
+!package.json
 *.pkl
 *.h5
 *.joblib

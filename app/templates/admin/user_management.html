@@ -1,49 +1,258 @@
 {% extends 'base.html' %}
+{% set active_page = "user-management" %}
+
+{% block header_title %}User Management{% endblock %}
+{% block header_subtitle %}Admin / Users{% endblock %}
+
 {% block content %}
-<div class="container-fluid py-4">
-    <h2 class="mb-4" style="font-weight:700;letter-spacing:1px;">Institution-Grade User Management</h2>
-    <div class="card mb-4">
-        <div class="card-body">
-            <input type="text" id="userSearch" class="form-control mb-3" placeholder="Search users by name, email, or ID...">
-            <div id="userList" class="table-responsive"></div>
-        </div>
-    </div>
-    <div id="userDetails" style="display:none;">
-        <!-- User details will be loaded here -->
+<div class="container-fluid" style="max-width: 1400px; margin: 0 auto; padding: 24px;">
+
+    <!-- Header Actions -->
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 24px;">
+        <button class="btn btn-primary" onclick="openAddUserModal()">
+            <span style="font-size: 1.2em; margin-right: 8px;">+</span> Add New User
+        </button>
     </div>
 
-    <!-- Admin: Manage User API Keys Modal -->
-    <div id="admin-user-keys-modal" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index:2000; align-items:center; justify-content:center;">
-        <div style="background:var(--bg-card); padding: 20px; border-radius:8px; width: 520px; max-width: 95%;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                <h3 id="admin-user-keys-modal-title">Manage User API Keys</h3>
-                <button class="modal-close" style="background:none;border:none;font-size:20px;" onclick="document.getElementById('admin-user-keys-modal').style.display='none'">×</button>
+    <!-- Users Table Card -->
+    <div class="card-panel"
+        style="padding: 0; overflow: hidden; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+        <table class="table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: var(--bg-tertiary); border-bottom: 1px solid var(--border-color);">
+                    <th
+                        style="padding: 16px 24px; text-align: left; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; font-size: 12px;">
+                        User Info</th>
+                    <th
+                        style="padding: 16px 24px; text-align: left; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; font-size: 12px;">
+                        Role</th>
+                    <th
+                        style="padding: 16px 24px; text-align: left; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; font-size: 12px;">
+                        Status</th>
+                    <th
+                        style="padding: 16px 24px; text-align: left; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; font-size: 12px;">
+                        Joined</th>
+                    <th
+                        style="padding: 16px 24px; text-align: right; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; font-size: 12px;">
+                        Actions</th>
+                </tr>
+            </thead>
+            <tbody id="users-table-body">
+                <tr>
+                    <td colspan="5" style="padding: 32px; text-align: center; color: var(--text-secondary);">
+                        <div class="loading-spinner"
+                            style="border: 2px solid var(--border-color); border-top-color: var(--primary); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 0 auto 12px;">
+                        </div>
+                        Loading users...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- Modal -->
+<div id="userModal" class="modal-backdrop"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="modal-content"
+        style="background: var(--bg-card); padding: 32px; border-radius: 16px; width: 100%; max-width: 500px; box-shadow: var(--shadow-xl); border: 1px solid var(--border-color);">
+        <h3 id="modalTitle" style="margin-top: 0; margin-bottom: 24px; color: var(--text-primary); font-size: 1.5rem;">
+            Add User</h3>
+
+        <form id="userForm">
+            <input type="hidden" id="userId">
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label
+                    style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 14px; font-weight: 500;">Username</label>
+                <input type="text" id="username" class="form-control-custom" required placeholder="Enter username"
+                    style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 14px;">
             </div>
-            <div class="form-group">
-                <label class="form-label">Account Type</label>
-                <select id="admin-api-account-type" class="form-input">
-                    <option value="spot">Spot</option>
-                    <option value="futures">Futures</option>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label
+                    style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 14px; font-weight: 500;">Email</label>
+                <input type="email" id="email" class="form-control-custom" required placeholder="name@example.com"
+                    style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 14px;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label
+                    style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 14px; font-weight: 500;">Role</label>
+                <select id="role" class="form-control-custom"
+                    style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 14px; appearance: none;">
+                    <option value="user">Trader</option>
+                    <option value="admin">Admin</option>
                 </select>
             </div>
-            <div class="form-group">
-                <label class="form-label">API Key</label>
-                <input id="admin-api-key" class="form-input" placeholder="API Key">
+
+            <div class="form-group" style="margin-bottom: 32px;">
+                <label
+                    style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 14px; font-weight: 500;">Password</label>
+                <input type="password" id="password" class="form-control-custom"
+                    placeholder="Leave empty to keep current"
+                    style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 14px;">
             </div>
-            <div class="form-group">
-                <label class="form-label">API Secret</label>
-                <input id="admin-api-secret" class="form-input" placeholder="API Secret">
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button type="button" class="btn btn-secondary" onclick="closeUserModal()"
+                    style="background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary);">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
             </div>
-            <div class="form-group">
-                <label class="checkbox-label"><input id="admin-api-testnet" type="checkbox" checked> Use Testnet</label>
-            </div>
-            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
-                <button class="btn btn-secondary" onclick="document.getElementById('admin-user-keys-modal').style.display='none'">Cancel</button>
-                <button id="admin-api-test-btn" class="btn btn-info">Test</button>
-                <button id="admin-api-save-btn" class="btn btn-primary">Save</button>
-            </div>
-        </div>
+        </form>
     </div>
 </div>
-<script src="{{ url_for('static', filename='src/js/admin/user-management.js') }}"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', loadUsers);
+
+    function loadUsers() {
+        fetch('/admin/api/users')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('users-table-body');
+                tbody.innerHTML = '';
+
+                if (data.error) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="padding: 32px; text-align: center; color: #ef4444;">${data.error}</td></tr>`;
+                    return;
+                }
+
+                if (!data.users || data.users.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="padding: 32px; text-align: center; color: var(--text-secondary);">No users found.</td></tr>`;
+                    return;
+                }
+
+                data.users.forEach(user => {
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid var(--border-color)';
+
+                    const roleBadgeClass = user.is_admin ? 'badge-admin' : 'badge-user';
+                    const roleColor = user.is_admin ? '#3b82f6' : '#94a3b8';
+                    const roleBg = user.is_admin ? 'rgba(59, 130, 246, 0.1)' : 'rgba(148, 163, 184, 0.1)';
+
+                    const statusColor = user.is_active ? '#10b981' : '#ef4444';
+                    const statusBg = user.is_active ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+
+                    tr.innerHTML = `
+                    <td style="padding: 16px 24px;">
+                        <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 2px;">${user.username}</div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">${user.email || 'No email'}</div>
+                    </td>
+                    <td style="padding: 16px 24px;">
+                        <span style="display: inline-block; padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; background: ${roleBg}; color: ${roleColor};">
+                            ${user.is_admin ? 'ADMIN' : 'TRADER'}
+                        </span>
+                    </td>
+                    <td style="padding: 16px 24px;">
+                        <span style="display: inline-block; padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; background: ${statusBg}; color: ${statusColor};">
+                            ${user.is_active ? 'ACTIVE' : 'BANNED'}
+                        </span>
+                    </td>
+                    <td style="padding: 16px 24px; color: var(--text-secondary); font-size: 14px;">
+                        ${new Date(user.created_at).toLocaleDateString()}
+                    </td>
+                    <td style="padding: 16px 24px; text-align: right;">
+                        <button class="btn-icon" onclick="editUser('${user.id}', '${user.username}', '${user.email}', ${user.is_admin})" 
+                            style="background: none; border: none; cursor: pointer; color: var(--primary); margin-right: 12px; padding: 4px; transition: opacity 0.2s;" title="Edit">
+                            Edit
+                        </button>
+                        <button class="btn-icon" onclick="toggleBan('${user.id}', ${user.is_active})" 
+                            style="background: none; border: none; cursor: pointer; color: ${user.is_active ? '#ef4444' : '#10b981'}; padding: 4px; transition: opacity 0.2s;" title="${user.is_active ? 'Ban' : 'Activate'}">
+                            ${user.is_active ? 'Ban' : 'Unban'}
+                        </button>
+                    </td>
+                `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('users-table-body').innerHTML = `<tr><td colspan="5" style="padding: 32px; text-align: center; color: #ef4444;">Failed to load users.</td></tr>`;
+            });
+    }
+
+    function openAddUserModal() {
+        document.getElementById('userId').value = '';
+        document.getElementById('userForm').reset();
+        document.getElementById('modalTitle').textContent = 'Add New User';
+        document.getElementById('userModal').style.display = 'flex';
+    }
+
+    function closeUserModal() {
+        document.getElementById('userModal').style.display = 'none';
+    }
+
+    function editUser(id, username, email, isAdmin) {
+        document.getElementById('userId').value = id;
+        document.getElementById('username').value = username;
+        document.getElementById('email').value = email === 'null' ? '' : email;
+        document.getElementById('role').value = isAdmin ? 'admin' : 'user';
+        document.getElementById('modalTitle').textContent = 'Edit User';
+        document.getElementById('userModal').style.display = 'flex';
+    }
+
+    document.getElementById('userForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const id = document.getElementById('userId').value;
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/admin/api/users/${id}` : '/admin/api/users';
+
+        // Construct payload
+        const payload = {
+            username: document.getElementById('username').value,
+            email: document.getElementById('email').value,
+            is_admin: document.getElementById('role').value === 'admin',
+            password: document.getElementById('password').value || undefined
+        };
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    closeUserModal();
+                    loadUsers();
+                }
+            });
+    });
+
+    function toggleBan(id, isActive) {
+        const action = isActive ? 'ban' : 'unban';
+        if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+
+        fetch(`/admin/api/users/${id}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: !isActive })
+        })
+            .then(() => loadUsers());
+    }
+
+    // Close modal on outside click
+    window.onclick = function (event) {
+        const modal = document.getElementById('userModal');
+        if (event.target == modal) {
+            closeUserModal();
+        }
+    }
+</script>
+
+<style>
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .btn-icon:hover {
+        opacity: 0.7;
+    }
+</style>
 {% endblock %}

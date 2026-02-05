@@ -73,6 +73,7 @@ def build_persistence_runtime(
     logger_factory: Callable[[str], logging.Logger],
     bot_profile: Optional[str] = None,
     save_interval_minutes: int = 5,
+    system_trade_user_id: Optional[Union[int, str]] = None,
 ) -> PersistenceRuntime:
     """Construct persistence/logging services for the AI runtime."""
     
@@ -131,7 +132,9 @@ def build_persistence_runtime(
         binance_log_manager=binance_log_manager,
         coerce_bool=coerce_bool,
     )
-    binance_credential_service.initialize_all()
+    # If a system user ID is provided, initialize credentials specifically for that user
+    # This allows the "Global Bot" to run using a specific user's API keys (e.g. Admin)
+    binance_credential_service.initialize_all(user_id=system_trade_user_id)
 
     return PersistenceRuntime(
         persistence_manager=persistence_manager,

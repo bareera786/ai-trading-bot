@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block header_title %}GLOBAL TRADE HISTORY (ADMIN){% endblock %}
+{% block header_subtitle %}Complete system-wide execution audit log{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+    <!-- Performance Summary -->
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">📚</span>
+                <h3 class="card-title">Total Executions</h3>
+            </div>
+            <div class="card-value">{{ total_trades }}</div>
+            <p class="card-subtitle">System-wide trades</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">💰</span>
+                <h3 class="card-title">Net Result</h3>
+            </div>
+            <div class="card-value {% if total_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                ${{ "%.2f"|format(total_pnl) }}
+            </div>
+            <p class="card-subtitle">Realized P&L</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🎯</span>
+                <h3 class="card-title">Win Rate</h3>
+            </div>
+            <div class="card-value">{{ "%.1f"|format(win_rate) }}%</div>
+            <p class="card-subtitle">Accuracy</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">⚙️</span>
+                <h3 class="card-title">Actions</h3>
+            </div>
+            <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-sm status-success" onclick="window.location.reload()">
+                    Refresh Data
+                </button>
+                <a href="/api/trades/export/csv?all=true" class="btn btn-sm btn-primary">
+                    📥 Download CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trade History Table -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <span class="card-icon">📜</span>
+            <h3 class="card-title">Global Execution Log</h3>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>User</th>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Type</th>
+                        <th>Entry</th>
+                        <th>Exit</th>
+                        <th>P&L</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if trades.items %}
+                    {% for trade in trades.items %}
+                    <tr>
+                        <td style="color: var(--text-secondary); font-size: 0.85rem;">
+                            {{ trade.timestamp.strftime('%Y-%m-%d %H:%M') }}
+                        </td>
+                        <td>
+                            {% if trade.user %}
+                            <span class="status-indicator status-neutral">{{ trade.user.username }}</span>
+                            {% else %}
+                            <span class="status-indicator status-secondary">System</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-weight: bold; color: var(--text-primary);">{{ trade.symbol }}</td>
+                        <td>
+                            <span
+                                class="status-indicator {% if trade.side == 'BUY' or trade.side == 'LONG' %}status-success{% else %}status-danger{% endif %}">
+                                {{ trade.side }}
+                            </span>
+                        </td>
+                        <td>MARKET</td>
+                        <td>{{ "%.4f"|format(trade.entry_price) }}</td>
+                        <td>
+                            {% if trade.exit_price %}
+                            {{ "%.4f"|format(trade.exit_price) }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td
+                            class="{% if trade.pnl is not none and trade.pnl >= 0 %}text-success{% elif trade.pnl is not none %}text-danger{% endif %} font-weight-bold">
+                            {% if trade.pnl is not none %}
+                            ${{ "%.2f"|format(trade.pnl) }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if trade.status == 'open' %}
+                            <span class="status-indicator status-warning">OPEN</span>
+                            {% elif trade.status == 'closed' %}
+                            <span class="status-indicator status-success">CLOSED</span>
+                            {% else %}
+                            <span class="status-indicator status-neutral">{{ trade.status|upper }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            No global trades recorded yet.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination (Admin Only Feature) -->
+        {% if trades.pages > 1 %}
+        <div style="padding: 1rem; display: flex; justify-content: center; gap: 0.5rem; background: var(--bg-card);">
+            {% if trades.has_prev %}
+            <a href="{{ url_for('admin_dashboard.trade_history', page=trades.prev_num) }}"
+                class="btn btn-sm status-neutral">Previous</a>
+            {% endif %}
+
+            <span style="display: flex; align-items: center; color: var(--text-secondary); font-size: 0.9rem;">
+                Page {{ trades.page }} of {{ trades.pages }}
+            </span>
+
+            {% if trades.has_next %}
+            <a href="{{ url_for('admin_dashboard.trade_history', page=trades.next_num) }}"
+                class="btn btn-sm status-neutral">Next</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

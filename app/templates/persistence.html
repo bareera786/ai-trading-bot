@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Persistence Dashboard - AI Trading Bot{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-3">
+                <i class="fas fa-database"></i> State Persistence
+            </h1>
+            <p class="text-muted">Manage system state checkpoints and recovery</p>
+        </div>
+    </div>
+
+    <!-- Status Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Last Checkpoint</h6>
+                    <h5 id="lastCheckpoint">-</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Checkpoints</h6>
+                    <h5 id="totalCheckpoints">0</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Storage Used</h6>
+                    <h5 id="storageUsed">0 MB</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Auto-Save</h6>
+                    <h5 id="autoSaveStatus">Enabled</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-primary" id="createCheckpoint">
+                            <i class="fas fa-save"></i> Create Checkpoint
+                        </button>
+                        <button class="btn btn-success" id="loadCheckpoint">
+                            <i class="fas fa-upload"></i> Load Checkpoint
+                        </button>
+                        <button class="btn btn-warning" id="exportState">
+                            <i class="fas fa-download"></i> Export State
+                        </button>
+                        <button class="btn btn-danger" id="clearOld">
+                            <i class="fas fa-trash"></i> Clear Old Checkpoints
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkpoint History -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Checkpoint History</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Type</th>
+                                    <th>Size</th>
+                                    <th>Positions</th>
+                                    <th>Balance</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="checkpointsBody">
+                                <tr>
+                                    <td colspan="6" class="text-center">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function loadPersistenceData() {
+        try {
+            const response = await fetch('/api/persistence/status');
+            const data = await response.json();
+
+            if (data.success) {
+                updateStatus(data.status);
+                displayCheckpoints(data.checkpoints);
+            }
+        } catch (error) {
+            console.error('Error loading persistence data:', error);
+        }
+    }
+
+    function updateStatus(status) {
+        if (!status) return;
+
+        document.getElementById('lastCheckpoint').textContent = status.last_checkpoint ?
+            new Date(status.last_checkpoint).toLocaleString() : 'Never';
+        document.getElementById('totalCheckpoints').textContent = status.total_checkpoints || 0;
+        document.getElementById('storageUsed').textContent = (status.storage_mb || 0).toFixed(2) + ' MB';
+        document.getElementById('autoSaveStatus').textContent = status.auto_save ? 'Enabled' : 'Disabled';
+    }
+
+    function displayCheckpoints(checkpoints) {
+        const tbody = document.getElementById('checkpointsBody');
+
+        if (!checkpoints || checkpoints.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">No checkpoints available</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = checkpoints.map(cp => `
+        <tr>
+            <td>${new Date(cp.timestamp).toLocaleString()}</td>
+            <td><span class="badge bg-${cp.type === 'auto' ? 'primary' : 'success'}">${cp.type}</span></td>
+            <td>${(cp.size_kb / 1024).toFixed(2)} MB</td>
+            <td>${cp.positions_count || 0}</td>
+            <td>$${(cp.balance || 0).toFixed(2)}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="restoreCheckpoint('${cp.id}')">
+                    <i class="fas fa-undo"></i> Restore
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteCheckpoint('${cp.id}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+    }
+
+    document.getElementById('createCheckpoint').addEventListener('click', async () => {
+        try {
+            const response = await fetch('/api/persistence/checkpoint', { method: 'POST' });
+            const data = await response.json();
+
+            if (data.success) {
+                alert('Checkpoint created successfully!');
+                loadPersistenceData();
+            } else {
+                alert('Error creating checkpoint');
+            }
+        } catch (error) {
+            console.error('Error creating checkpoint:', error);
+        }
+    });
+
+    async function restoreCheckpoint(id) {
+        if (!confirm('Are you sure you want to restore this checkpoint? Current state will be lost.')) return;
+
+        try {
+            const response = await fetch(`/api/persistence/restore/${id}`, { method: 'POST' });
+            const data = await response.json();
+
+            if (data.success) {
+                alert('Checkpoint restored successfully!');
+                window.location.reload();
+            } else {
+                alert('Error restoring checkpoint');
+            }
+        } catch (error) {
+            console.error('Error restoring checkpoint:', error);
+        }
+    }
+
+    async function deleteCheckpoint(id) {
+        if (!confirm('Delete this checkpoint?')) return;
+
+        try {
+            const response = await fetch(`/api/persistence/checkpoint/${id}`, { method: 'DELETE' });
+            const data = await response.json();
+
+            if (data.success) {
+                loadPersistenceData();
+            } else {
+                alert('Error deleting checkpoint');
+            }
+        } catch (error) {
+            console.error('Error deleting checkpoint:', error);
+        }
+    }
+
+    loadPersistenceData();
+    setInterval(loadPersistenceData, 60000);
+</script>
+{% endblock %}

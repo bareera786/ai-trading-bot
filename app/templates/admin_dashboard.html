@@ -1,66 +1,150 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <div class="container mt-5">
-        <h1 class="mb-4">Admin Dashboard</h1>
+{% extends 'base.html' %}
+{% set active_page = "admin-dashboard" %}
 
-        <!-- User Table -->
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Username</th>
-                    <th>Role</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="user-table-body">
-                <!-- Rows will be dynamically populated -->
-            </tbody>
-        </table>
+{% block header_title %}Admin Control Center{% endblock %}
+{% block header_subtitle %}Industrial-grade system controls and user management{% endblock %}
 
-        <!-- Add User Button -->
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userModal">Add User</button>
-
-        <!-- User Modal -->
-        <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="userModalLabel">Add/Edit User</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="user-form">
-                            <input type="hidden" id="user-id">
-                            <div class="mb-3">
-                                <label for="username" class="form-label">Username</label>
-                                <input type="text" class="form-control" id="username" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="role" class="form-label">Role</label>
-                                <select class="form-select" id="role" required>
-                                    <option value="user">User</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Save</button>
-                        </form>
-                    </div>
-                </div>
+{% block content %}
+<div class="dashboard-container">
+    <!-- CRITICAL DANGER ZONE -->
+    <div class="dashboard-card mb-5" style="border-color: var(--danger); background: rgba(239, 68, 68, 0.08);">
+        <div class="card-header" style="justify-content: space-between;">
+            <h3 class="card-title text-danger"
+                style="display:flex;align-items:center;gap:10px; color: var(--danger) !important;">
+                <span class="pulse-dot bg-danger"></span> EMERGENCY STOP (GLOBAL KILL SWITCH)
+            </h3>
+            <span id="kill-switch-badge" class="status-indicator status-warning">STATUS: UNKNOWN</span>
+        </div>
+        <div class="card-body">
+            <p class="text-danger fw-bold mb-4" style="font-size: 1.1em; color: var(--danger); opacity: 0.9;">
+                ⚠️ CRITICAL: Activating this will IMMEDIATELY BLOCK all new trade execution for ALL users system-wide.
+            </p>
+            <div class="d-flex gap-3">
+                <button id="btn-kill-switch" class="btn btn-lg w-100 fw-bold"
+                    style="padding: 15px; font-size: 1.2em; text-transform: uppercase; letter-spacing: 1px; background: transparent; border: 2px solid var(--danger); color: var(--danger); transition: all 0.3s ease;"
+                    onclick="confirmToggleKillSwitch()">
+                    LOADING...
+                </button>
+                <button id="btn-reset-drawdown" class="btn btn-lg w-100 fw-bold"
+                    style="padding: 15px; font-size: 1.2em; text-transform: uppercase; letter-spacing: 1px; background: transparent; border: 2px solid var(--warning); color: var(--warning); transition: all 0.3s ease;"
+                    onclick="executeDrawdownReset()">
+                    RESET DRAWDOWN
+                </button>
             </div>
         </div>
+    </div>
 
-        <!-- Add a section for viewing audit logs -->
-        <div class="audit-logs mt-5">
-            <h3>Audit Logs</h3>
-            <table class="table table-bordered">
+    <!-- System Stats Grid -->
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">👥</span>
+                <h3 class="card-title">Total Users</h3>
+            </div>
+            <div class="card-value" id="admin-total-users">0</div>
+            <p class="card-subtitle">All registered users</p>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">✅</span>
+                <h3 class="card-title">Active Users</h3>
+            </div>
+            <div class="card-value" id="admin-active-users">0</div>
+            <p class="card-subtitle">Currently active</p>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">💸</span>
+                <h3 class="card-title">Total Revenue</h3>
+            </div>
+            <div class="card-value" id="admin-total-revenue">$0.00</div>
+            <p class="card-subtitle">All-time subscription revenue</p>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">⚡</span>
+                <h3 class="card-title">System Health</h3>
+            </div>
+            <div class="card-value"><span class="status-indicator status-success" id="admin-system-health">ONLINE</span>
+            </div>
+            <p class="card-subtitle">All systems operational</p>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">💰</span>
+                <h3 class="card-title">Total P&L</h3>
+            </div>
+            <div class="card-value" id="admin-total-pnl">$0.00</div>
+            <p class="card-subtitle">Realized Profit/Loss</p>
+        </div>
+    </div>
+
+    <!-- AI Self-Improvement System -->
+    <div class="section-header mt-5">
+        <h2 class="section-title">
+            <span class="section-icon">🤖</span>
+            AI Self-Improvement System
+        </h2>
+        <p class="section-helper">Advanced autonomous optimization and predictive analytics.</p>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">📈</span>
+                <h3 class="card-title">Success Rate</h3>
+            </div>
+            <div class="card-value" id="si-success-rate">0.0%</div>
+            <p class="card-subtitle">Average improvement success</p>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">🔄</span>
+                <h3 class="card-title">Cycle Count</h3>
+            </div>
+            <div class="card-value" id="si-cycle-count">0</div>
+            <p class="card-subtitle">Total improvement cycles</p>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header"><span class="card-icon">🧬</span>
+                <h3 class="card-title">Optimizer Health</h3>
+            </div>
+            <div class="card-value"><span id="admin-ribs-status" class="status-indicator status-warning">UNKNOWN</span>
+            </div>
+            <div style="margin-top:0.5rem;"><button id="admin-ribs-action" class="btn btn-sm btn-primary">Start</button>
+            </div>
+            <p class="card-subtitle" id="admin-ribs-sub">Last checkpoint: --</p>
+        </div>
+    </div>
+
+
+    <!-- User Management Section -->
+    <div class="section-header mt-5">
+        <h2 class="section-title"><span class="section-icon">👥</span> User Management</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userModal">
+            <span style="margin-right:5px;">+</span> Add User
+        </button>
+    </div>
+
+    <div class="dashboard-card p-0 overflow-hidden">
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="user-table-body">
+                    <!-- Rows will be dynamically populated -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Audit Logs Section -->
+    <div class="section-header mt-5">
+        <h2 class="section-title"><span class="section-icon">📋</span> Audit Logs</h2>
+    </div>
+
+    <div class="dashboard-card p-0 overflow-hidden">
+        <div class="data-table-container" style="max-height: 500px; overflow-y: auto;">
+            <table class="data-table">
                 <thead>
                     <tr>
                         <th>Action</th>
@@ -76,39 +160,180 @@
             </table>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const userTableBody = document.getElementById('user-table-body');
-            const userForm = document.getElementById('user-form');
-            const userIdInput = document.getElementById('user-id');
-            const usernameInput = document.getElementById('username');
-            const roleInput = document.getElementById('role');
+<!-- User Modal -->
+<div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content"
+            style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                <h5 class="modal-title">Add/Edit User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="user-form">
+                    <input type="hidden" id="user-id">
+                    <div class="mb-3">
+                        <label for="username" class="form-label text-secondary">Username</label>
+                        <input type="text" class="form-control" id="username" required
+                            style="background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px;">
+                    </div>
+                    <div class="mb-3">
+                        <label for="role" class="form-label text-secondary">Role</label>
+                        <select class="form-select" id="role" required
+                            style="background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px;">
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4">Save User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-            // Fetch and display users
-            function fetchUsers() {
-                fetch('/admin/users')
-                    .then(response => response.json())
-                    .then(users => {
-                        userTableBody.innerHTML = '';
-                        users.forEach(user => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                                <td>${user.id}</td>
-                                <td>${user.username}</td>
-                                <td>${user.role}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-warning" onclick="editUser(${user.id}, '${user.username}', '${user.role}')">Edit</button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">Delete</button>
-                                </td>
-                            `;
-                            userTableBody.appendChild(row);
-                        });
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const userTableBody = document.getElementById('user-table-body');
+        const userForm = document.getElementById('user-form');
+        const userIdInput = document.getElementById('user-id');
+        const usernameInput = document.getElementById('username');
+        const roleInput = document.getElementById('role');
+
+        function fetchUsers() {
+            fetch('/admin/api/users')
+                .then(response => {
+                    if (!response.ok) return []; // Handle error gracefully
+                    return response.json();
+                })
+                .then(data => {
+                    const users = data.users || [];
+                    userTableBody.innerHTML = '';
+                    if (!Array.isArray(users)) return;
+
+                    users.forEach(user => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${user.id}</td>
+                            <td>${user.username}</td>
+                            <td>
+                                <span class="badge ${user.role === 'admin' ? 'bg-warning text-dark' : 'bg-info'}">
+                                    ${user.role}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-info me-2" onclick="editUser('${user.id}', '${user.username}', '${user.role}')">Edit</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteUser('${user.id}')">Delete</button>
+                            </td>
+                        `;
+                        userTableBody.appendChild(row);
+                    });
+                })
+                .catch(err => console.error("Failed to fetch users", err));
+        }
+
+        // Kill Switch Logic
+        const btnKillSwitch = document.getElementById('btn-kill-switch');
+        const badgeKillSwitch = document.getElementById('kill-switch-badge');
+        let isKillSwitchActive = false;
+
+        function updateKillSwitchUI(active) {
+            isKillSwitchActive = active;
+            if (active) {
+                btnKillSwitch.textContent = "RESUME TRADING (DEACTIVATE STOP)";
+                btnKillSwitch.style.background = "var(--danger)";
+                btnKillSwitch.style.color = "white";
+                btnKillSwitch.style.boxShadow = "0 0 15px rgba(239, 68, 68, 0.4)";
+
+                badgeKillSwitch.textContent = "STATUS: ACTIVATED (TRADING STOPPED)";
+                badgeKillSwitch.className = "status-indicator status-danger";
+            } else {
+                btnKillSwitch.textContent = "ACTIVATE EMERGENCY STOP";
+                btnKillSwitch.style.background = "transparent";
+                btnKillSwitch.style.color = "var(--danger)";
+                btnKillSwitch.style.boxShadow = "none";
+
+                badgeKillSwitch.textContent = "STATUS: OPERATIONAL";
+                badgeKillSwitch.className = "status-indicator status-success";
+            }
+        }
+
+        function fetchKillSwitchStatus() {
+            fetch('/admin/api/kill-switch')
+                .then(r => r.json())
+                .then(data => {
+                    updateKillSwitchUI(data.active);
+                })
+                .catch(err => console.error("Failed to fetch kill switch status", err));
+        }
+
+        window.confirmToggleKillSwitch = function () {
+            const action = isKillSwitchActive ? "RESUME" : "STOP";
+            const msg = isKillSwitchActive
+                ? "Are you sure you want to RESUME trading? This will allow new orders immediately."
+                : "⚠️ CRITICAL WARNING ⚠️\n\nAre you sure you want to ACTIVATE THE GLOBAL KILL SWITCH?\n\nThis will BLOCK ALL NEW ORDERS system-wide immediately.\nExisting positions will NOT be closed automatically (you must close them manually if needed).";
+
+            if (confirm(msg)) {
+                btnKillSwitch.disabled = true;
+                btnKillSwitch.textContent = "PROCESSING...";
+
+                fetch('/admin/api/kill-switch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ active: !isKillSwitchActive })
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            updateKillSwitchUI(data.active);
+                            alert(data.message);
+                        } else {
+                            alert("Error: " + (data.error || "Unknown error"));
+                        }
+                    })
+                    .catch(err => alert("Request failed: " + err))
+                    .finally(() => btnKillSwitch.disabled = false);
+            }
+        };
+
+        window.executeDrawdownReset = function () {
+            const msg = "⚠️ EMERGENCY DRAWDOWN RESET ⚠️\n\nThis will reset the 'sticky' max_drawdown penalty for YOUR trading session.\n\nUse this ONLY if you are certain the recent drawdown was a transient measurement error or has been fully recovered.\n\nContinue?";
+
+            if (confirm(msg)) {
+                const btn = document.getElementById('btn-reset-drawdown');
+                btn.disabled = true;
+                btn.textContent = "RESETTING...";
+
+                fetch('/api/trading/drawdown/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert("✅ " + data.message);
+                        } else {
+                            alert("❌ Reset failed: " + (data.error || "Unknown error"));
+                        }
+                    })
+                    .catch(err => alert("Connection error: " + err))
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.textContent = "RESET DRAWDOWN";
                     });
             }
+        };
 
-            // Add/Edit user
+        // Add/Edit user
+        if (userForm) {
             userForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const userId = userIdInput.value;
@@ -125,56 +350,152 @@
                     },
                     body: JSON.stringify({ username, role })
                 })
-                .then(response => response.json())
-                .then(() => {
-                    fetchUsers();
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('userModal'));
-                    modal.hide();
-                });
-            });
-
-            // Edit user
-            window.editUser = (id, username, role) => {
-                userIdInput.value = id;
-                usernameInput.value = username;
-                roleInput.value = role;
-                const modal = new bootstrap.Modal(document.getElementById('userModal'));
-                modal.show();
-            };
-
-            // Delete user
-            window.deleteUser = (id) => {
-                if (confirm('Are you sure you want to delete this user?')) {
-                    fetch(`/admin/users/${id}`, { method: 'DELETE' })
-                        .then(() => fetchUsers());
-                }
-            };
-
-            // Fetch and display audit logs
-            function fetchAuditLogs() {
-                fetch('/api/admin/audit-logs')
                     .then(response => response.json())
-                    .then(data => {
-                        const tbody = document.getElementById('audit-log-entries');
-                        tbody.innerHTML = '';
-                        data.forEach(log => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                                <td>${log.action}</td>
-                                <td>${log.actor_user_id}</td>
-                                <td>${log.target_user_id || 'N/A'}</td>
-                                <td>${log.ip_address || 'N/A'}</td>
-                                <td>${log.created_at}</td>
-                            `;
-                            tbody.appendChild(row);
-                        });
+                    .then(() => {
+                        fetchUsers();
+                        const modalEl = document.getElementById('userModal');
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        modal.hide();
+                    })
+                    .catch(err => alert("Operation failed: " + err));
+            });
+        }
+
+        // Edit user
+        window.editUser = (id, username, role) => {
+            userIdInput.value = id;
+            usernameInput.value = username;
+            roleInput.value = role;
+            const modal = new bootstrap.Modal(document.getElementById('userModal'));
+            modal.show();
+        };
+
+        // Delete user
+        window.deleteUser = (id) => {
+            if (confirm('Are you sure you want to delete this user?')) {
+                fetch(`/admin/users/${id}`, { method: 'DELETE' })
+                    .then(() => fetchUsers())
+                    .catch(err => alert("Delete failed: " + err));
+            }
+        };
+
+        // Fetch and display audit logs
+        function fetchAuditLogs() {
+            fetch('/admin/api/audit-logs')
+                .then(response => {
+                    if (!response.ok) throw new Error("API not found");
+                    return response.json();
+                })
+                .then(data => {
+                    const tbody = document.getElementById('audit-log-entries');
+                    tbody.innerHTML = '';
+                    if (!data || !Array.isArray(data)) return;
+
+                    data.forEach(log => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><span class="badge bg-secondary">${log.action}</span></td>
+                            <td>${log.actor_user_id}</td>
+                            <td>${log.target_user_id || 'N/A'}</td>
+                            <td>${log.ip_address || 'N/A'}</td>
+                            <td>${log.created_at}</td>
+                        `;
+                        tbody.appendChild(row);
                     });
+                })
+                .catch(err => console.log("Audit logs not available yet"));
+        }
+
+        // Initial fetch
+        fetchKillSwitchStatus();
+        fetchUsers();
+        fetchAuditLogs();
+
+        // Lightweight admin ribs health updater
+        function updateAdminRIBSHealth() {
+            function formatAgeSeconds(s) {
+                if (s === null || s === undefined) return null;
+                const n = Number(s) || 0;
+                if (n < 1) return '<1s';
+                if (n < 60) return `${n}s`;
+                if (n < 3600) return `${Math.round(n / 60)}m`;
+                if (n < 86400) return `${Math.round(n / 3600)}h`;
+                return `${Math.round(n / 86400)}d`;
             }
 
-            // Initial fetch
-            fetchUsers();
-            fetchAuditLogs();
-        });
-    </script>
-</body>
-</html>
+            fetch('/api/ribs/progress')
+                .then(r => {
+                    if (!r.ok) throw new Error('no-status');
+                    return r.json();
+                })
+                .then(data => {
+                    const el = document.getElementById('admin-ribs-status');
+                    const sub = document.getElementById('admin-ribs-sub');
+                    if (!el) return;
+                    if (data.status === 'missing') {
+                        el.textContent = 'UNAVAILABLE';
+                        el.className = 'status-indicator status-inactive';
+                        if (sub) sub.textContent = 'RIBS status missing';
+                        return;
+                    }
+                    const healthy = data.healthy ? 'OK' : 'STALE';
+                    el.textContent = healthy;
+                    el.className = data.healthy ? 'status-indicator status-success' : 'status-indicator status-warning';
+
+                    // Update action button
+                    const action = document.getElementById('admin-ribs-action');
+                    if (action) {
+                        const running = !!data.running;
+                        action.textContent = running ? 'Pause' : 'Start';
+                        action.disabled = false;
+                        action.onclick = function () {
+                            action.disabled = true;
+                            const url = running ? '/api/ribs/pause' : '/api/ribs/start';
+                            fetch(url, {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                }
+                            })
+                                .then(r => {
+                                    if (r.redirected && r.url && r.url.includes('/login')) {
+                                        throw new Error('Authentication required');
+                                    }
+                                    if (!r.ok) {
+                                        return r.json().then(j => { throw new Error(j.error || j.message || `Request failed: ${r.status}`); });
+                                    }
+                                    return r.json();
+                                })
+                                .then(j => {
+                                    setTimeout(updateAdminRIBSHealth, 800);
+                                })
+                                .catch((error) => {
+                                    action.disabled = false;
+                                    alert('Failed to start RIBS: ' + error.message);
+                                });
+                        };
+                    }
+
+                    if (sub) {
+                        const age = data.latest_checkpoint_age_seconds;
+                        const formatted = formatAgeSeconds(age);
+                        sub.textContent = formatted ? `Last checkpoint: ${formatted} ago` : 'Last checkpoint: unknown';
+                    }
+                })
+                .catch(() => {
+                    const el = document.getElementById('admin-ribs-status');
+                    if (el) {
+                        el.textContent = 'ERROR';
+                        el.className = 'status-indicator status-danger';
+                    }
+                });
+        }
+        // Update every 30s
+        setInterval(updateAdminRIBSHealth, 30000);
+        updateAdminRIBSHealth();
+
+    });
+
+</script>
+{% endblock %}

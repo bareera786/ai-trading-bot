@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block header_title %}COMPOSITE RISK TUNED SIGNALS{% endblock %}
+{% block header_subtitle %}Raw signal feed from CRT engine{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+    <!-- Active Signals Grid -->
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">📶</span>
+                <h3 class="card-title">Signal Quality</h3>
+            </div>
+            <div class="card-value" style="color: var(--success);" id="sigStrength">92/100</div>
+            <p class="card-subtitle">Excellent Conditions</p>
+        </div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <span class="card-icon">📡</span>
+            <h3 class="card-title">Live CRT Feed</h3>
+        </div>
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Symbol</th>
+                        <th>Direction</th>
+                        <th>Strength</th>
+                        <th>Entry Zone</th>
+                        <th>Stop Loss</th>
+                        <th>Target</th>
+                    </tr>
+                </thead>
+                <tbody id="signalsBody">
+                    <tr>
+                        <td colspan="7" class="text-center">Scanning methods...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<script>
+    const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+
+    async function loadSignals() {
+        try {
+            const response = await fetch('/api/crt/signals');
+            const data = await response.json();
+
+            if (data.success) {
+                renderSignals(data.signals);
+                if (data.summary) {
+                    document.getElementById('sigStrength').textContent = data.summary.strength.toFixed(0) + '/100';
+                }
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    function renderSignals(signals) {
+        if (!signals || signals.length === 0) {
+            document.getElementById('signalsBody').innerHTML = `<tr><td colspan="7" class="text-center">No active signals found. Market regime filter active.</td></tr>`;
+            return;
+        }
+
+        document.getElementById('signalsBody').innerHTML = signals.map(s => `
+        <tr>
+            <td>${new Date(s.timestamp).toLocaleTimeString()}</td>
+            <td style="font-weight: bold; color: var(--text-primary);">${s.symbol}</td>
+            <td><span class="status-indicator ${s.direction === 'BUY' ? 'status-success' : (s.direction === 'SELL' ? 'status-danger' : 'status-neutral')}">${s.direction}</span></td>
+            <td>${s.strength.toFixed(0)}</td>
+            <td>${formatCurrency(s.entry_price)}</td>
+            <td style="color: var(--danger);">${formatCurrency(s.stop_loss)}</td>
+            <td style="color: var(--success);">${formatCurrency(s.target_price)}</td>
+        </tr>
+    `).join('');
+    }
+
+    loadSignals();
+    setInterval(loadSignals, 5000);
+</script>
+{% endblock %}

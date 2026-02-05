@@ -12,11 +12,14 @@ import time
 from requests.exceptions import Timeout
 import requests
 import importlib
+import logging
 
 try:  # cryptography is required for credential encryption, but we guard imports for optional installs
     from cryptography.fernet import Fernet  # type: ignore
 except Exception:  # pragma: no cover - handled gracefully downstream
     Fernet = None  # type: ignore
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     try:
@@ -51,11 +54,11 @@ class CredentialCipher:
             try:
                 self._fernet = Fernet(normalized)
             except Exception:
-                print(
+                logger.warning(
                     "⚠️ Invalid BINANCE_CREDENTIAL_KEY provided; falling back to plaintext storage."
                 )
         elif normalized and not Fernet:
-            print(
+            logger.warning(
                 "⚠️ 'cryptography' package missing; install it to enable credential encryption."
             )
 
@@ -101,7 +104,10 @@ class BinanceCredentialStore:
         except PermissionError:
             # In containerized environments, we may not have permission to create directories
             # Continue with credential storage but warn that persistence may not work
-            print(f"⚠️ Could not create credential storage directory {self.storage_dir}, credential persistence disabled")
+            logger.warning(
+                "⚠️ Could not create credential storage directory %s, credential persistence disabled",
+                self.storage_dir,
+            )
         self.credential_file = credential_file or os.path.join(
             self.storage_dir, "binance_credentials.json"
         )
@@ -156,6 +162,7 @@ class BinanceCredentialStore:
             "account_type": self._normalize_account_type(
                 decrypted_entry.get("account_type") or account_type
             ),
+            "status": decrypted_entry.get("status") or "ACTIVE",
             "encrypted": bool(decrypted_entry.get("encrypted")),
         }
         if sanitized["updated_at"] is None and sanitized["api_key"]:
@@ -197,9 +204,8 @@ class BinanceCredentialStore:
                 return decrypted
             return ""
         if encrypted and not self._decryption_warning_emitted:
-            print(
-                "⚠️ Encrypted Binance credentials detected but BINANCE_CREDENTIAL_KEY is missing;"
-                " returning blank secrets for security."
+            logger.warning(
+                "⚠️ Encrypted Binance credentials detected but BINANCE_CREDENTIAL_KEY is missing; returning blank secrets for security."
             )
             self._decryption_warning_emitted = True
         return ""
@@ -302,10 +308,10 @@ class BinanceCredentialStore:
         except (
             Exception
         ) as exc:  # pragma: no cover - defensive logging handled upstream
-            print(f"⚠️ Unable to load Binance credentials: {exc}")
+            logger.warning("⚠️ Unable to load Binance credentials: %s", exc)
         return {}
 
-    def list_user_ids(self) -> list[int]:
+    def list_user_ids(self) -> list[Union[int, str]]:
         """Return user ids that have at least one stored credential record."""
 
         with self._lock:
@@ -314,17 +320,26 @@ class BinanceCredentialStore:
         if not isinstance(users, dict):
             return []
 
-        out: list[int] = []
+        out: list[Union[int, str]] = []
         for key, value in users.items():
-            try:
-                user_id = int(key)
-            except (TypeError, ValueError):
-                continue
+            user_id: Union[int, str] = key
+            # Try to convert to int if it looks like one, otherwise keep as string (UUID)
+            if str(key).isdigit():
+                try:
+                    user_id = int(key)
+                except (TypeError, ValueError):
+                    pass
+            else:
+                 user_id = str(key)
+
             if not isinstance(value, dict):
                 continue
             for account_key in ("spot", "futures"):
                 entry = value.get(account_key) or {}
                 if not isinstance(entry, dict):
+                    continue
+                # Only include ACTIVE credentials
+                if entry.get("status") == "DISABLED" or entry.get("status") == "REVOKED":
                     continue
                 if (entry.get("api_key") or entry.get("api_key_encrypted")) and (
                     entry.get("api_secret") or entry.get("api_secret_encrypted")
@@ -397,37 +412,44 @@ class BinanceCredentialStore:
         account_type: Optional[str] = None,
         user_id: Optional[Union[int, str]] = None,
     ) -> dict[str, Any]:
-        """Get credentials for a given account type or user. If user_id is provided, returns that user's credentials.
-
-        If no arguments are provided, returns the global (legacy) credential mapping.
-        """
+        """Get credentials for a given account type or user. If user_id is provided, returns that user's credentials."""
         with self._lock:
             cache = self._ensure_cache()
+            
+            # Helper to check if entry is explicitly disabled
+            def is_active(e: dict) -> bool:
+                return e.get("status") not in ("DISABLED", "REVOKED")
+
             # Per-user scoped credentials
             if user_id is not None:
                 users = cache.get("users") or {}
                 user_key = str(user_id)
                 user_map = users.get(user_key) or {}
                 if account_type:
-                    return dict(
+                    entry = dict(
                         user_map.get(self._normalize_account_type(account_type)) or {}
                     )
-                # Return all for user
+                    return entry if is_active(entry) else {}
+                # Return all for user (filtering disabled)
                 return {
                     key: dict(value)
                     for key, value in (
                         user_map.items() if isinstance(user_map, dict) else []
                     )
+                    if is_active(value)
                 }
 
             # Legacy/global behaviour
             if account_type:
                 key = self._normalize_account_type(account_type)
-                return dict(cache.get(key) or {})
+                entry = dict(cache.get(key) or {})
+                return entry if is_active(entry) else {}
             return {
                 key: dict(value)
                 for key, value in cache.items()
-                if key in self.SUPPORTED_ACCOUNT_TYPES and isinstance(value, dict)
+                if key in self.SUPPORTED_ACCOUNT_TYPES 
+                and isinstance(value, dict) 
+                and is_active(value)
             }
 
     def save_credentials(
@@ -445,6 +467,7 @@ class BinanceCredentialStore:
             "testnet": _coerce_bool(testnet, default=True),
             "updated_at": datetime.utcnow().isoformat(),
             "note": note or "",
+            "status": "ACTIVE",  # Explicitly set to ACTIVE on save
             "account_type": self._normalize_account_type(account_type),
         }
         payload = self._sanitize_entry(payload, payload["account_type"])
@@ -480,23 +503,40 @@ class BinanceCredentialStore:
         account_type: Optional[str] = None,
         user_id: Optional[Union[int, str]] = None,
     ) -> dict[str, dict[str, Any]]:
+        """Soft-disable credentials by setting status to DISABLED instead of deleting."""
         with self._lock:
             cache = self._ensure_cache()
             if user_id is not None:
                 users = cache.get("users") or {}
                 user_key = str(user_id)
                 user_map = users.get(user_key) or {}
+                
                 if account_type:
-                    user_map.pop(self._normalize_account_type(account_type), None)
+                    # SOFT DELETE: Mark as DISABLED
+                    acct_key = self._normalize_account_type(account_type)
+                    if acct_key in user_map:
+                        user_map[acct_key]["status"] = "DISABLED"
+                        user_map[acct_key]["updated_at"] = datetime.utcnow().isoformat()
                 else:
-                    user_map.clear()
+                    # Disable ALL for user
+                    for k in user_map:
+                        user_map[k]["status"] = "DISABLED"
+                        user_map[k]["updated_at"] = datetime.utcnow().isoformat()
+                        
                 users[user_key] = user_map
                 cache["users"] = users
             else:
                 if account_type:
-                    cache.pop(self._normalize_account_type(account_type), None)
+                    acct_key = self._normalize_account_type(account_type)
+                    if acct_key in cache:
+                        cache[acct_key]["status"] = "DISABLED"
+                        cache[acct_key]["updated_at"] = datetime.utcnow().isoformat()
                 else:
-                    cache.clear()
+                     for k in self.SUPPORTED_ACCOUNT_TYPES:
+                        if k in cache:
+                            cache[k]["status"] = "DISABLED"
+                            cache[k]["updated_at"] = datetime.utcnow().isoformat()
+
             self._write_to_disk(cache)
             self._cache = dict(cache)
         return {}
@@ -633,9 +673,33 @@ class BinanceCredentialService:
             return "****"
         return f"{api_key[:4]}…{api_key[-4:]}"
 
-    def initialize_all(self) -> None:
-        self.apply_credentials("spot")
-        self.apply_credentials("futures")
+    def initialize_all(self, user_id: Optional[Union[int, str]] = None) -> None:
+        """Initialize credentials. 
+        If user_id is provided, we fetch THAT user's credentials but apply them 
+        to the GLOBAL trading system (by avoiding passing user_id to apply_credentials).
+        """
+        spot_creds = None
+        futures_creds = None
+
+        if user_id is not None:
+             creds_map = self.credentials_store.get_credentials(user_id=user_id)
+             if isinstance(creds_map, dict):
+                 spot_creds = creds_map.get("spot")
+                 futures_creds = creds_map.get("futures")
+                 
+                 # Intelligent Fallback:
+                 # Binance API Keys are often universal. 
+                 # If user only provided one set, try to use it for both.
+                 if not spot_creds and futures_creds:
+                     spot_creds = futures_creds
+                 elif not futures_creds and spot_creds:
+                     futures_creds = spot_creds
+        
+        # Apply credentials. 
+        # Pass user_id so it can be used for trader initialization, 
+        # but apply_credentials will avoid 'Isolation Mode' if it is the system user.
+        self.apply_credentials("spot", creds=spot_creds, user_id=user_id)
+        self.apply_credentials("futures", creds=futures_creds, user_id=user_id)
 
     def apply_credentials(
         self,
@@ -653,19 +717,40 @@ class BinanceCredentialService:
             )
             creds = creds_map.get(account_key) if isinstance(creds_map, dict) else {}
 
+        # Fallback: If requesting Futures credentials but none found, try to use Spot credentials
+        # (Binance API keys are typically shared)
+        if (
+            account_key == "futures"
+            and (not creds or not creds.get("api_key"))
+        ):
+            creds_map = (
+                self.credentials_store.get_credentials(user_id=user_id)
+                if user_id is not None
+                else self.credentials_store.get_credentials()
+            )
+            spot_creds = creds_map.get("spot")
+            if spot_creds and spot_creds.get("api_key"):
+                logger.info("ℹ️ Using Spot credentials for Futures trading (Fallback)")
+                creds = spot_creds
+
         if not creds:
             return False
 
         api_key = creds.get("api_key")
         api_secret = creds.get("api_secret")
+        # Ensure we use the fallback's testnet setting if we fell back
         testnet = _coerce_bool(creds.get("testnet", True), default=True)
+        
         if not api_key or not api_secret:
             return False
 
         # When called in a user-scoped context (multi-tenant dashboard), do not
         # mutate the global trader instances. Instead, validate credentials and
         # let per-user trade execution use isolated client instances.
-        if user_id is not None:
+        # EXCEPTION: If the user_id matches the system bot user ID, we DO want 
+        # to initialize the global trader instances.
+        system_user_id = os.getenv("SYSTEM_TRADE_USER_ID")
+        if user_id is not None and str(user_id) != str(system_user_id):
             result = self.test_credentials(
                 str(api_key),
                 str(api_secret),
@@ -690,7 +775,7 @@ class BinanceCredentialService:
                 enable = getattr(trader, "enable_real_trading", None)
                 if callable(enable):
                     connected = bool(
-                        enable(api_key=api_key, api_secret=api_secret, testnet=testnet)
+                        enable(api_key=api_key, api_secret=api_secret, testnet=testnet, user_id=user_id)
                     )
                     connected_any = connected_any or connected
             self._log_event(
@@ -710,7 +795,7 @@ class BinanceCredentialService:
                 enable = getattr(self.ultimate_trader, "enable_futures_trading", None)
                 if callable(enable):
                     connected = bool(
-                        enable(api_key=api_key, api_secret=api_secret, testnet=testnet)
+                        enable(api_key=api_key, api_secret=api_secret, testnet=testnet, user_id=user_id)
                     )
             self._update_futures_dashboard(connected=connected, testnet=testnet)
             self._log_event(
@@ -953,6 +1038,7 @@ class BinanceCredentialService:
         account_type: str = "spot",
         testnet: bool = True,
         timeout: float = 10.0,
+        user_id: Union[int, str] = "test_user",  # Required for multi-tenant safety
     ) -> dict[str, Any]:
         """Attempt a lightweight validation of API credentials.
 
@@ -988,6 +1074,7 @@ class BinanceCredentialService:
                     binance_um_futures_cls=BinanceFuturesClient,
                     binance_rest_client_cls=BinanceClient,
                     coerce_bool=self._coerce_bool,
+                    user_id=user_id,  # SECURITY: Pass user_id for audit trail
                 )
                 connected = bool(trader.connect())
                 status = trader.get_status() if hasattr(trader, "get_status") else {}
@@ -1007,7 +1094,9 @@ class BinanceCredentialService:
                 account_type="spot",
                 binance_client_cls=BinanceClient,
                 api_exception_cls=BinanceAPIException,
+                user_id=user_id,  # SECURITY: Pass user_id for audit trail
             )
+            trader.timeout = timeout # Set explicit timeout for testing
             connected = bool(trader.connect())
             status = trader.get_status() if hasattr(trader, "get_status") else {}
             if not connected:

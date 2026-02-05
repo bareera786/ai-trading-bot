@@ -6,14 +6,15 @@ services:
       context: .
       dockerfile: Dockerfile.optimized
     container_name: ai-trading-bot-prod
-    user: "1001:1001"  # Match host user UID/GID
+    user: "1001:1001" # Match host user UID/GID
     restart: unless-stopped
     ports:
       - "5000:5000"
     environment:
       - FLASK_ENV=production
+      - AI_BOT_ROLE=api # Explicitly mark as API Role (No Trading Loops)
       - FINAL_HAMMER=true
-      - DATABASE_URL=postgresql://trading_user:secure_password_123@172.18.0.3:5432/trading_bot
+      - DATABASE_URL=postgresql://trading_user:${POSTGRES_PASSWORD:-secure_password_123}@postgres:5432/trading_bot
       - REDIS_URL=redis://redis:6379/0
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -22,8 +23,11 @@ services:
       - CONTAINER_GID=1001
       - PUID=1001
       - PGID=1001
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - RECORD_SYSTEM_TRADES_TO_DB=${RECORD_SYSTEM_TRADES_TO_DB:-1}
+      - SYSTEM_TRADE_USER_ID=${SYSTEM_TRADE_USER_ID:-f5118e77-03a7-4bce-89cb-f772e88b9827}
     env_file:
-      - config/deploy.env.production
+      - config/deploy.env
     volumes:
       # Persistent storage for bot state and logs
       - ./bot_persistence:/app/bot_persistence:cached,rw
@@ -41,13 +45,15 @@ services:
       - ./reports:/app/reports:rw
       # Read-only config (secrets should be in env vars)
       - ./config:/app/config:ro
+      # MOUNT SOURCE CODE FOR QUICK REDEPLOY
+      - ./app:/app/app:cached,rw
     depends_on:
       - postgres
       - redis
     networks:
       - trading-network
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
+      test: [ "CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -57,11 +63,109 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          memory: 1G
+          memory: 8G
         reservations:
           cpus: '0.5'
-          memory: 512M
+          memory: 4G
 
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.optimized
+    container_name: ai-trading-bot-execution
+    user: "1001:1001"
+    restart: unless-stopped
+    command: [ "python", "run_bot.py" ]
+    environment:
+      - FLASK_ENV=production
+      - AI_BOT_ROLE=worker # Explicitly mark as Worker execution role
+      - FINAL_HAMMER=true
+      - DATABASE_URL=postgresql://trading_user:${POSTGRES_PASSWORD:-secure_password_123}@postgres:5432/trading_bot
+      - REDIS_URL=redis://redis:6379/0
+      - BOT_PERSISTENCE_DIR=/app/bot_persistence
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - RECORD_SYSTEM_TRADES_TO_DB=${RECORD_SYSTEM_TRADES_TO_DB:-1}
+      - SYSTEM_TRADE_USER_ID=${SYSTEM_TRADE_USER_ID:-f5118e77-03a7-4bce-89cb-f772e88b9827}
+    env_file:
+      - config/deploy.env
+    volumes:
+      - ./bot_persistence:/app/bot_persistence:cached,rw
+      - ./logs:/app/logs:cached,rw
+      - ./credentials:/app/credentials:cached,rw
+      - ./app:/app/app:cached,rw
+      - ./run_bot.py:/app/run_bot.py:ro
+      - ./ultimate_models:/app/ultimate_models:rw
+      - ./futures_models:/app/futures_models:rw
+      - ./optimized_models:/app/optimized_models:rw
+      - ./trade_data:/app/trade_data:rw
+      - ./optimized_trade_data:/app/optimized_trade_data:rw
+      - ./reports:/app/reports:rw
+      - ./config:/app/config:ro
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - trading-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 8G
+        reservations:
+          cpus: '0.5'
+          memory: 2G
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import redis; r = redis.Redis.from_url('redis://redis:6379/0'); r.ping()" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.optimized
+    container_name: ai-trading-bot-worker
+    user: "1001:1001"
+    restart: unless-stopped
+    command: [ "python", "-m", "app.worker" ]
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://trading_user:${POSTGRES_PASSWORD:-secure_password_123}@postgres:5432/trading_bot
+      - REDIS_URL=redis://redis:6379/0
+      - BOT_PERSISTENCE_DIR=/app/bot_persistence
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    env_file:
+      - config/deploy.env
+    volumes:
+      - ./bot_persistence:/app/bot_persistence:cached,rw
+      - ./logs:/app/logs:cached,rw
+      - ./app:/app/app:cached,rw
+      # Model directories - CRITICAL for training worker
+      - ./ultimate_models:/app/ultimate_models:rw
+      - ./futures_models:/app/futures_models:rw
+      - ./optimized_models:/app/optimized_models:rw
+      - ./trade_data:/app/trade_data:rw
+      - ./optimized_trade_data:/app/optimized_trade_data:rw
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - trading-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 8G
+        reservations:
+          cpus: '0.5'
+          memory: 4G
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import redis; r = redis.Redis.from_url('redis://redis:6379/0'); r.ping()" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
   postgres:
     image: postgres:15-alpine
     container_name: trading-bot-postgres
@@ -76,7 +180,7 @@ services:
     networks:
       - trading-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U trading_user -d trading_bot"]
+      test: [ "CMD-SHELL", "pg_isready -U trading_user -d trading_bot" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -91,7 +195,7 @@ services:
     networks:
       - trading-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -163,6 +267,7 @@ volumes:
   grafana_data:
   prometheus_data:
   nginx_logs:
+
 
 networks:
   trading-network:

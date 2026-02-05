@@ -13,13 +13,28 @@ ENV/
 .pytest_cache/
 .coverage*
 test_results/
+htmlcov/
 
 # Logs and AI agent artifacts
 logs/
+*.log
+*.txt
 ai_fix_log.json
 bot_backup/
 .github/ai_agent*.py
 .github/run_tests_and_report*.py
+
+# Models and Persistence (Large Files)
+bot_persistence*/
+backups/
+ultimate_models/
+optimized_models/
+futures_models/
+trade_data/
+optimized_trade_data/
+instance/
+*.bak
+*.tmp
 
 # VS Code, Mac, Node, etc.
 .vscode/
@@ -32,3 +47,17 @@ build/
 trading_bot.db
 instance/trading_bot.db
 *.db
+
+# Secrets
+.env
+*.key
+*.pem
+*.secret
+credentials/
+deploy.env.*
+audit_*.json
+cookie.txt
+cookies.txt
+
+# Agent Internal
+.gemini/

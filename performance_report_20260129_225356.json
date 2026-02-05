@@ -1,0 +1,12 @@
+{
+  "uptime_hours": 2.8719703356424966e-05,
+  "trade_count": 1,
+  "success_rate": 1.0,
+  "error_count": 0,
+  "avg_cpu_usage": 3.8,
+  "avg_memory_usage": 69.4,
+  "slow_operations": {},
+  "recommendations": [
+    "Performance is good. Continue monitoring."
+  ]
+}

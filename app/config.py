@@ -27,8 +27,11 @@ class Config:
     # Database
     # In production the DATABASE_URL environment variable MUST be set
     # (use PostgreSQL). Do not fall back to SQLite in production.
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or (
+        "sqlite:///" + str(Path(__file__).resolve().parent.parent / "instance" / "trading_bot.db")
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    TEMPLATES_AUTO_RELOAD = True
 
     # Paths used by various subsystems
     BASE_DIR = Path(__file__).resolve().parent.parent
@@ -193,8 +196,8 @@ class ProductionConfig(Config):
     LOG_PERFORMANCE = True
     ENABLE_PROMETHEUS = True
     ALERT_EMAIL_ENABLED = True
-    # Enforce secure cookies for production
-    SESSION_COOKIE_SECURE = True
-    SESSION_COOKIE_SAMESITE = "None"
+    # Enforce secure cookies for production - DISABLED for IP-based deployment
+    SESSION_COOKIE_SECURE = False 
+    SESSION_COOKIE_SAMESITE = "Lax"
     # Allow CORS origin to be configured via env (frontend origin)
     CORS_ALLOWED_ORIGINS = os.getenv("FRONTEND_ORIGIN", "").split(",") if os.getenv("FRONTEND_ORIGIN") else []

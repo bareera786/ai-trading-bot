@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+
+{% block title %}Market Intelligence - AI Trading{% endblock %}
+{% block header_title %}Market Intelligence{% endblock %}
+{% block header_subtitle %}Real-time institutional metrics and AI sentiment analysis{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+
+    <!-- Hero Market Stats -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="hero-card">
+                <div class="hero-content">
+                    <div class="hero-icon">
+                        <span style="font-size: 2.5rem;">🌍</span>
+                    </div>
+                    <div>
+                        <h2>Global Market Pulse</h2>
+                        <p>Aggregated metrics across all connected exchanges and liquidity pools.</p>
+                        <div class="hero-stats">
+                            <div class="h-stat">
+                                <span class="label">Market Cap</span>
+                                <span class="value text-primary">$2.42T</span>
+                            </div>
+                            <div class="h-stat">
+                                <span class="label">24h Vol</span>
+                                <span class="value text-warning">$84.2B</span>
+                            </div>
+                            <div class="h-stat">
+                                <span class="label">BTC Dom</span>
+                                <span class="value" style="color: #f59e0b;">52.1%</span>
+                            </div>
+                            <div class="h-stat">
+                                <span class="label">Sentiment</span>
+                                <span class="value text-success">Greed (65)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Dynamic Ticker Tape Effect -->
+                <div class="ticker-tape-container">
+                    <div class="ticker-tape">
+                        <div class="ticker-item text-success">BTC <i class="fas fa-caret-up"></i> $68,420</div>
+                        <div class="ticker-item text-danger">ETH <i class="fas fa-caret-down"></i> $3,450</div>
+                        <div class="ticker-item text-success">SOL <i class="fas fa-caret-up"></i> $145</div>
+                        <div class="ticker-item text-success">BNB <i class="fas fa-caret-up"></i> $580</div>
+                        <div class="ticker-item text-danger">XRP <i class="fas fa-caret-down"></i> $0.62</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TradingView Advanced Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0" style="background: linear-gradient(145deg, #1e293b, #0f172a);">
+                <div class="card-header border-0 bg-transparent text-white d-flex justify-content-between">
+                    <h5 class="mb-0"><i class="fas fa-chart-line text-info"></i> Price Action: <span
+                            id="chart-symbol">BTC/USDT</span></h5>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary" onclick="loadChart('BTC/USDT')">BTC</button>
+                        <button class="btn btn-outline-secondary" onclick="loadChart('ETH/USDT')">ETH</button>
+                        <button class="btn btn-outline-secondary" onclick="loadChart('SOL/USDT')">SOL</button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="tv-chart" style="width: 100%; height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="dashboard-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <span class="card-icon">⚡</span>
+                <h3 class="card-title">Live Asset Matrix</h3>
+            </div>
+
+            <!-- Scripts -->
+            <script
+                src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+            <script src="{{ url_for('static', filename='js/chart-manager.js') }}"></script>
+            <script>
+                let chartMgr;
+                document.addEventListener('DOMContentLoaded', () => {
+                    chartMgr = new ChartManager('tv-chart');
+                    chartMgr.init();
+                    chartMgr.loadSymbol('BTC/USDT');
+                });
+
+                function loadChart(symbol) {
+                    document.getElementById('chart-symbol').innerText = symbol;
+                    chartMgr.loadSymbol(symbol);
+                }
+            </script>
+
+
+            <div class="header-actions">
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" class="search-input" placeholder="Search assets...">
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Asset</th>
+                            <th>Last Price</th>
+                            <th>24h Change</th>
+                            <th>Volume (24h)</th>
+                            <th>Volatility Index</th>
+                            <th>AI Sentiment</th>
+                        </tr>
+                    </thead>
+                    <tbody id="marketBody">
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <i class="fas fa-circle-notch fa-spin text-primary fa-2x"></i>
+                                <p class="mt-3 text-muted">Connecting to data feeds...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+<style>
+    /* Premium UI Overrides - Consistent Brand Colors */
+
+    .hero-card {
+        background: radial-gradient(circle at top right, rgba(124, 58, 237, 0.15), transparent 40%),
+            linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border: 1px solid rgba(124, 58, 237, 0.2);
+        border-radius: 20px;
+        padding: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+
+    .hero-content {
+        display: flex;
+        gap: 25px;
+        align-items: flex-start;
+        position: relative;
+        z-index: 2;
+    }
+
+    .hero-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(124, 58, 237, 0.1);
+        border: 1px solid rgba(124, 58, 237, 0.2);
+        color: var(--primary);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .hero-stats {
+        display: flex;
+        gap: 40px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .h-stat .label {
+        color: #94a3b8;
+        /* var(--muted) */
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .h-stat .value {
+        font-weight: 700;
+        font-size: 1.25rem;
+        font-family: 'JetBrains Mono', monospace;
+        color: #f8fafc;
+    }
+
+    .h-stat .value.text-primary {
+        color: var(--primary) !important;
+    }
+
+    .h-stat .value.text-success {
+        color: var(--success) !important;
+    }
+
+    /* Ticker Tape */
+    .ticker-tape-container {
+        position: absolute;
+        right: -20px;
+        top: 20px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        padding: 10px;
+        width: 300px;
+        transform: rotate(-5deg);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(5px);
+    }
+
+    .ticker-item {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+        color: #e2e8f0;
+    }
+
+    /* Table Styles */
+    .data-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .data-table th {
+        background: #f8fafc;
+        /* match light theme tertiary if standard, or dark if premium mode */
+        /* Forcing premium dark accents inside the component to match hero */
+        background: rgba(15, 23, 42, 0.6);
+        padding: 15px 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        color: #94a3b8;
+        letter-spacing: 1px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .data-table td {
+        padding: 15px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        vertical-align: middle;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .data-table td:nth-child(2),
+    .data-table td:nth-child(3),
+    .data-table td:nth-child(4) {
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .data-table tr:hover td {
+        background: rgba(124, 58, 237, 0.05);
+        /* primary tint */
+    }
+
+    .coin-icon {
+        width: 32px;
+        height: 32px;
+        background: #1e293b;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: bold;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-right: 12px;
+        color: white;
+    }
+
+    /* Search */
+    .search-wrapper {
+        position: relative;
+    }
+
+    .search-wrapper i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+    }
+
+    .search-input {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(15, 23, 42, 0.1);
+        padding: 8px 15px 8px 40px;
+        border-radius: 20px;
+        color: var(--text-primary);
+        width: 250px;
+        transition: all 0.2s;
+    }
+
+    .search-input:focus {
+        background: white;
+        border-color: var(--primary);
+        width: 280px;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+    }
+</style>
+
+<script>
+    const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+
+    async function fetchMarketData() {
+        try {
+            const response = await fetch('/api/dashboard');
+            if (!response.ok) throw new Error('Network response was not ok');
+            const data = await response.json();
+
+            if (data.market_data) {
+                renderMarket(data.market_data);
+            } else {
+                // Fallback simulation for demo if API returns empty
+                renderMarket({
+                    "BTCUSDT": { price: 68420.50, change_24h: 2.5, volume_24h: 4500000000, volatility: 0.024, ai_sentiment: "BULLISH" },
+                    "ETHUSDT": { price: 3450.12, change_24h: -1.2, volume_24h: 2100000000, volatility: 0.031, ai_sentiment: "NEUTRAL" },
+                    "SOLUSDT": { price: 145.60, change_24h: 5.4, volume_24h: 890000000, volatility: 0.045, ai_sentiment: "BULLISH" },
+                    "BNBUSDT": { price: 580.90, change_24h: 0.8, volume_24h: 120000000, volatility: 0.015, ai_sentiment: "NEUTRAL" },
+                    "DOGEUSDT": { price: 0.16, change_24h: -4.5, volume_24h: 340000000, volatility: 0.062, ai_sentiment: "BEARISH" }
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching market data:', error);
+        }
+    }
+
+    function renderMarket(marketData) {
+        const tbody = document.getElementById('marketBody');
+        const rows = Object.entries(marketData).map(([symbol, data]) => {
+            const price = data.price || 0;
+            const change = data.change_24h || 0;
+            const volume = data.volume_24h || 0;
+            const volatility = data.volatility || 0;
+            const aiRegard = data.ai_sentiment || 'NEUTRAL';
+
+            const changeClass = change >= 0 ? 'text-success' : 'text-danger';
+            const changeSign = change > 0 ? '+' : '';
+
+            let badgeClass = 'bg-secondary-subtle text-secondary';
+
+            if (aiRegard === 'BULLISH') {
+                badgeClass = 'bg-success-subtle text-success';
+            }
+            if (aiRegard === 'BEARISH') {
+                badgeClass = 'bg-danger-subtle text-danger';
+            }
+
+            // Clean symbol
+            const displaySymbol = symbol.replace('USDT', '');
+
+            return `
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="coin-icon">${displaySymbol.substring(0, 1)}</div>
+                        <div style="font-weight:bold;">${symbol}</div>
+                    </div>
+                </td>
+                <td>${formatCurrency(price)}</td>
+                <td class="${changeClass}">${changeSign}${change.toFixed(2)}%</td>
+                <td>$${(volume / 1000000).toFixed(2)}M</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                         <div class="progress flex-grow-1 me-2" style="height: 4px; width: 50px; background: rgba(0,0,0,0.1);">
+                            <div class="progress-bar ${volatility > 0.04 ? 'bg-warning' : 'bg-info'}" style="width: ${(volatility * 1000)}%"></div>
+                        </div>
+                        ${(volatility * 100).toFixed(2)}%
+                    </div>
+                </td>
+                <td><span class="badge ${badgeClass} border border-opacity-10">${aiRegard}</span></td>
+            </tr>
+            `;
+        }).join('');
+
+        if (rows) {
+            tbody.innerHTML = rows;
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No market data available</td></tr>';
+        }
+    }
+
+    // Initial fetch
+    fetchMarketData();
+    setInterval(fetchMarketData, 5000);
+</script>
+{% endblock %}

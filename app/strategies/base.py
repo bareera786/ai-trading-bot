@@ -10,6 +10,11 @@ import time
 from copy import deepcopy
 
 import pandas as pd
+from typing import Optional, Any, Dict
+
+if False: # Type hinting only to avoid circular imports at runtime if needed
+    from app.strategies.oracle import ModelOracle
+
 
 
 class BaseStrategy:
@@ -33,7 +38,18 @@ class BaseStrategy:
         self.active_positions = {}
         self.trade_history = []
         self.qfm_engine = None  # Will be set by strategy manager
+        self.model_oracle: Optional['ModelOracle'] = None # New Phase 7: Model Oracle
         self.active = True
+
+    def update_parameters(self, new_params: Dict[str, Any]):
+        """Update strategy parameters"""
+        if new_params:
+            self.parameters.update(new_params)
+            self.performance_metrics["last_updated"] = time.time()
+
+    def set_model_oracle(self, oracle: 'ModelOracle'):
+        """Set Model Oracle for AI assistance"""
+        self.model_oracle = oracle
 
     def set_qfm_engine(self, qfm_engine):
         """Set QFM engine for enhanced analysis"""
@@ -141,6 +157,50 @@ class BaseStrategy:
         except Exception as exc:  # pragma: no cover - defensive logging
             print(f"QFM enhancement error: {exc}")
             return base_signal
+
+    def enhance_with_oracle(self, symbol: str, market_data: Any, base_signal: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhance signal using Model Oracle advice (Phase 7)"""
+        if not self.model_oracle:
+            return base_signal
+            
+        try:
+            advice = self.model_oracle.get_advice(symbol, market_data)
+            
+            if advice.get("status") != "ready":
+                return base_signal
+                
+            model_conf = advice.get("confidence", 0.5)
+            model_dir = advice.get("direction", "NEUTRAL")
+            
+            # Simple Confidence Weighted Blending
+            base_conf = base_signal.get("confidence", 0.5)
+            base_dir = base_signal.get("signal", "HOLD")
+            
+            # Weight: 70% Strategy, 30% Model (Model is Assistant, not Driver)
+            # Logic: If Model supports Strategy, boost confidence. If opposes, penalize.
+            
+            enhanced_conf = base_conf
+            
+            # Boost if direction matches
+            if (base_dir == "BUY" and model_dir in ["BUY", "UP", "1"]) or \
+               (base_dir == "SELL" and model_dir in ["SELL", "DOWN", "0"]):
+                enhanced_conf = min(0.95, base_conf + (model_conf * 0.2))
+                base_signal["reason"] += f" | Oracle Confirms ({model_conf:.2f})"
+                
+            # Penalize if direction opposes
+            elif (base_dir == "BUY" and model_dir in ["SELL", "DOWN", "0"]) or \
+                 (base_dir == "SELL" and model_dir in ["BUY", "UP", "1"]):
+                enhanced_conf = max(0.1, base_conf - (model_conf * 0.3))
+                base_signal["reason"] += f" | Oracle Opposes ({model_conf:.2f})"
+                
+            base_signal["confidence"] = enhanced_conf
+            base_signal["oracle_advice"] = advice
+            return base_signal
+            
+        except Exception as e:
+            print(f"Oracle enhancement error: {e}")
+            return base_signal
+
 
     def should_enter_long(self, symbol, market_data, indicators=None):
         """Determine if should enter long position"""

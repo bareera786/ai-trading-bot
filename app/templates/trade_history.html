@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block header_title %}TRADE EXECUTION HISTORY{% endblock %}
+{% block header_subtitle %}Complete audit log of AI automated executions{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+    <!-- Performance Summary -->
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">📚</span>
+                <h3 class="card-title">Total Executions</h3>
+            </div>
+            <div class="card-value" id="totalTrades">0</div>
+            <p class="card-subtitle">Lifetime trades</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">💰</span>
+                <h3 class="card-title">Net Result</h3>
+            </div>
+            <div class="card-value" id="totalPnl">$0.00</div>
+            <p class="card-subtitle">Realized P&L</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🎯</span>
+                <h3 class="card-title">Win Rate</h3>
+            </div>
+            <div class="card-value" id="winRate">0%</div>
+            <p class="card-subtitle">Accuracy</p>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">⬇️</span>
+                <h3 class="card-title">Export Log</h3>
+            </div>
+            <div style="margin-top: 10px;">
+                <button class="btn btn-sm status-success" onclick="exportCsv()">
+                    Download CSV
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trade History Table -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <span class="card-icon">📜</span>
+            <h3 class="card-title">Execution Log</h3>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Type</th>
+                        <th>Size</th>
+                        <th>Entry</th>
+                        <th>Exit</th>
+                        <th>P&L</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tradesBody">
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            <div
+                                style="display: inline-block; animation: spin 1s infinite linear; border: 2px solid var(--text-muted); border-top-color: transparent; border-radius: 50%; width: 20px; height: 20px;">
+                            </div>
+                            Loading history...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<script>
+    // Format currency
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+    };
+
+    async function loadTrades() {
+        try {
+            const response = await fetch('/api/monitor/trades');
+            const data = await response.json();
+
+            if (data.success) {
+                renderTrades(data.trades);
+                updateSummary(data.summary);
+            }
+        } catch (error) {
+            console.error('Error loading trades:', error);
+            document.getElementById('tradesBody').innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2rem; color: var(--danger);">Error loading trade history.</td></tr>`;
+        }
+    }
+
+    function renderTrades(trades) {
+        const tbody = document.getElementById('tradesBody');
+        if (!trades || trades.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 3rem; color: var(--text-muted);">No recorded trades in current history.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = trades.map(trade => `
+        <tr>
+            <td style="color: var(--text-secondary); font-size: 0.85rem;">${new Date(trade.timestamp).toLocaleString()}</td>
+            <td style="font-weight: bold; color: var(--text-primary);">${trade.symbol}</td>
+            <td><span class="status-indicator ${trade.side === 'BUY' ? 'status-success' : 'status-danger'}">${trade.side}</span></td>
+            <td>${trade.type || 'MARKET'}</td>
+            <td>${trade.quantity}</td>
+            <td>${formatCurrency(trade.entry_price)}</td>
+            <td>${trade.exit_price ? formatCurrency(trade.exit_price) : '-'}</td>
+            <td class="${trade.pnl >= 0 ? 'text-success' : 'text-danger'} font-weight-bold">
+                ${trade.pnl ? formatCurrency(trade.pnl) : '-'}
+            </td>
+            <td><span class="status-indicator status-neutral">${trade.status}</span></td>
+        </tr>
+    `).join('');
+    }
+
+    function updateSummary(summary) {
+        if (!summary) return;
+        document.getElementById('totalTrades').textContent = summary.total_trades;
+        document.getElementById('totalPnl').textContent = formatCurrency(summary.total_pnl);
+        document.getElementById('winRate').textContent = summary.win_rate.toFixed(1) + '%';
+
+        const pnlEl = document.getElementById('totalPnl');
+        pnlEl.className = `card-value ${summary.total_pnl >= 0 ? 'text-success' : 'text-danger'}`;
+    }
+
+    // Initial load
+    loadTrades();
+    // Refresh rarely (history doesn't change fast)
+    setInterval(loadTrades, 60000);
+
+    function exportCsv() {
+        alert("Downloading CSV export...");
+        // Implement actual export call if endpoint exists
+    }
+</script>
+
+<style>
+    @keyframes spin {
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+{% endblock %}

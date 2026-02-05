@@ -1,0 +1,17 @@
+{
+  "id": "ribs_best_20260123_2223",
+  "params": {
+    "rsi_period": 10,
+    "macd_fast": 12,
+    "macd_slow": 31,
+    "bbands_period": 21,
+    "atr_period": 7,
+    "risk_multiplier": 1.3034505511401122,
+    "take_profit": 5.0,
+    "stop_loss": 2.5,
+    "position_size": 0.09999999999999999,
+    "max_positions": 1
+  },
+  "created_at": "2026-01-23T22:23:26.226317",
+  "source": "ribs_optimization"
+}

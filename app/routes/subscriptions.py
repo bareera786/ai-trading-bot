@@ -142,6 +142,9 @@ def api_create_subscription_plan():
                 400,
             )
 
+        features = data.get("features") or {}
+        limits = data.get("limits") or {}
+
         plan = SubscriptionPlan(
             name=name,
             code=code,
@@ -153,6 +156,8 @@ def api_create_subscription_plan():
             description=description,
             is_active=coerce_bool(data.get("is_active"), default=True),
             is_featured=is_featured,
+            features=features,
+            limits=limits,
         )
         db.session.add(plan)
         _apply_featured_flag(plan, is_featured)
@@ -244,6 +249,12 @@ def api_update_subscription_plan(plan_id):
                 data.get("is_featured"), default=plan.is_featured
             )
             _apply_featured_flag(plan, should_feature)
+
+        if "features" in data:
+            plan.features = data.get("features") or {}
+
+        if "limits" in data:
+            plan.limits = data.get("limits") or {}
 
         db.session.commit()
         _invalidate_public_plan_cache()

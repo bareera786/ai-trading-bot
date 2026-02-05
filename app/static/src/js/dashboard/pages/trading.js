@@ -1,4 +1,5 @@
 import { fetchJson } from '../utils/network.js';
+import { showNotification } from '../utils/notifications.js';
 
 function getInputValue(id) {
   return document.getElementById(id)?.value?.trim();
@@ -10,7 +11,7 @@ export async function executeSpotTrade() {
   const amount = getInputValue('spot-trade-amount');
 
   if (!symbol || !amount) {
-    alert('Please fill in all fields');
+    showNotification('Please fill in all fields', 'warning');
     return;
   }
 
@@ -23,14 +24,14 @@ export async function executeSpotTrade() {
     });
     const data = await response.json();
     if (data.error) {
-      alert(`Error: ${data.error}`);
+      showNotification(`Error: ${data.error}`, 'error');
     } else {
-      alert('Spot trade executed successfully!');
+      showNotification('Spot trade executed successfully!', 'success');
       refreshSpotData();
     }
   } catch (error) {
     console.error('Failed to execute spot trade:', error);
-    alert('Failed to execute trade');
+    showNotification('Failed to execute trade', 'error');
   }
 }
 
@@ -41,12 +42,13 @@ export async function toggleSpotTrading() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
-    alert(data.message || 'Spot trading updated');
+    showNotification(data.message || 'Spot trading updated', 'success');
     // Update button text based on new state
     updateSpotTradingButton(data.trading_enabled);
   } catch (error) {
     console.error('Failed to toggle spot trading:', error);
-    alert('Failed to toggle spot trading');
+    alert(`Failed to toggle spot trading: ${error.message || error}`);
+    showNotification('Failed to toggle spot trading', 'error');
   }
 }
 
@@ -65,7 +67,7 @@ export async function executeFuturesTrade() {
   const leverage = parseInt(getInputValue('futures-trade-leverage') || '3', 10);
 
   if (!symbol || !quantity) {
-    alert('Please fill in symbol and quantity');
+    showNotification('Please fill in symbol and quantity', 'warning');
     return;
   }
 
@@ -78,24 +80,28 @@ export async function executeFuturesTrade() {
     });
     const data = await response.json();
     if (data.error) {
-      alert(`Error: ${data.error}`);
+      showNotification(`Error: ${data.error}`, 'error');
     } else {
-      alert('Futures trade executed successfully!');
+      showNotification('Futures trade executed successfully!', 'success');
       refreshFuturesData();
     }
   } catch (error) {
     console.error('Failed to execute futures trade:', error);
-    alert('Failed to execute futures trade');
+    showNotification('Failed to execute futures trade', 'error');
   }
 }
 
 export async function toggleFuturesTrading(forceEnable = null) {
   const button = document.getElementById('futures-toggle-btn');
   try {
+    // If the function is called via event listener, the first arg is an Event object.
+    // We treat non-boolean arguments as null (auto-toggle mode).
+    const explicitState = (typeof forceEnable === 'boolean') ? forceEnable : null;
+
     // Query current state so we can toggle when enable is omitted
     const dashboard = await fetchJson('/api/dashboard');
     const current = !!(dashboard && dashboard.system_status && dashboard.system_status.futures_trading_enabled);
-    const enable = forceEnable === null ? !current : !!forceEnable;
+    const enable = explicitState === null ? !current : !!explicitState;
 
     // Show spinner and disable button while request is in-flight
     if (button) {
@@ -110,11 +116,24 @@ export async function toggleFuturesTrading(forceEnable = null) {
       body: JSON.stringify({ enable }),
     });
 
-    alert(data.message || 'Futures trading updated');
-    updateFuturesTradingButton(data.futures_trading_enabled);
+    if (data.error) {
+      showNotification(data.error, 'error');
+    } else {
+      showNotification(data.message || 'Futures trading updated', 'success');
+    }
+
+    // Explicitly update button if we got a valid state back
+    if (data.futures_trading_enabled !== undefined) {
+      updateFuturesTradingButton(data.futures_trading_enabled);
+    } else if (!data.error) {
+      // Fallback if the endpoint didn't return the state directly but succeeded
+      updateFuturesTradingButton(enable);
+    }
+
   } catch (error) {
     console.error('Failed to toggle futures trading:', error);
-    alert('Failed to toggle futures trading');
+    alert(`Failed to toggle futures trading: ${error.message || error}`);
+    showNotification('Failed to toggle futures trading', 'error');
   } finally {
     if (button) {
       button.disabled = false;
@@ -286,11 +305,24 @@ if (typeof window !== 'undefined') {
   });
 
   document.addEventListener('DOMContentLoaded', () => {
+    console.log("Trading.js: DOMContentLoaded - attaching listeners");
     // Wire up button event listeners (replaces inline onclick handlers)
-    document.getElementById('execute-spot-trade-btn')?.addEventListener('click', executeSpotTrade);
-    document.getElementById('toggle-spot-trading-btn')?.addEventListener('click', toggleSpotTrading);
-    document.getElementById('execute-futures-trade-btn')?.addEventListener('click', executeFuturesTrade);
-    document.getElementById('futures-toggle-btn')?.addEventListener('click', toggleFuturesTrading);
+    const spotBtn = document.getElementById('execute-spot-trade-btn');
+    if (spotBtn) spotBtn.addEventListener('click', executeSpotTrade);
+
+    const toggleSpotBtn = document.getElementById('toggle-spot-trading-btn');
+    if (toggleSpotBtn) toggleSpotBtn.addEventListener('click', toggleSpotTrading);
+
+    const matchBtn = document.getElementById('execute-futures-trade-btn');
+    if (matchBtn) matchBtn.addEventListener('click', executeFuturesTrade);
+
+    const futuresToggleBtn = document.getElementById('futures-toggle-btn');
+    if (futuresToggleBtn) {
+      console.log("Trading.js: Found futures-toggle-btn, attaching listener");
+      futuresToggleBtn.addEventListener('click', toggleFuturesTrading);
+    } else {
+      console.warn("Trading.js: futures-toggle-btn NOT found");
+    }
   });
 
   Object.assign(window, {

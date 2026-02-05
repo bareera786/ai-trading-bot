@@ -17,7 +17,7 @@ from .payloads import build_ai_bot_context_payload
 from . import symbols
 from .symbols import get_training_universe
 
-LEGACY_RUNTIME_MODULE = "ai_ml_auto_bot_final"
+LEGACY_RUNTIME_MODULE = "app.core.bot"
 
 
 class RuntimeBuilderError(RuntimeError):

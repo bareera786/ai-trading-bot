@@ -342,6 +342,24 @@ def api_toggle_trading():
         # If persistence scheduler is unavailable, continue without failing
         pass
 
+    # FIX: Publish to Redis so background services (MarketDataService) pick up the change
+    try:
+        import redis
+        import json
+        r = redis.Redis(host=os.getenv('REDIS_HOST', 'localhost'), port=int(os.getenv('REDIS_PORT', '6379')), decode_responses=True)
+        # Fetch existing settings to preserve other keys if any
+        existing = r.get("trading:settings")
+        settings = json.loads(existing) if existing else {}
+        
+        settings["trading_enabled"] = enable
+        # Also sync paper trading state
+        settings["paper_trading"] = getattr(ultimate, "paper_trading", True)
+        
+        r.set("trading:settings", json.dumps(settings))
+        print(f"✅ Published trading:settings to Redis: enabled={enable}")
+    except Exception as e:
+        print(f"❌ Failed to publish to Redis: {e}")
+
     return jsonify(
         {
             "trading_enabled": enable,
@@ -648,35 +666,29 @@ def api_list_symbols():
 @system_ops_bp.route("/api/start_continuous_training", methods=["POST"])
 @admin_required
 def api_start_continuous_training():
-    ctx = _ctx()
-    ultimate_system = ctx.get("ultimate_ml_system")
-    optimized_system = ctx.get("optimized_ml_system")
-    if not ultimate_system or not optimized_system:
-        return jsonify({"error": "ML systems unavailable"}), 500
-    ultimate_system.start_continuous_training_cycle()
-    optimized_system.start_continuous_training_cycle()
-    return jsonify(
-        {
-            "message": "Continuous training cycles started for ultimate and optimized systems"
-        }
-    )
+    """DEPRECATED: Legacy continuous training is disabled for multi-user safety.
+    
+    Use BrainService and the Brain Dashboard for ML training instead.
+    Legacy training threads cause:
+    - CPU starvation (blocks main trading loop)
+    - Global model pollution (all users share trained model)
+    - Memory exhaustion
+    """
+    return jsonify({
+        "error": "DEPRECATED: Legacy continuous training is disabled.",
+        "message": "Use the Brain Dashboard for ML training. Legacy training causes resource starvation and cross-user contamination.",
+        "alternative": "/api/brain/train (via BrainService)"
+    }), 410
 
 
 @system_ops_bp.route("/api/stop_continuous_training", methods=["POST"])
 @admin_required
 def api_stop_continuous_training():
-    ctx = _ctx()
-    ultimate_system = ctx.get("ultimate_ml_system")
-    optimized_system = ctx.get("optimized_ml_system")
-    if not ultimate_system or not optimized_system:
-        return jsonify({"error": "ML systems unavailable"}), 500
-    ultimate_system.stop_continuous_training_cycle()
-    optimized_system.stop_continuous_training_cycle()
-    return jsonify(
-        {
-            "message": "Continuous training cycles stopped for ultimate and optimized systems"
-        }
-    )
+    """DEPRECATED: Legacy continuous training is disabled for multi-user safety."""
+    return jsonify({
+        "error": "DEPRECATED: Legacy continuous training is disabled.",
+        "message": "No legacy training threads to stop. Use Brain Dashboard."
+    }), 410
 
 
 @system_ops_bp.route("/api/clear_history", methods=["POST"])
@@ -731,3 +743,32 @@ def api_reload_models():
             "optimized_models_loaded": optimized_loaded,
         }
     )
+
+
+@system_ops_bp.route("/api/brain/train_auto", methods=["POST"])
+@admin_required
+def api_brain_train_auto():
+    """
+    Trigger comprehensive AutoML grid search training for a symbol.
+    Does NOT block - returns job ID.
+    """
+    from app.services.brain_service import BrainService
+    
+    data = request.get_json(silent=True) or {}
+    symbol = _normalize_request_symbol(data)
+    
+    if not symbol:
+        return jsonify({"error": "Symbol required"}), 400
+        
+    try:
+        # Use BrainService to enqueue the specialized auto-training job
+        job_id = BrainService.start_auto_training_job(symbol)
+        
+        return jsonify({
+            "message": f"AutoML Grid Search started for {symbol}",
+            "job_id": job_id,
+            "status": "queued",
+            "info": "This process iterates 12+ configurations and may take 10-20 minutes."
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

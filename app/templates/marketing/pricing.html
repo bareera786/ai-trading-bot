@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing - AI Trading Bot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <style>
+        :root {
+            --primary: #00d4aa;
+            --primary-dark: #00b894;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .pricing-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 24px;
+        }
+
+        .pricing-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .pricing-header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--primary), #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .pricing-header p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 32px;
+            margin-bottom: 60px;
+        }
+
+        .plan-card {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px 32px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .plan-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--primary);
+            box-shadow: 0 20px 40px rgba(0, 212, 170, 0.2);
+        }
+
+        .plan-card.featured {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(0, 212, 170, 0.1), rgba(59, 130, 246, 0.1));
+        }
+
+        .plan-badge {
+            position: absolute;
+            top: -12px;
+            right: 32px;
+            background: linear-gradient(135deg, var(--primary), #3b82f6);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .plan-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .plan-price {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+
+        .plan-price span {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .plan-description {
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            min-height: 48px;
+        }
+
+        .plan-features {
+            list-style: none;
+            margin-bottom: 32px;
+        }
+
+        .plan-features li {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            color: var(--text-secondary);
+        }
+
+        .plan-features li:last-child {
+            border-bottom: none;
+        }
+
+        .plan-features li::before {
+            content: "✓";
+            color: var(--primary);
+            font-weight: 700;
+            margin-right: 12px;
+            font-size: 1.25rem;
+        }
+
+        .plan-cta {
+            width: 100%;
+            padding: 16px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .plan-cta.primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+
+        .plan-cta.primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(0, 212, 170, 0.4);
+        }
+
+        .plan-cta.secondary {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .plan-cta.secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 60px 0;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            border: 3px solid var(--border-color);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .faq-section {
+            max-width: 800px;
+            margin: 80px auto 0;
+        }
+
+        .faq-section h2 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 40px;
+        }
+
+        .faq-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .faq-question {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .faq-answer {
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        @media (max-width: 768px) {
+            .pricing-header h1 {
+                font-size: 2rem;
+            }
+
+            .plans-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .plan-price {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="pricing-container">
+        <div class="pricing-header">
+            <h1>Choose Your Plan</h1>
+            <p>Start trading smarter with AI-powered strategies. All plans include 24/7 support and regular updates.</p>
+        </div>
+
+        <div id="plans-container">
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Loading pricing plans...</p>
+            </div>
+        </div>
+
+        <div class="faq-section">
+            <h2>Frequently Asked Questions</h2>
+
+            <div class="faq-item">
+                <div class="faq-question">Can I change plans later?</div>
+                <div class="faq-answer">Yes! You can upgrade or downgrade your plan at any time. Changes take effect
+                    immediately.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">What payment methods do you accept?</div>
+                <div class="faq-answer">We accept all major credit cards, PayPal, and cryptocurrency (USDT).</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Is there a free trial?</div>
+                <div class="faq-answer">Select plans include a trial period. Check the plan details above for trial
+                    availability.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Can I cancel anytime?</div>
+                <div class="faq-answer">Absolutely. You can cancel your subscription at any time with no cancellation
+                    fees.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', loadPlans);
+
+        function loadPlans() {
+            fetch('/api/subscriptions/plans')
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('plans-container');
+
+                    if (!data.plans || data.plans.length === 0) {
+                        container.innerHTML = '<div class="loading-state"><p>No plans available at this time.</p></div>';
+                        return;
+                    }
+
+                    const plansGrid = document.createElement('div');
+                    plansGrid.className = 'plans-grid';
+
+                    data.plans.forEach(plan => {
+                        const isFeatured = plan.is_featured || false;
+                        const card = document.createElement('div');
+                        card.className = `plan-card ${isFeatured ? 'featured' : ''}`;
+
+                        // Dynamically build feature list from limits and boolean features
+                        const featuresList = [];
+
+                        // 1. Add numeric limits if they exist
+                        const limits = plan.limits || {};
+                        if (limits.max_exchange_accounts) {
+                            featuresList.push(`${limits.max_exchange_accounts} Exchange Account${limits.max_exchange_accounts > 1 ? 's' : ''}`);
+                        }
+
+                        if (limits.max_bots) {
+                            featuresList.push(`${limits.max_bots} Active Bot${limits.max_bots > 1 ? 's' : ''}`);
+                        } else if (plan.max_active_bots) {
+                            // Fallback for legacy plans
+                            featuresList.push(`${plan.max_active_bots} Active Bot${plan.max_active_bots > 1 ? 's' : ''}`);
+                        }
+
+                        if (limits.max_trades_daily) {
+                            featuresList.push(`${limits.max_trades_daily} Daily Trades`);
+                        }
+
+                        // 2. Add boolean features
+                        const feats = plan.features || {};
+                        if (feats.live_trading) featuresList.push('Live Trading Enabled');
+                        if (feats.paper_trading) featuresList.push('Paper Trading Mode');
+                        if (feats.advanced_ml) featuresList.push('Advanced ML Models');
+                        if (feats.priority_support) featuresList.push('Priority Support');
+
+                        // 3. Add any other hardcoded marketing points if desired, e.g. "Real-time Signals"
+                        // But let's stick to actual data to be accurate.
+                        if (featuresList.length === 0) {
+                            featuresList.push('Standard Features');
+                        }
+
+                        const isAuthenticated = {{ current_user.is_authenticated | tojson
+                    }};
+            const ctaText = isAuthenticated ? 'Switch Plan' : 'Get Started';
+            const ctaLink = isAuthenticated ? `/dashboard/subscription/confirm?plan=${plan.code}` : '/register';
+
+            // If user is already on this plan, maybe disable or show "Current Plan"
+            // For now keep it simple: "Switch Plan" logic
+
+            card.innerHTML = `
+                            ${isFeatured ? '<div class="plan-badge">Most Popular</div>' : ''}
+                            <div class="plan-name">${plan.name}</div>
+                            <div class="plan-price">$${plan.price_usd}<span>/month</span></div>
+                            <div class="plan-description">${plan.description || 'Professional trading automation'}</div>
+                            <ul class="plan-features">
+                                ${featuresList.map(f => `<li>${f}</li>`).join('')}
+                            </ul>
+                            <a href="${ctaLink}" class="plan-cta ${isFeatured ? 'primary' : 'secondary'}">
+                                ${ctaText}
+                            </a>
+                        `;
+
+            plansGrid.appendChild(card);
+        });
+
+        container.innerHTML = '';
+        container.appendChild(plansGrid);
+                })
+                .catch (err => {
+            console.error('Error loading plans:', err);
+            document.getElementById('plans-container').innerHTML =
+                '<div class="loading-state"><p>Failed to load pricing plans. Please try again later.</p></div>';
+        });
+        }
+    </script>
+</body>
+
+</html>

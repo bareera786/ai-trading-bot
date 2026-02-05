@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 from typing import Any
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, render_template
 from flask_login import current_user, login_required
 
 from app.auth.decorators import subscription_required
@@ -27,6 +27,20 @@ def _strategy_manager():
     if not manager:
         raise RuntimeError("Strategy manager unavailable")
     return manager
+
+def _ultimate_trader():
+    trader = _context().get("trader")
+    # If not in context directly, it might be the 'ultimate_trader' global in main
+    if not trader:
+        # Fallback to app global if attached
+        trader = getattr(current_app, "ultimate_trader", None)
+    
+    if not trader:
+         # Try import as last resort (circular import risk but acceptable inside function)
+         from app.core.bot import ultimate_trader as global_trader
+         trader = global_trader
+         
+    return trader
 
 
 def _qfm_engine():
@@ -63,6 +77,13 @@ def list_strategies():
         response["total_strategies"] = len(detailed)
         response["active_strategies"] = len([s for s in detailed if s.get("active")])
     return jsonify(response)
+
+
+@strategies_bp.route("/grid_bot", methods=["GET"])
+@login_required
+def grid_bot_ui():
+    """Render Grid Bot configuration page."""
+    return render_template("strategies/grid.html")
 
 
 @strategies_bp.route("/api/strategies/<strategy_name>", methods=["GET"])
@@ -331,3 +352,42 @@ def save_strategy_config():
             "timestamp": datetime.now().isoformat(),
         }
     )
+
+@strategies_bp.route("/api/governor/activity", methods=["GET"])
+@login_required
+def governor_activity():
+    """Get recent Governor decisions and active signals."""
+    trader = _ultimate_trader()
+    if not trader or not hasattr(trader, "governor"):
+         return jsonify({"decisions": [], "oracle_advice": {}})
+    
+    # 1. Get History
+    # Convert dataclass list to dict list
+    history = []
+    for d in reversed(trader.governor.decision_history[-50:]): # Last 50
+        history.append({
+            "symbol": d.symbol,
+            "action": d.action,
+            "confidence": d.confidence,
+            "reason": d.reason,
+            "strategies": d.strategies_involved,
+            "alignment": d.alignment_score,
+            "timestamp": d.timestamp,
+        })
+
+    # 2. Get active active universe info (optional) specific advice
+    # Not easily available unless we cache it, but let's return last 1 result if cached in oracle
+    oracle_advice = {} 
+    # Attempt to peek into oracle cache if possible
+    if hasattr(trader, "model_oracle") and hasattr(trader.model_oracle.inference_manager, "result_cache"):
+         for sym, res in trader.model_oracle.inference_manager.result_cache.items():
+              oracle_advice[sym] = {
+                  "regime": res.get("prediction", {}).get("regime", "Unknown"),
+                  "confidence": res.get("prediction", {}).get("confidence", 0.0)
+              }
+              
+    return jsonify({
+        "decisions": history,
+        "oracle_advice": oracle_advice,
+        "timestamp": time.time()
+    })

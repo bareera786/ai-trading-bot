@@ -1,4 +1,5 @@
 import { fetchJson } from '../utils/network.js';
+import { showNotification } from '../utils/notifications.js';
 
 const SELECTORS = {
   tableBody: 'strategies-table',
@@ -56,6 +57,16 @@ export async function refreshStrategies() {
           bestStrategy = strategy.name;
         }
 
+        // Determine Health (Mock logic if backend data missing)
+        const health = strategy.health || (strategy.active ? 'Good' : 'Inactive');
+        let healthClass = 'strategy-health-good';
+        if (health === 'Degraded') healthClass = 'strategy-health-degraded';
+        if (health === 'Critical') healthClass = 'strategy-health-critical';
+        if (!strategy.active) healthClass = 'text-muted';
+
+        // Last Signal Reason
+        const lastSignal = strategy.last_signal_reason || '—';
+
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${strategy.name}</td>
@@ -64,6 +75,9 @@ export async function refreshStrategies() {
           <td>${(winRate * 100).toFixed(1)}%</td>
           <td style="color: ${totalPnL >= 0 ? 'var(--success)' : 'var(--danger)'}">$${totalPnL.toFixed(2)}</td>
           <td>${perf.total_trades || 0}</td>
+          <td class="${healthClass}">${health}</td>
+          <td class="signal-reason" title="${lastSignal}">${lastSignal}</td>
+          <td>${(perf.qfm_score || 0).toFixed(2)}</td>
           <td>${strategy.last_updated || 'Never'}</td>
           <td>
             <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;" onclick="toggleStrategy('${strategy.name}', ${!strategy.active})">
@@ -89,6 +103,7 @@ export async function refreshStrategies() {
     }
   } catch (error) {
     console.error('Failed to refresh strategies:', error);
+    showNotification('Failed to load strategies', 'error');
   }
 }
 
@@ -102,14 +117,14 @@ export async function toggleStrategy(strategyName, enable) {
     });
     const data = await response.json();
     if (data.error) {
-      alert(`Error: ${data.error}`);
+      showNotification(`Error: ${data.error}`, 'error');
     } else {
-      alert(data.message || 'Strategy updated');
+      showNotification(data.message || 'Strategy updated', 'success');
       refreshStrategies();
     }
   } catch (error) {
     console.error('Failed to toggle strategy:', error);
-    alert('Failed to toggle strategy');
+    showNotification('Failed to toggle strategy', 'error');
   }
 }
 
@@ -155,7 +170,7 @@ export async function configureStrategy(strategyName) {
     modal.style.display = 'flex';
   } catch (error) {
     console.error('Failed to load strategy config:', error);
-    alert('Failed to load strategy configuration');
+    showNotification('Failed to load strategy configuration', 'error');
   }
 }
 
@@ -186,15 +201,15 @@ export async function saveStrategyConfig() {
     });
     const data = await response.json();
     if (data.error) {
-      alert(`Error: ${data.error}`);
+      showNotification(`Error: ${data.error}`, 'error');
     } else {
-      alert(data.message || 'Configuration saved');
+      showNotification(data.message || 'Configuration saved', 'success');
       closeStrategyConfig();
       refreshStrategies();
     }
   } catch (error) {
     console.error('Failed to save strategy config:', error);
-    alert('Failed to save strategy configuration');
+    showNotification('Failed to save strategy configuration', 'error');
   }
 }
 
@@ -207,14 +222,14 @@ export async function resetStrategies() {
     });
     const data = await response.json();
     if (data.error) {
-      alert(`Error: ${data.error}`);
+      showNotification(`Error: ${data.error}`, 'error');
     } else {
-      alert(data.message || 'Strategies reset');
+      showNotification(data.message || 'Strategies reset', 'success');
       refreshStrategies();
     }
   } catch (error) {
     console.error('Failed to reset strategies:', error);
-    alert('Failed to reset strategies');
+    showNotification('Failed to reset strategies', 'error');
   }
 }
 
@@ -223,17 +238,18 @@ export async function optimizeStrategies() {
   try {
     updateText(SELECTORS.optimizationProgress, 'Running...');
     updateText(SELECTORS.optimizationStatus, 'Optimizing strategies...');
+    showNotification('Optimization started...', 'info');
     const data = await fetchJson('/api/strategies/optimize', { method: 'POST' });
     updateText(SELECTORS.optimizationProgress, '100%');
     updateText(SELECTORS.optimizationStatus, 'Optimization complete');
     updateText(SELECTORS.qfmImprovements, data.improvements ?? 0);
     updateText(SELECTORS.lastOptimization, new Date().toLocaleTimeString());
     updateText(SELECTORS.optimizationResult, `${data.improvements ?? 0} strategies optimized`);
-    alert(`Strategy optimization complete! ${data.improvements ?? 0} strategies enhanced.`);
+    showNotification(`Strategy optimization complete! ${data.improvements ?? 0} strategies enhanced.`, 'success');
     refreshStrategies();
   } catch (error) {
     console.error('Strategy optimization error:', error);
-    alert('Failed to optimize strategies');
+    showNotification('Failed to optimize strategies', 'error');
     updateText(SELECTORS.optimizationProgress, '0%');
     updateText(SELECTORS.optimizationStatus, 'Optimization failed');
   }
@@ -245,16 +261,17 @@ export async function runQFMStrategyAnalysis() {
     const data = await fetchJson('/api/strategies/qfm_analysis');
     if (Array.isArray(data.analysis) && data.analysis.length > 0) {
       const summary = data.analysis
-        .map((item) => `${item.strategy}: ${item.recommendation}\n  QFM Score: ${item.qfm_score?.toFixed(3) ?? 'N/A'}\n  Confidence: ${((item.confidence || 0) * 100).toFixed(1)}%`)
-        .join('\n\n');
-      alert(`QFM Strategy Analysis Results:\n\n${summary}`);
+        .map((item) => `${item.strategy}: ${item.recommendation}<br>QFM Score: ${item.qfm_score?.toFixed(3) ?? 'N/A'}`)
+        .join('<br><br>');
+      // Use showNotification with HTML content for summary
+      showNotification(`QFM Strategy Analysis Results:<br><br>${summary}`, 'info');
     } else {
-      alert('No QFM analysis data available.');
+      showNotification('No QFM analysis data available.', 'info');
     }
     updateText(SELECTORS.optimizationStatus, 'QFM analysis complete');
   } catch (error) {
     console.error('QFM analysis error:', error);
-    alert('Failed to run QFM analysis');
+    showNotification('Failed to run QFM analysis', 'error');
     updateText(SELECTORS.optimizationStatus, 'QFM analysis failed');
   }
 }
@@ -268,13 +285,14 @@ export async function toggleAutoOptimize() {
       el.textContent = enabled ? 'ENABLED' : 'DISABLED';
       el.className = `status-indicator ${enabled ? 'status-success' : 'status-neutral'}`;
     }
-    alert(`Auto-optimization ${enabled ? 'enabled' : 'disabled'}`);
+    showNotification(`Auto-optimization ${enabled ? 'enabled' : 'disabled'}`, 'success');
   } catch (error) {
     console.error('Auto-optimize toggle error:', error);
-    alert('Failed to toggle auto-optimization');
+    showNotification('Failed to toggle auto-optimization', 'error');
   }
 }
 
+// ... Rest of the file handling events ...
 function handleSectionActivation(event) {
   if (event.target.closest('[data-page="strategies"]')) {
     setTimeout(refreshStrategies, 100);

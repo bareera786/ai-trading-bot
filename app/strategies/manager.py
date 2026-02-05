@@ -22,17 +22,20 @@ from .base import (
     ScalpingStrategy,
     TrendFollowingStrategy,
 )
+from .grid import GridStrategy
 from .qfm import QuantumFusionMomentumEngine
 
 
 class StrategyManager:
     """Manages multiple trading strategies with QFM enhancement."""
 
-    def __init__(self):
+    def __init__(self, user_id=None):
+        self.user_id = user_id
         self.strategies: Dict[str, BaseStrategy] = {}
         self.active_strategies: Dict[str, bool] = {}
         self.strategy_performance: Dict[str, dict] = {}
-        self.performance_history: List[dict] = []
+        # PHASE 5 REFACTOR: Removed limitless in-memory history list
+        # self.performance_history: List[dict] = []
         self.backtest_jobs: Dict[str, dict] = {}
         self.backtest_lock = threading.Lock()
         self.optimization_status = {
@@ -49,6 +52,31 @@ class StrategyManager:
         self.initialize_user_dashboard_features()
         self.initialize_adaptive_risk_management()
         self.initialize_continuous_improvement_pipeline()
+
+    def update_parameters(self, new_params: dict):
+        """Update strategy parameters dynamically from RIBS or other optimizers."""
+        print(f"DEBUG: Updating strategy parameters with: {new_params}")
+        
+        # 1. Update global config if needed (optional, depending on parameter scope)
+        # self.trading_config.update(new_params)
+
+        # 2. Update individual active strategies
+        for name, strategy in self.strategies.items():
+            if hasattr(strategy, "update_parameters"):
+                # Pass only relevant params if we had a mapping, 
+                # but for now pass all and let strategy filter
+                strategy.update_parameters(new_params)
+            else:
+                # Direct attribute injection fallback
+                for key, value in new_params.items():
+                    if hasattr(strategy, key):
+                        setattr(strategy, key, value)
+        
+        # 3. Re-weigh QFM if weights changed
+        if "qfm_weights" in new_params:
+             self.qfm_engine.update_weights(new_params["qfm_weights"])
+        
+        print("DEBUG: Strategy parameters updated successfully.")
 
     def initialize_adaptive_risk_management(self):
         """Initialize adaptive risk management system."""
@@ -191,7 +219,7 @@ class StrategyManager:
     def initialize_ml_feedback_system(self):
         """Initialize ML feedback system for strategy optimization."""
         self.ml_feedback = {
-            "performance_history": [],
+            # "performance_history": [],  # REMOVED
             "parameter_history": {name: [] for name in self.strategies},
             "qfm_correlations": {},
             "learning_rate": 0.01,
@@ -207,24 +235,37 @@ class StrategyManager:
             return
 
         strategy = self.strategies[strategy_name]
-        performance_entry = {
-            "timestamp": time.time(),
-            "strategy": strategy_name,
-            "pnl": trade_result.get("pnl", 0),
-            "win": trade_result.get("pnl", 0) > 0,
-            "confidence": trade_result.get("confidence", 0),
-            "parameters": strategy.parameters.copy(),
-            "qfm_features": qfm_features or {},
-        }
-
-        self.ml_feedback["performance_history"].append(performance_entry)
-        if (
-            len(self.ml_feedback["performance_history"])
-            > self.ml_feedback["max_history_size"]
-        ):
-            self.ml_feedback["performance_history"] = self.ml_feedback[
-                "performance_history"
-            ][-self.ml_feedback["max_history_size"] :]
+        # PHASE 5 REFACTOR: Interact with DB instead of memory list
+        # ---------------------------------------------------------
+        try:
+            from app.models import StrategyPerformance, Strategy, db
+            
+            # Find or Create Strategy ID (naive lookup)
+            strat_record = Strategy.query.filter_by(name=strategy_name).first()
+            if not strat_record:
+                # Auto-register strategy if missing
+                strat_record = Strategy(name=strategy_name)
+                db.session.add(strat_record)
+                db.session.commit()
+            
+            # Persist Performance Record
+            perf_entry = StrategyPerformance(
+                strategy_id=strat_record.id,
+                user_id=self.user_id, # PHASE 6: Enforce Isolation
+                pnl=float(trade_result.get("pnl", 0)),
+                win=(trade_result.get("pnl", 0) > 0),
+                confidence=float(trade_result.get("confidence", 0)),
+                parameters_snapshot=strategy.parameters.copy(),
+                qfm_features=qfm_features or {}
+            )
+            db.session.add(perf_entry)
+            db.session.commit()
+            
+        except Exception as e:
+            print(f"Error persisting strategy performance: {e}")
+            # Fallback? No, just log error to avoid bloating memory if DB is down.
+            pass
+        # ---------------------------------------------------------
 
         param_entry = {
             "timestamp": time.time(),
@@ -246,21 +287,43 @@ class StrategyManager:
             self._adapt_strategy_parameters(strategy_name)
 
     def _calculate_performance_score(self, strategy_name, window=20):
-        """Calculate performance score for a strategy over recent trades."""
-        history = self.ml_feedback["performance_history"]
-        recent_trades = [h for h in history if h["strategy"] == strategy_name][-window:]
-        if not recent_trades:
+        """Calculate performance score for a strategy over recent trades using DB."""
+        try:
+            from app.models import StrategyPerformance, Strategy
+            
+            # Join strategies? or just filter by name if we cached ID?
+            # Safe query:
+            query = StrategyPerformance.query.join(Strategy).filter(Strategy.name == strategy_name)
+            
+            # PHASE 6: Filter by User ID
+            if self.user_id:
+                query = query.filter(StrategyPerformance.user_id == self.user_id)
+            
+            history_query = (
+                query
+                .order_by(StrategyPerformance.timestamp.desc())
+                .limit(window)
+                .all()
+            )
+            
+            recent_trades = history_query # list of objects
+            
+            if not recent_trades:
+                return 0.0
+
+            wins = sum(1 for t in recent_trades if t.win)
+            win_rate = wins / len(recent_trades)
+            pnl_values = [t.pnl for t in recent_trades]
+            avg_pnl = np.mean(pnl_values)
+            pnl_std = np.std(pnl_values)
+            sharpe_ratio = avg_pnl / pnl_std if pnl_std > 0 else 0
+
+            score = win_rate * 0.4 + sharpe_ratio * 0.4 + (avg_pnl / 100) * 0.2
+            return max(0, min(1, score))
+            
+        except Exception as e:
+            print(f"Error calculating performance score: {e}")
             return 0.0
-
-        wins = sum(1 for t in recent_trades if t["win"])
-        win_rate = wins / len(recent_trades)
-        pnl_values = [t["pnl"] for t in recent_trades]
-        avg_pnl = np.mean(pnl_values)
-        pnl_std = np.std(pnl_values)
-        sharpe_ratio = avg_pnl / pnl_std if pnl_std > 0 else 0
-
-        score = win_rate * 0.4 + sharpe_ratio * 0.4 + (avg_pnl / 100) * 0.2
-        return max(0, min(1, score))
 
     def _update_qfm_correlations(self, strategy_name, trade_result, qfm_features):
         """Update correlations between QFM features and trading performance."""
@@ -357,11 +420,23 @@ class StrategyManager:
                 continue
 
             param_history = self.ml_feedback["parameter_history"][strat_name]
-            performance_history = [
-                h
-                for h in self.ml_feedback["performance_history"]
-                if h["strategy"] == strat_name
-            ]
+            try:
+                from app.models import StrategyPerformance, Strategy
+                
+                query = StrategyPerformance.query.join(Strategy).filter(Strategy.name == strat_name)
+                if self.user_id:
+                    query = query.filter(StrategyPerformance.user_id == self.user_id)
+                
+                performance_history = (
+                    query
+                    .order_by(StrategyPerformance.timestamp.desc())
+                    .limit(100) # Analyze last 100 trades max
+                    .all()
+                )
+                # Convert to dict format expected by logic below
+                performance_history = [t.to_dict() for t in performance_history]
+            except Exception:
+                performance_history = []
 
             if not param_history or not performance_history:
                 continue
@@ -1133,6 +1208,7 @@ class StrategyManager:
             "arbitrage": ArbitrageStrategy(),
             "ml_based": MLBasedStrategy(),
             "scalping": ScalpingStrategy(),
+            "grid_bot": GridStrategy(name="grid_bot", config={}),  # Grid Trading Bot
         }
 
         self.active_strategies = {name: True for name in self.strategies}
@@ -1649,8 +1725,15 @@ class StrategyManager:
         if not isinstance(param_updates, dict):
             return False
 
-        for key, value in param_updates.items():
-            strategy.parameters[key] = value
+        if hasattr(strategy, "update_parameters"):
+            try:
+                strategy.update_parameters(param_updates)
+            except Exception as e:
+                print(f"Error updating strategy {strategy_name}: {e}")
+                return False
+        else:
+            for key, value in param_updates.items():
+                strategy.parameters[key] = value
 
         return True
 

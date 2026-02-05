@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block header_title %}BACKTEST LAB{% endblock %}
+{% block header_subtitle %}Simulate strategies against historical data{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <span class="card-icon">🧪</span>
+            <h3 class="card-title">New Simulation</h3>
+        </div>
+        <div class="card-body">
+            <form onsubmit="event.preventDefault(); startBacktest();"
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div>
+                    <label style="color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Symbol</label>
+                    <input type="text" class="form-control" value="BTCUSDT"
+                        style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; padding: 0.5rem; width: 100%; border-radius: var(--radius-sm);">
+                </div>
+                <div>
+                    <label style="color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Period</label>
+                    <select class="form-control"
+                        style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; padding: 0.5rem; width: 100%; border-radius: var(--radius-sm);">
+                        <option>Last 7 Days</option>
+                        <option>Last 30 Days</option>
+                        <option>Last 90 Days</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Strategy</label>
+                    <select class="form-control"
+                        style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; padding: 0.5rem; width: 100%; border-radius: var(--radius-sm);">
+                        <option>QFM Momentum</option>
+                        <option>Mean Reversion</option>
+                        <option>GridBot</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: flex-end;">
+                    <button type="submit" class="btn status-success" style="width: 100%; justify-content: center;">▶ Run
+                        Simulation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Area (Hidden initially) -->
+    <div id="resultsArea" style="display: none; margin-top: 2rem;">
+        <div class="section-header">
+            <h3 class="section-title">Backtest Results</h3>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="dashboard-card">
+                <div class="card-header">Total P&L</div>
+                <div class="card-value text-success">+$1,450.20</div>
+            </div>
+            <div class="dashboard-card">
+                <div class="card-header">Win Rate</div>
+                <div class="card-value">72%</div>
+            </div>
+            <div class="dashboard-card">
+                <div class="card-header">Max Drawdown</div>
+                <div class="card-value text-danger">-5.1%</div>
+            </div>
+        </div>
+
+        <div class="dashboard-card"
+            style="height: 300px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
+            [Interactive Equity Curve Chart]
+        </div>
+    </div>
+</section>
+
+<script>
+    function startBacktest() {
+        const btn = document.querySelector('button[type="submit"]');
+        btn.innerHTML = '⏳ Running...';
+        btn.disabled = true;
+
+        // Simulate latency
+        setTimeout(() => {
+            btn.innerHTML = '▶ Run Simulation';
+            btn.disabled = false;
+            document.getElementById('resultsArea').style.display = 'block';
+            document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth' });
+        }, 1500);
+    }
+</script>
+{% endblock %}

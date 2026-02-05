@@ -1,73 +1,162 @@
 {% extends 'base.html' %}
+{% set active_page = "ribs-config" %}
 
-{% block title %}RIBS Deploy Configuration{% endblock %}
+{% block header_title %}RIBS Configuration{% endblock %}
+{% block header_subtitle %}Admin / Strategy Parameters{% endblock %}
 
 {% block content %}
-<div class="container">
-  <h2>RIBS Deploy Thresholds</h2>
-  <form id="ribs-config-form">
-    <div class="form-group">
-      <label for="min_return">Min Return</label>
-      <input type="number" step="0.01" class="form-control" id="min_return" name="ribs_deploy_min_return">
-    </div>
-    <div class="form-group">
-      <label for="min_sharpe">Min Sharpe</label>
-      <input type="number" step="0.01" class="form-control" id="min_sharpe" name="ribs_deploy_min_sharpe">
-    </div>
-    <div class="form-group">
-      <label for="max_drawdown">Max Drawdown (%)</label>
-      <input type="number" step="0.1" class="form-control" id="max_drawdown" name="ribs_deploy_max_drawdown">
-    </div>
-    <div class="form-group">
-      <label for="min_win_rate">Min Win Rate (0-1)</label>
-      <input type="number" step="0.01" class="form-control" id="min_win_rate" name="ribs_deploy_min_win_rate">
-    </div>
-    <div class="form-group">
-      <label for="backtest_hours">Backtest Hours</label>
-      <input type="number" step="1" class="form-control" id="backtest_hours" name="ribs_deploy_backtest_hours">
-    </div>
-    <button type="submit" class="btn btn-primary">Save</button>
-  </form>
+<div class="container-fluid" style="max-width: 800px; margin: 0 auto; padding: 24px;">
 
-  <div id="ribs-config-status" class="mt-3"></div>
+  <div class="card-panel"
+    style="background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color); padding: 32px; box-shadow: var(--shadow-sm);">
+    <h3 style="margin-top: 0; margin-bottom: 24px; color: var(--text-primary);">Deployment Thresholds</h3>
+    <p style="color: var(--text-secondary); margin-bottom: 32px; font-size: 14px;">
+      Configure the minimum performance requirements for a generic strategy to be considered for live deployment.
+    </p>
+
+    <form id="ribs-config-form">
+      <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <div class="form-group">
+          <label>Min Return</label>
+          <input type="number" step="0.01" id="min_return" name="ribs_deploy_min_return" class="form-input"
+            placeholder="e.g. 5.0">
+          <div class="help-text">Minimum total return percentage</div>
+        </div>
+
+        <div class="form-group">
+          <label>Min Sharpe Ratio</label>
+          <input type="number" step="0.01" id="min_sharpe" name="ribs_deploy_min_sharpe" class="form-input"
+            placeholder="e.g. 1.5">
+          <div class="help-text">Risk-adjusted return metric</div>
+        </div>
+
+        <div class="form-group">
+          <label>Max Drawdown (%)</label>
+          <input type="number" step="0.1" id="max_drawdown" name="ribs_deploy_max_drawdown" class="form-input"
+            placeholder="e.g. 20.0">
+          <div class="help-text">Maximum acceptable loss from peak</div>
+        </div>
+
+        <div class="form-group">
+          <label>Min Win Rate (0-1)</label>
+          <input type="number" step="0.01" id="min_win_rate" name="ribs_deploy_min_win_rate" class="form-input"
+            placeholder="e.g. 0.55">
+          <div class="help-text">Ratio of winning trades</div>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 24px;">
+        <label>Backtest Horizon (Hours)</label>
+        <input type="number" step="1" id="backtest_hours" name="ribs_deploy_backtest_hours" class="form-input"
+          placeholder="e.g. 168">
+        <div class="help-text">Duration of the verification backtest before deployment</div>
+      </div>
+
+      <div style="margin-top: 32px; display: flex; align-items: center; justify-content: space-between;">
+        <div id="ribs-config-status" style="font-size: 14px;"></div>
+        <button type="submit" class="btn btn-primary" style="padding: 10px 24px;">
+          Save Configuration
+        </button>
+      </div>
+    </form>
+  </div>
+
 </div>
 
+<style>
+  .form-group label {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: border-color 0.2s;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+
+  .help-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    opacity: 0.8;
+  }
+
+  .text-success {
+    color: #10b981;
+  }
+
+  .text-error {
+    color: #ef4444;
+  }
+</style>
+
 <script>
-async function fetchConfig(){
-  const r = await fetch('/admin/api/ribs/config');
-  const j = await r.json();
-  if (j.error){
-    document.getElementById('ribs-config-status').innerText = j.error;
-    return;
+  async function fetchConfig() {
+    const statusEl = document.getElementById('ribs-config-status');
+    statusEl.innerHTML = '<span style="color:var(--text-secondary)">Loading...</span>';
+
+    try {
+      const r = await fetch('/admin/api/ribs/config');
+      const j = await r.json();
+      if (j.error) {
+        statusEl.innerHTML = `<span class="text-error">${j.error}</span>`;
+        return;
+      }
+      const e = j.effective || {};
+      document.getElementById('min_return').value = e.ribs_deploy_min_return ?? '';
+      document.getElementById('min_sharpe').value = e.ribs_deploy_min_sharpe ?? '';
+      document.getElementById('max_drawdown').value = e.ribs_deploy_max_drawdown ?? '';
+      document.getElementById('min_win_rate').value = e.ribs_deploy_min_win_rate ?? '';
+      document.getElementById('backtest_hours').value = e.ribs_deploy_backtest_hours ?? '';
+      statusEl.innerHTML = '';
+    } catch (err) {
+      statusEl.innerHTML = `<span class="text-error">Failed to load config</span>`;
+    }
   }
-  const e = j.effective || {};
-  document.getElementById('min_return').value = e.ribs_deploy_min_return ?? '';
-  document.getElementById('min_sharpe').value = e.ribs_deploy_min_sharpe ?? '';
-  document.getElementById('max_drawdown').value = e.ribs_deploy_max_drawdown ?? '';
-  document.getElementById('min_win_rate').value = e.ribs_deploy_min_win_rate ?? '';
-  document.getElementById('backtest_hours').value = e.ribs_deploy_backtest_hours ?? '';
-}
 
-fetchConfig();
+  fetchConfig();
 
-document.getElementById('ribs-config-form').addEventListener('submit', async (ev)=>{
-  ev.preventDefault();
-  const body = {
-    ribs_deploy_min_return: parseFloat(document.getElementById('min_return').value),
-    ribs_deploy_min_sharpe: parseFloat(document.getElementById('min_sharpe').value),
-    ribs_deploy_max_drawdown: parseFloat(document.getElementById('max_drawdown').value),
-    ribs_deploy_min_win_rate: parseFloat(document.getElementById('min_win_rate').value),
-    ribs_deploy_backtest_hours: parseInt(document.getElementById('backtest_hours').value, 10),
-  };
-  const r = await fetch('/admin/api/ribs/config', {
-    method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+  document.getElementById('ribs-config-form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const statusEl = document.getElementById('ribs-config-status');
+    statusEl.innerHTML = '<span style="color:var(--text-secondary)">Saving...</span>';
+
+    const body = {
+      ribs_deploy_min_return: parseFloat(document.getElementById('min_return').value),
+      ribs_deploy_min_sharpe: parseFloat(document.getElementById('min_sharpe').value),
+      ribs_deploy_max_drawdown: parseFloat(document.getElementById('max_drawdown').value),
+      ribs_deploy_min_win_rate: parseFloat(document.getElementById('min_win_rate').value),
+      ribs_deploy_backtest_hours: parseInt(document.getElementById('backtest_hours').value, 10),
+    };
+
+    try {
+      const r = await fetch('/admin/api/ribs/config', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      });
+      const j = await r.json();
+      if (j.error) {
+        statusEl.innerHTML = `<span class="text-error">Error: ${j.error}</span>`;
+      } else {
+        statusEl.innerHTML = `<span class="text-success">✓ Configuration saved successfully</span>`;
+        setTimeout(() => statusEl.innerHTML = '', 3000);
+      }
+    } catch (err) {
+      statusEl.innerHTML = `<span class="text-error">Network error</span>`;
+    }
   });
-  const j = await r.json();
-  if (j.error) {
-    document.getElementById('ribs-config-status').innerText = 'Error: ' + j.error;
-  } else {
-    document.getElementById('ribs-config-status').innerText = 'Saved successfully.';
-  }
-});
 </script>
 {% endblock %}

@@ -3,10 +3,9 @@ from __future__ import annotations
 
 from .manager import BackgroundTaskManager
 from .model_training import ModelTrainingWorker
-from .self_improvement import SelfImprovementWorker
+from .model_training import ModelTrainingWorker
 
 __all__ = [
     "BackgroundTaskManager",
     "ModelTrainingWorker",
-    "SelfImprovementWorker",
 ]

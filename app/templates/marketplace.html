@@ -1,0 +1,280 @@
+{% extends 'base.html' %}
+{% set active_page = "marketplace" %}
+
+{% block title %}Strategy Store - AI Trading{% endblock %}
+{% block header_title %}Strategy Marketplace{% endblock %}
+{% block header_subtitle %}Discover and copy top-performing community strategies{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+
+    <!-- Marketplace Stats / Featured Hero -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <span class="card-icon">🛍️</span>
+            <h3 class="card-title">Marketplace Overview</h3>
+        </div>
+
+        <div class="risk-metrics-grid">
+            <div class="risk-metric">
+                <span class="metric-label">Featured Strategy</span>
+                <span class="metric-value">Quantum V4</span>
+                <span class="metric-subtitle">By System</span>
+            </div>
+            <div class="risk-metric">
+                <span class="metric-label">Top Return (30d)</span>
+                <span class="metric-value text-success">+142%</span>
+                <span class="metric-subtitle">Consistent</span>
+            </div>
+            <div class="risk-metric">
+                <span class="metric-label">Total Copiers</span>
+                <span class="metric-value">1,248</span>
+                <span class="metric-subtitle">Active Users</span>
+            </div>
+            <div class="risk-metric">
+                <span class="metric-label">Avg Profit Share</span>
+                <span class="metric-value">20%</span>
+                <span class="metric-subtitle">Revenue</span>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Filter & Search Bar container -->
+    <div
+        style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; margin-bottom: 1rem;">
+        <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-primary btn-sm">All</button>
+            <button class="btn btn-secondary btn-sm">Conservative</button>
+            <button class="btn btn-secondary btn-sm">Aggressive</button>
+            <button class="btn btn-secondary btn-sm">AI Driven</button>
+        </div>
+
+        <div style="position: relative;">
+            <input type="text" placeholder="Search..."
+                style="padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); width: 200px;">
+        </div>
+    </div>
+
+    <!-- Marketplace Grid -->
+    <div class="risk-presets-grid">
+        {% for strategy in strategies %}
+        <div class="risk-preset-card">
+            <!-- Badge -->
+            {% if strategy.roi_30d > 20 %}
+            <div class="preset-badge" style="background: var(--danger); color: white;">Trending</div>
+            {% else %}
+            <div class="preset-badge" style="background: var(--primary); color: white;">
+                {% if strategy.price_usd > 0 %}${{ strategy.price_usd }}{% else %}FREE{% endif %}
+            </div>
+            {% endif %}
+
+            <div class="preset-icon" style="color: var(--primary);">
+                {% if strategy.strategy_type == 'grid' %}🌊{% else %}🤖{% endif %}
+            </div>
+
+            <h4 class="preset-name">{{ strategy.name }}</h4>
+            <div class="preset-description">
+                <div>by {{ strategy.author.username if strategy.author else 'Unknown' }}</div>
+                <div style="font-size: 0.75rem; margin-top: 4px; color: var(--text-muted);">
+                    {{ strategy.strategy_type|upper }} Strategy
+                </div>
+            </div>
+
+            <div class="preset-stats">
+                <div class="stat-item">
+                    <span class="stat-label">30d Return</span>
+                    <span class="stat-value {{ 'text-success' if strategy.roi_30d >= 0 else 'text-danger' }}">
+                        {{ strategy.roi_30d }}%
+                    </span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Win Rate</span>
+                    <span class="stat-value">{{ strategy.win_rate }}%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Copiers</span>
+                    <span class="stat-value">{{ strategy.copiers_count }}</span>
+                </div>
+            </div>
+
+            <form action="{{ url_for('marketplace.copy_strategy', strategy_id=strategy.id) }}" method="POST"
+                onsubmit="return confirm('Copy this strategy?');" style="margin-top: 1rem;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-primary w-100 btn-sm">
+                    Copy Strategy
+                </button>
+            </form>
+        </div>
+        {% else %}
+        <!-- Demo Content -->
+        <div class="risk-preset-card">
+            <div class="preset-badge" style="background: var(--primary); color: white;">FREE</div>
+            <div class="preset-icon" style="color: var(--primary);">🤖</div>
+            <h4 class="preset-name">Alpha Gen V1</h4>
+            <div class="preset-description">
+                <div>by System</div>
+                <div style="font-size: 0.75rem; margin-top: 4px; color: var(--text-muted);">ML ENSEMBLE</div>
+            </div>
+            <div class="preset-stats">
+                <div class="stat-item">
+                    <span class="stat-label">30d Return</span>
+                    <span class="stat-value text-success">+34%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Win Rate</span>
+                    <span class="stat-value">62%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Copiers</span>
+                    <span class="stat-value">150</span>
+                </div>
+            </div>
+            <button class="btn btn-primary w-100 mt-3 btn-sm">Copy Strategy</button>
+        </div>
+
+        <div class="risk-preset-card"
+            style="border-style: dashed; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div class="preset-icon" style="color: var(--text-muted); background: transparent; font-size: 2rem;">📤
+            </div>
+            <h4 class="preset-name" style="color: var(--text-secondary);">Publish Yours</h4>
+            <p class="preset-description">Share your strategy and earn.</p>
+            <button class="btn btn-secondary btn-sm" disabled>Coming Soon</button>
+        </div>
+        {% endfor %}
+    </div>
+
+</section>
+
+<!-- Identical Styles from Risk Presets -->
+<style>
+    .risk-presets-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .risk-preset-card {
+        position: relative;
+        padding: 1.5rem;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.02);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .risk-preset-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--primary);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+    }
+
+    .preset-icon {
+        font-size: 2rem;
+        text-align: center;
+        margin-bottom: 1rem;
+        background: var(--bg-tertiary);
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .preset-name {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .preset-description {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        text-align: center;
+        margin-bottom: 1.5rem;
+        min-height: 2.5rem;
+    }
+
+    .preset-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-label {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+        display: block;
+        font-size: 1rem;
+        /* Slightly smaller for 3 cols */
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .preset-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.25rem 0.75rem;
+        background: var(--primary);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 700;
+        border-radius: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .risk-metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .risk-metric {
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+
+    .metric-label {
+        display: block;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+        display: block;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .metric-subtitle {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+    }
+</style>
+{% endblock %}

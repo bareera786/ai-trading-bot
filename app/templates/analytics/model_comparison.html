@@ -1,0 +1,490 @@
+{% extends "base.html" %}
+
+{% block title %}ML Model Comparison - AI Trading Bot{% endblock %}
+{% block header_title %}ML Model Comparison{% endblock %}
+{% block header_subtitle %}Performance analysis of all 15 trading models{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+    <!-- Summary Cards -->
+    <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🎯</span>
+                <h3 class="card-title">Overall Accuracy</h3>
+            </div>
+            <div class="card-value" id="overall-accuracy">--</div>
+            <p class="card-subtitle">Across all models</p>
+        </div>
+
+        <div class="dashboard-card">
+            <span class="card-icon">🏆</span>
+            <h3 class="card-title">Best Model</h3>
+            <div class="card-value" style="font-size: 1.25rem;" id="best-model">--</div>
+            <p class="card-subtitle">Highest accuracy</p>
+        </div>
+
+        <div class="dashboard-card">
+            <span class="card-icon">📊</span>
+            <h3 class="card-title">Total Predictions</h3>
+            <div class="card-value" id="total-predictions">--</div>
+            <p class="card-subtitle">All time</p>
+        </div>
+
+        <div class="dashboard-card">
+            <span class="card-icon">✅</span>
+            <h3 class="card-title">Correct Predictions</h3>
+            <div class="card-value" id="correct-predictions">--</div>
+            <p class="card-subtitle">Success count</p>
+        </div>
+    </div>
+
+    <!-- Model Performance Grid -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <span class="card-icon">🤖</span>
+            <h3 class="card-title">Model Performance by Symbol</h3>
+            <button class="btn btn-secondary btn-sm" onclick="refreshData()">
+                <span id="refresh-icon">🔄</span> Refresh
+            </button>
+        </div>
+
+        <div class="models-grid" id="models-grid">
+            <!-- Model cards will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Confidence Analysis -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <span class="card-icon">📈</span>
+            <h3 class="card-title">Confidence vs Accuracy Analysis</h3>
+        </div>
+
+        <div style="padding: 1rem;">
+            <canvas id="confidence-chart" style="max-height: 300px;"></canvas>
+        </div>
+
+        <div id="confidence-insight"
+            style="padding: 1rem; background: rgba(0,212,170,0.1); border-radius: var(--radius-md); margin: 1rem; text-align: center; font-weight: var(--font-weight-semibold);">
+            <!-- Insight will be populated -->
+        </div>
+    </div>
+
+    <!-- Win Rate Comparison -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <span class="card-icon">🎲</span>
+            <h3 class="card-title">Win Rate Comparison</h3>
+        </div>
+
+        <div style="padding: 1rem;">
+            <canvas id="winrate-chart" style="max-height: 400px;"></canvas>
+        </div>
+    </div>
+</section>
+
+<style>
+    .models-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .model-card {
+        padding: 1.5rem;
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        background: rgba(255, 255, 255, 0.02);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .model-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--primary);
+        box-shadow: 0 4px 12px rgba(0, 212, 170, 0.15);
+    }
+
+    .model-card.excellent {
+        border-color: #00d4aa;
+        background: rgba(0, 212, 170, 0.05);
+    }
+
+    .model-card.good {
+        border-color: #ffd700;
+        background: rgba(255, 215, 0, 0.05);
+    }
+
+    .model-card.poor {
+        border-color: #ff6b6b;
+        background: rgba(255, 107, 107, 0.05);
+    }
+
+    .model-symbol {
+        font-size: 1.25rem;
+        font-weight: var(--font-weight-bold);
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .model-accuracy {
+        font-size: 2rem;
+        font-weight: var(--font-weight-bold);
+        color: var(--primary);
+        margin: 0.5rem 0;
+    }
+
+    .model-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .model-stat {
+        text-align: center;
+    }
+
+    .stat-label {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+        display: block;
+        font-size: 1rem;
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-primary);
+    }
+
+    .model-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: var(--font-weight-bold);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .badge-excellent {
+        background: #00d4aa;
+        color: white;
+    }
+
+    .badge-good {
+        background: #ffd700;
+        color: #0a0e27;
+    }
+
+    .badge-poor {
+        background: #ff6b6b;
+        color: white;
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .spinning {
+        display: inline-block;
+        animation: spin 1s linear infinite;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    let confidenceChart = null;
+    let winrateChart = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadModelPerformance();
+        loadConfidenceAnalysis();
+    });
+
+    async function loadModelPerformance() {
+        try {
+            const response = await fetch('/api/analytics/model-performance');
+            const data = await response.json();
+
+            if (data.success) {
+                // Update summary cards
+                document.getElementById('overall-accuracy').textContent = data.summary.overall_accuracy + '%';
+                document.getElementById('best-model').textContent = data.summary.best_model || '--';
+                document.getElementById('total-predictions').textContent = data.summary.total_predictions.toLocaleString();
+                document.getElementById('correct-predictions').textContent = data.summary.total_correct.toLocaleString();
+
+                // Render model cards
+                renderModelCards(data.models);
+
+                // Render win rate chart
+                renderWinRateChart(data.models);
+            }
+        } catch (error) {
+            console.error('Error loading model performance:', error);
+            showToast('Failed to load model performance', 'error');
+        }
+    }
+
+    function renderModelCards(models) {
+        const container = document.getElementById('models-grid');
+        container.innerHTML = '';
+
+        models.forEach(model => {
+            const accuracy = model.accuracy;
+            let cardClass = 'model-card';
+            let badgeClass = 'model-badge';
+            let badgeText = '';
+
+            if (accuracy >= 60) {
+                cardClass += ' excellent';
+                badgeClass += ' badge-excellent';
+                badgeText = 'Excellent';
+            } else if (accuracy >= 50) {
+                cardClass += ' good';
+                badgeClass += ' badge-good';
+                badgeText = 'Good';
+            } else {
+                cardClass += ' poor';
+                badgeClass += ' badge-poor';
+                badgeText = 'Needs Improvement';
+            }
+
+            const card = document.createElement('div');
+            card.className = cardClass;
+            card.innerHTML = `
+            <div class="model-symbol">${model.symbol}</div>
+            <span class="${badgeClass}">${badgeText}</span>
+            <div class="model-accuracy">${model.accuracy}%</div>
+            <div class="model-stats">
+                <div class="model-stat">
+                    <span class="stat-label">Win Rate</span>
+                    <span class="stat-value">${model.win_rate}%</span>
+                </div>
+                <div class="model-stat">
+                    <span class="stat-label">Predictions</span>
+                    <span class="stat-value">${model.total_predictions.toLocaleString()}</span>
+                </div>
+                <div class="model-stat">
+                    <span class="stat-label">Confidence</span>
+                    <span class="stat-value">${(model.avg_confidence * 100).toFixed(0)}%</span>
+                </div>
+                <div class="model-stat">
+                    <span class="stat-label">Correct</span>
+                    <span class="stat-value">${model.correct_predictions.toLocaleString()}</span>
+                </div>
+            </div>
+        `;
+
+            container.appendChild(card);
+        });
+    }
+
+    function renderWinRateChart(models) {
+        const ctx = document.getElementById('winrate-chart').getContext('2d');
+
+        if (winrateChart) {
+            winrateChart.destroy();
+        }
+
+        // Sort by win rate
+        const sorted = [...models].sort((a, b) => b.win_rate - a.win_rate);
+
+        winrateChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: sorted.map(m => m.symbol),
+                datasets: [{
+                    label: 'Win Rate (%)',
+                    data: sorted.map(m => m.win_rate),
+                    backgroundColor: sorted.map(m => {
+                        if (m.win_rate >= 60) return 'rgba(0, 212, 170, 0.8)';
+                        if (m.win_rate >= 50) return 'rgba(255, 215, 0, 0.8)';
+                        return 'rgba(255, 107, 107, 0.8)';
+                    }),
+                    borderColor: sorted.map(m => {
+                        if (m.win_rate >= 60) return '#00d4aa';
+                        if (m.win_rate >= 50) return '#ffd700';
+                        return '#ff6b6b';
+                    }),
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(10, 14, 39, 0.95)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#00d4aa',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#b2bec3',
+                            callback: function (value) {
+                                return value + '%';
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#b2bec3'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    async function loadConfidenceAnalysis() {
+        try {
+            const response = await fetch('/api/analytics/confidence-analysis');
+            const data = await response.json();
+
+            if (data.success) {
+                renderConfidenceChart(data.data);
+                document.getElementById('confidence-insight').textContent = '💡 ' + data.insight;
+            }
+        } catch (error) {
+            console.error('Error loading confidence analysis:', error);
+        }
+    }
+
+    function renderConfidenceChart(data) {
+        const ctx = document.getElementById('confidence-chart').getContext('2d');
+
+        if (confidenceChart) {
+            confidenceChart.destroy();
+        }
+
+        confidenceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(d => d.confidence_bucket),
+                datasets: [{
+                    label: 'Accuracy (%)',
+                    data: data.map(d => d.accuracy),
+                    borderColor: '#00d4aa',
+                    backgroundColor: 'rgba(0, 212, 170, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: {
+                            color: '#b2bec3'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(10, 14, 39, 0.95)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#00d4aa',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#b2bec3'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Confidence Range',
+                            color: '#b2bec3'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#b2bec3',
+                            callback: function (value) {
+                                return value + '%';
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Accuracy (%)',
+                            color: '#b2bec3'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    async function refreshData() {
+        const icon = document.getElementById('refresh-icon');
+        icon.classList.add('spinning');
+
+        await Promise.all([
+            loadModelPerformance(),
+            loadConfidenceAnalysis()
+        ]);
+
+        icon.classList.remove('spinning');
+        showToast('Data refreshed successfully', 'success');
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `
+        <span style="font-size: 1.25rem; margin-right: 0.5rem;">
+            ${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}
+        </span>
+        <span>${message}</span>
+    `;
+
+        const container = document.getElementById('toast-container');
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+</script>
+{% endblock %}

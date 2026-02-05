@@ -1,0 +1,607 @@
+{% extends 'base.html' %}
+{% set active_page = "trading" %}
+
+{% block header_title %}Grid Trading Bot{% endblock %}
+{% block header_subtitle %}Automated high-frequency range trading system{% endblock %}
+
+{% block content %}
+<section id="grid-bot" class="page-section active">
+
+    <!-- Hero Status Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="hero-card">
+                <div class="hero-content">
+                    <div class="hero-icon">
+                        <span style="font-size: 2.5rem;">🌊</span>
+                    </div>
+                    <div>
+                        <h2>AI Grid Matrix</h2>
+                        <p>Deploy a high-frequency volatility harvesting system. The bot automatically executes buy/sell
+                            orders within your specified price range.</p>
+                        <div class="hero-stats">
+                            <div class="h-stat">
+                                <span class="label">Status</span>
+                                <span class="value text-success" id="bot-status-text">Ready</span>
+                            </div>
+                            <div class="h-stat">
+                                <span class="label">Active Grids</span>
+                                <span class="value text-info" id="active-grids-count">0</span>
+                            </div>
+                            <div class="h-stat">
+                                <span class="label">24h Profit</span>
+                                <span class="value text-primary" id="profit-24h">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-graphic">
+                    <!-- Dynamic Pulse Graphic -->
+                    <div class="pulse-ring"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Configuration Panel -->
+        <div class="col-lg-4 col-md-5">
+            <div class="dashboard-card h-100">
+                <div class="card-header">
+                    <span class="card-icon">⚙️</span>
+                    <h3 class="card-title">Grid Configuration</h3>
+                </div>
+
+                <form id="grid-form" onsubmit="event.preventDefault(); createGridBot();" class="mt-3">
+
+                    <div class="form-group mb-4">
+                        <label class="input-label">Trading Pair</label>
+                        <div class="custom-select-wrapper">
+                            <select class="form-control custom-select" id="grid-symbol">
+                                <option value="BTCUSDT">BTC / USDT</option>
+                                <option value="ETHUSDT">ETH / USDT</option>
+                                <option value="SOLUSDT">SOL / USDT</option>
+                                <option value="BNBUSDT">BNB / USDT</option>
+                            </select>
+                            <i class="fas fa-chevron-down select-icon"></i>
+                        </div>
+                    </div>
+
+                    <div class="grid-range-inputs">
+                        <div class="range-group">
+                            <label class="input-label">Lower Price</label>
+                            <div class="input-wrapper">
+                                <span class="currency-symbol">$</span>
+                                <input type="number" class="form-control" id="grid-lower" placeholder="30000" required>
+                            </div>
+                        </div>
+                        <div class="range-connector"></div>
+                        <div class="range-group">
+                            <label class="input-label">Upper Price</label>
+                            <div class="input-wrapper">
+                                <span class="currency-symbol">$</span>
+                                <input type="number" class="form-control" id="grid-upper" placeholder="40000" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-4 mt-4">
+                        <label class="input-label d-flex justify-content-between align-items-center">
+                            <span>Grid Levels</span>
+                            <span class="badge badge-primary" id="grid-lines-val">50 Grids</span>
+                        </label>
+                        <div class="range-slider-container">
+                            <input type="range" class="custom-range" id="grid-lines" min="2" max="200" value="50"
+                                oninput="updateGridLines(this.value)">
+                            <div class="range-track-fill" id="grid-track-fill" style="width: 25%;"></div>
+                        </div>
+                        <div class="d-flex justify-content-between text-muted mt-1" style="font-size: 0.75rem;">
+                            <span>Loose (2)</span>
+                            <span>Dense (200)</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-4">
+                        <label class="input-label">Total Investment</label>
+                        <div class="input-wrapper">
+                            <input type="number" class="form-control" id="grid-investment" placeholder="1000" required>
+                            <span class="suffix">USDT</span>
+                        </div>
+                        <div class="balance-indicator">
+                            <span>Available:</span>
+                            <span class="text-white">$10,000.00</span>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button type="submit" class="btn btn-primary btn-lg w-100 glow-effect" id="deploy-btn">
+                            <i class="fas fa-rocket mr-2"></i> Deploy Validated Grid
+                        </button>
+                    </div>
+
+                    <div id="grid-message" class="mt-3 text-center small fade-in"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Visualization / Live Feed -->
+        <div class="col-lg-8 col-md-7">
+            <div class="dashboard-card h-100 d-flex flex-column">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <span class="card-icon">📊</span>
+                        <h3 class="card-title">Live Grid Matrix</h3>
+                    </div>
+                    <div class="live-status">
+                        <span class="dot"></span> Live
+                    </div>
+                </div>
+
+                <div class="chart-container-wrapper" style="flex: 1; position: relative; min-height: 400px;">
+                    <!-- Canvas for Chart.js -->
+                    <canvas id="gridChart"></canvas>
+
+                    <!-- Overlay for empty state -->
+                    <div id="chart-placeholder" class="chart-placeholder">
+                        <div class="placeholder-content">
+                            <div class="placeholder-icon">📉</div>
+                            <h4>No Active Grid</h4>
+                            <p>Configure and deploy a strategy to view the live order matrix.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Orders Ticker -->
+                <div class="order-ticker mt-3">
+                    <div class="ticker-header">Recent Executions</div>
+                    <div class="ticker-content" id="order-ticker-content">
+                        <span class="text-muted font-italic">Waiting for execution...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    /* Premium UI Variables */
+    :root {
+        --primary-glow: rgba(0, 212, 170, 0.4);
+        --card-bg: rgba(16, 23, 38, 0.6);
+        --input-bg: rgba(255, 255, 255, 0.03);
+    }
+
+    /* Hero Section */
+    .hero-card {
+        background: radial-gradient(circle at top right, rgba(0, 212, 170, 0.1), transparent),
+            linear-gradient(135deg, rgba(16, 23, 38, 0.95) 0%, rgba(10, 15, 25, 1) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .hero-content {
+        display: flex;
+        gap: 25px;
+        align-items: flex-start;
+        position: relative;
+        z-index: 2;
+        max-width: 80%;
+    }
+
+    .hero-content h2 {
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(90deg, #fff, #a0aec0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .hero-content p {
+        color: var(--text-secondary);
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+        max-width: 600px;
+    }
+
+    .hero-icon {
+        width: 70px;
+        height: 70px;
+        background: rgba(0, 212, 170, 0.1);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(0, 212, 170, 0.2);
+        box-shadow: 0 0 20px var(--primary-glow);
+    }
+
+    .hero-stats {
+        display: flex;
+        gap: 30px;
+        padding-top: 15px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .h-stat .label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .h-stat .value {
+        font-weight: 700;
+        font-size: 1.1rem;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Pulse Animation */
+    .pulse-ring {
+        position: absolute;
+        width: 250px;
+        height: 250px;
+        border-radius: 50%;
+        background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+        opacity: 0.2;
+        animation: pulse 4s infinite;
+        right: -80px;
+        top: -80px;
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(0.8);
+            opacity: 0.2;
+        }
+
+        50% {
+            transform: scale(1.2);
+            opacity: 0.1;
+        }
+
+        100% {
+            transform: scale(0.8);
+            opacity: 0.2;
+        }
+    }
+
+    /* Form Styles */
+    .dashboard-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .input-label {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .form-control {
+        background: var(--input-bg);
+        border: 1px solid var(--border-color);
+        color: #fff;
+        border-radius: 10px;
+        padding: 12px 15px;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+
+    .form-control:focus {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.15);
+    }
+
+    /* Custom Inputs */
+    .input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-wrapper .currency-symbol {
+        position: absolute;
+        left: 15px;
+        color: var(--text-secondary);
+        z-index: 2;
+    }
+
+    .input-wrapper .form-control {
+        padding-left: 30px;
+    }
+
+    .input-wrapper .suffix {
+        position: absolute;
+        right: 15px;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+
+    .grid-range-inputs {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .range-group {
+        flex: 1;
+    }
+
+    .range-connector {
+        width: 15px;
+        height: 2px;
+        background: var(--border-color);
+        margin-top: 25px;
+    }
+
+    /* Slider */
+    .range-slider-container {
+        position: relative;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        margin-top: 10px;
+    }
+
+    .range-track-fill {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        background: var(--primary);
+        border-radius: 3px;
+        pointer-events: none;
+    }
+
+    .custom-range {
+        position: absolute;
+        top: -6px;
+        left: 0;
+        width: 100%;
+        height: 18px;
+        opacity: 0;
+        /* Hide default, keep functionality */
+        cursor: pointer;
+        margin: 0;
+    }
+
+    .badge-primary {
+        background: rgba(0, 212, 170, 0.2);
+        color: var(--primary);
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+    }
+
+    /* Buttons */
+    .btn-primary {
+        background: linear-gradient(135deg, #00d4aa 0%, #00a88a 100%);
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    .glow-effect:hover {
+        box-shadow: 0 0 20px rgba(0, 212, 170, 0.4);
+        transform: translateY(-1px);
+    }
+
+    /* Visualization */
+    .chart-placeholder {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        border: 1px dashed var(--border-color);
+    }
+
+    .placeholder-content {
+        text-align: center;
+        color: var(--text-secondary);
+    }
+
+    .placeholder-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .live-status {
+        display: flex;
+        align-items: center;
+        font-size: 0.8rem;
+        color: var(--success);
+        background: rgba(0, 200, 81, 0.1);
+        padding: 4px 10px;
+        border-radius: 12px;
+    }
+
+    .live-status .dot {
+        width: 6px;
+        height: 6px;
+        background: var(--success);
+        border-radius: 50%;
+        margin-right: 6px;
+        box-shadow: 0 0 5px var(--success);
+    }
+
+    .order-ticker {
+        border-top: 1px solid var(--border-color);
+        padding-top: 1rem;
+    }
+
+    .ticker-header {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+    }
+
+    .ticker-content {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.85rem;
+    }
+</style>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    let gridChart;
+
+    function updateGridLines(val) {
+        document.getElementById('grid-lines-val').textContent = val + " Grids";
+        const percent = ((val - 2) / (200 - 2)) * 100;
+        document.getElementById('grid-track-fill').style.width = percent + "%";
+    }
+
+    async function createGridBot() {
+        const symbol = document.getElementById('grid-symbol').value;
+        const lower = document.getElementById('grid-lower').value;
+        const upper = document.getElementById('grid-upper').value;
+        const lines = document.getElementById('grid-lines').value;
+        const investment = document.getElementById('grid-investment').value;
+        const msgDiv = document.getElementById('grid-message');
+        const btn = document.getElementById('deploy-btn');
+
+        // Loading state
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Deploying Matrix...';
+        btn.disabled = true;
+        msgDiv.innerHTML = '';
+
+        try {
+            // 1. Configure
+            const configResp = await fetch(`/api/strategies/grid_bot/configure`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': "{{ csrf_token() }}" },
+                body: JSON.stringify({
+                    config: {
+                        symbol: symbol,
+                        lower_price: lower,
+                        upper_price: upper,
+                        grid_lines: lines,
+                        investment: investment
+                    }
+                })
+            });
+
+            if (!configResp.ok) {
+                const errData = await configResp.json();
+                throw new Error(errData.error || "Configuration failed");
+            }
+
+            // 2. Enable
+            const toggleResp = await fetch(`/api/strategies/grid_bot/toggle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': "{{ csrf_token() }}" },
+                body: JSON.stringify({ enable: true })
+            });
+
+            if (!toggleResp.ok) throw new Error("Activation failed");
+
+            // Success Visuals
+            btn.innerHTML = '<i class="fas fa-check"></i> Deployed';
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-success');
+
+            msgDiv.innerHTML = '<span class="text-success">✅ Grid Matrix Active. Orders placed.</span>';
+            document.getElementById('bot-status-text').textContent = "Running";
+            document.getElementById('bot-status-text').className = "value text-success";
+            document.getElementById('active-grids-count').textContent = lines;
+
+            // Activate Chart
+            document.getElementById('chart-placeholder').style.display = 'none';
+            initChart(symbol, lower, upper, lines);
+
+            // Mock Ticker Update
+            document.getElementById('order-ticker-content').innerHTML = `
+                <span class="text-success">BUY LMT 0.1 BTC @ ${parseFloat(lower) + 10}</span> <span class="text-muted ml-2">Just now</span>
+            `;
+
+        } catch (err) {
+            btn.innerHTML = '<i class="fas fa-rocket mr-2"></i> Deploy Validated Grid';
+            btn.disabled = false;
+            msgDiv.innerHTML = '<span class="text-danger">❌ ' + err.message + '</span>';
+        }
+    }
+
+    function initChart(symbol, lower, upper, lines) {
+        const ctx = document.getElementById('gridChart').getContext('2d');
+
+        // Generate Mock Data for Visualization
+        const currentPrice = (parseFloat(lower) + parseFloat(upper)) / 2;
+        const labels = Array.from({ length: 20 }, (_, i) => i);
+        const prices = Array.from({ length: 20 }, () => currentPrice * (1 + (Math.random() - 0.5) * 0.05));
+
+        // Grid Lines
+        const gridLines = [];
+        const step = (upper - lower) / lines;
+        for (let i = 0; i <= lines; i++) {
+            gridLines.push(parseFloat(lower) + (i * step));
+        }
+
+        if (gridChart) gridChart.destroy();
+
+        gridChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Price',
+                    data: prices,
+                    borderColor: '#00d4aa',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    annotation: {
+                        annotations: gridLines.map(val => ({
+                            type: 'line',
+                            yMin: val,
+                            yMax: val,
+                            borderColor: 'rgba(255, 255, 255, 0.05)',
+                            borderWidth: 1
+                        }))
+                    }
+                },
+                scales: {
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.02)' },
+                        ticks: { color: '#718096' }
+                    },
+                    x: { display: false }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

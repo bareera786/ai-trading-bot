@@ -16,11 +16,33 @@ import './pages/health.js';
 // eslint-disable-next-line no-undef
 console.info('📦 Dashboard build loaded:', typeof BUILD_ID !== 'undefined' ? BUILD_ID : 'unknown');
 
+import { initSubscriptionManagement } from '../admin/subscriptions.js';
+import { initUserManagement } from '../admin/users.js';
+import { initPlanManagement } from '../admin/plan-management.js';
+
 function bootstrap() {
   initNavigation();
   initAutoRefresh();
   initEventHandlers();
   initTradeHistory();
+  initPlanManagement(); // New Admin SaaS Plans
+
+  // Initialize Admin Features if present
+  if (document.getElementById('subscription-plans-table')) {
+    initSubscriptionManagement();
+  }
+  if (document.getElementById('user-table-body')) {
+    initUserManagement();
+  }
+
+  // Hide the loading skeleton
+  const loader = document.getElementById('app-loader');
+  if (loader) {
+    loader.style.opacity = '0';
+    setTimeout(() => {
+      loader.style.display = 'none';
+    }, 500);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', bootstrap);

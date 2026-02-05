@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from .backtest import BacktestManager
 from .binance import BinanceCredentialService, BinanceCredentialStore, BinanceLogManager
-from .binance_market import BinanceMarketDataHelper
+from .binance_market import BinanceMarketDataHelper, get_real_market_data
 from .futures import FuturesManualService
 from .futures_market import FuturesMarketDataService
 from .futures_safety import FuturesSafetyService
@@ -28,6 +28,10 @@ from .trading import (
     create_user_trader_resolver,
     record_user_trade,
 )
+# from .reseller_service import ResellerService
+from .audit_service import AuditService
+from .brain_service import BrainService
+from .model_promotion_service import ModelPromotionService
 from .timescaledb_service import TimescaleDBService
 from .trade_history import ComprehensiveTradeHistory
 
@@ -61,4 +65,7 @@ __all__ = [
     "record_user_trade",
     "ComprehensiveTradeHistory",
     "TimescaleDBService",
+    "get_real_market_data",
+    "ModelPromotionService",
+    "BrainService",
 ]

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Optional
 import os
+from datetime import timedelta
 
 from flask import Flask
 from .config import Config
@@ -27,6 +28,17 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
         static_folder="static",
     )
     app.config.from_object(config_cls)
+
+    # Update session and remember cookie settings for proper authentication
+    app.config.update(
+        PERMANENT_SESSION_LIFETIME=timedelta(seconds=86400),  # 24 hours
+        SESSION_REFRESH_EACH_REQUEST=True,
+        REMEMBER_COOKIE_DURATION=timedelta(days=30),
+        REMEMBER_COOKIE_REFRESH_EACH_REQUEST=True,
+        REMEMBER_COOKIE_SAMESITE='None',
+        REMEMBER_COOKIE_SECURE=True,
+        REMEMBER_COOKIE_HTTPONLY=True
+    )
 
     # Allow operational scripts (e.g., create_admin.py) to skip the heavy
     # runtime bootstrap without forcing an in-memory database.
@@ -80,31 +92,41 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
     # proxy / cache issues). Only attach to JSON responses and keep
     # the hook intentionally minimal and non-intrusive.
     @app.after_request
-    def add_x_data_source_header(response):
-        try:
-            # Ensure the asset manifest is never cached by browsers/proxies.
-            # This prevents stale bundle URLs after deploy.
-            if (getattr(response, "direct_passthrough", False) is False):
-                try:
-                    from flask import request as flask_request
+    def after_request(response):
+        # 1. CORS Headers (Allow frontend access)
+        # Use configured allowed origins or default to wildcard for this setup
+        response.headers.add('Access-Control-Allow-Origin', '*') 
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        
+        # 2. Cache Control Strategy
+        # NO CACHE for HTML Routes (Dashboard, Login, everything user-facing)
+        if response.mimetype == 'text/html':
+            response.headers.add('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            response.headers.add('Pragma', 'no-cache')
+            response.headers.add('Expires', '0')
+        
+        # 3. Add Observability Header
+        if response.mimetype == 'application/json':
+             response.headers.setdefault("X-Data-Source", "backend")
 
-                    if (flask_request.path or "").endswith("/static/dist/manifest.json"):
-                        response.headers["Cache-Control"] = (
-                            "no-store, no-cache, must-revalidate, max-age=0"
-                        )
-                        response.headers["Pragma"] = "no-cache"
-                        response.headers["Expires"] = "0"
-                except Exception:
-                    pass
-
-            ctype = response.headers.get("Content-Type", "")
-            if ctype and "application/json" in ctype.lower():
-                # set default header; allow existing header to remain if present
-                response.headers.setdefault("X-Data-Source", "backend")
-        except Exception:
-            # guard against any unexpected errors in the hook
-            pass
         return response
+
+    @app.context_processor
+    def inject_reseller_branding():
+        """Inject reseller branding into all templates."""
+        from flask_login import current_user
+        
+        branding = {}
+        reseller = None
+        
+        if current_user.is_authenticated and getattr(current_user, "reseller_id", None):
+            reseller = getattr(current_user, "reseller", None)
+            if reseller and reseller.branding_config:
+                branding = reseller.branding_config
+                
+        return dict(reseller_branding=branding, current_reseller=reseller)
 
     # Minimal SPA fallback: serve the dashboard entry for deep links that
     # are not API/static/health/metrics. This allows client-side routing to
@@ -116,6 +138,7 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
 
     @app.route(
         "/<path:requested_path>",
+
         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     )
     def _spa_fallback(requested_path: str):
@@ -127,6 +150,23 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
         if path == "/health" or path.startswith("/health?"):
             return abort(404)
         if path == "/metrics" or path.startswith("/metrics?"):
+            return abort(404)
+        # Preserve auth routes
+        if path in ("/login", "/login/", "/register", "/register/", "/logout", "/logout/"):
+            return abort(404)
+        
+        # Preserve new feature routes (Phase 1-3)
+        if path.startswith("/settings/notifications") or path.startswith("/settings/risk-presets"):
+            return abort(404)
+        if path.startswith("/analytics/"):
+            return abort(404)
+        if path.startswith("/trading/journal"):
+            return abort(404)
+        if path == "/backtesting" or path.startswith("/backtesting/"):
+            return abort(404)
+        
+        # Public Marketing Pages
+        if path in ("/pricing", "/pricing/", "/plans", "/plans/"):
             return abort(404)
 
         # For any other path, render the SPA dashboard entry so the client
@@ -144,11 +184,31 @@ def create_app(config_class: Optional[type[Config]] = None) -> Flask:
             # the original error path is visible to callers.
             return abort(404)
 
-    from app.extensions import limiter, csrf
-
-    # Initialize extensions
+    # Initialize extensions (use the module-level instances imported above)
     limiter.init_app(app)
     csrf.init_app(app)
+
+    # Exempt API endpoints from CSRF protection (do this after csrf is initialized)
+    try:
+        # Be robust: instead of assuming attributes on a blueprint/module,
+        # look up the actual registered view callables in app.view_functions
+        # and exempt the API endpoints we care about. This avoids problems
+        # where older deploys or refactors expose only a Blueprint object.
+        for endpoint, view_func in list(app.view_functions.items()):
+            should_exempt = False
+            if endpoint in ("auth_api.api_login", "auth_api.api_logout", "auth_api.api_register"):
+                should_exempt = True
+            elif endpoint.startswith("brain.") or endpoint.startswith("system_ops."):
+                should_exempt = True
+            
+            if should_exempt:
+                try:
+                    csrf.exempt(view_func)
+                    app.logger.debug(f"CSRF exempted: {endpoint}")
+                except Exception:
+                    app.logger.debug(f"Failed to CSRF-exempt view: {endpoint}", exc_info=True)
+    except Exception:
+        app.logger.debug("Failed while scanning view functions for CSRF exemptions", exc_info=True)
 
     # Temporary global error handler to log full tracebacks for debugging
     # production 500s. Preserve HTTPExceptions (404/405/400/etc) so clients

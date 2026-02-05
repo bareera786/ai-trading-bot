@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}Strategy Command - AI Trading{% endblock %}
+{% block header_title %}Strategy Command{% endblock %}
+{% block header_subtitle %}Overview and configuration of algorithmic trading models{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+
+    <!-- Hero Stats (Following Risk Presets Dashboard Card Style) -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <span class="card-icon">🧠</span>
+            <h3 class="card-title">Algorithmic Squad Status</h3>
+        </div>
+
+        <div class="risk-metrics-grid">
+            <div class="risk-metric">
+                <span class="metric-label">Active Agents</span>
+                <span class="metric-value" id="total-active">0</span>
+                <span class="metric-subtitle">Running models</span>
+            </div>
+            <div class="risk-metric">
+                <span class="metric-label">Total PnL</span>
+                <span class="metric-value" id="total-pnl">$0.00</span>
+                <span class="metric-subtitle">Cumulative Profit</span>
+            </div>
+            <div class="risk-metric">
+                <span class="metric-label">Avg Win Rate</span>
+                <span class="metric-value" id="avg-winrate">0%</span>
+                <span class="metric-subtitle">Accuracy</span>
+            </div>
+            <div class="risk-metric">
+                <span class="metric-label">System Health</span>
+                <span class="metric-value text-success">100%</span>
+                <span class="metric-subtitle">Operational</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guide Section -->
+    <div class="dashboard-card" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+        <div class="card-header" style="cursor: pointer;" onclick="toggleGuide()">
+            <div style="display: flex; align-items: center;">
+                <span class="card-icon">📚</span>
+                <h3 class="card-title">How to Use Strategies</h3>
+            </div>
+            <span id="guide-toggle-icon">▼</span>
+        </div>
+        <div id="strategy-guide"
+            style="display: none; padding-top: 1rem; border-top: 1px solid var(--border-color); margin-top: 1rem;">
+            <div style="color: var(--text-secondary); line-height: 1.6;">
+                <p><strong>1. Understanding Strategies:</strong> Each strategy represents a unique trading algorithm.
+                    "Enabled" strategies actively scan the market for opportunities.</p>
+                <p><strong>2. Configuration:</strong> Click <strong>Configure</strong> to adjust risk settings (Stop
+                    Loss, Take Profit) and position sizing for each strategy.</p>
+                <p><strong>3. Activation:</strong> Strategies run automatically based on your <strong>Risk
+                        Presets</strong>. To manually pause a strategy, go to configuration.</p>
+                <p><strong>4. Monitoring:</strong> Real-time Win Rate and PnL are updated every 10 seconds. "MULTI"
+                    means the strategy operates on multiple coins simultaneously.</p>
+            </div>
+        </div>
+    </div>
+    <script>
+        function toggleGuide() {
+            const guide = document.getElementById('strategy-guide');
+            const icon = document.getElementById('guide-toggle-icon');
+            if (guide.style.display === 'none') {
+                guide.style.display = 'block';
+                icon.textContent = '▲';
+            } else {
+                guide.style.display = 'none';
+                icon.textContent = '▼';
+            }
+        }
+    </script>
+
+    <!-- Strategy Grid -->
+    <div class="dashboard-card">
+        <div class="card-header" style="display: flex; justify-content: space-between;">
+            <div style="display: flex; align-items: center;">
+                <span class="card-icon">⚡</span>
+                <h3 class="card-title">Deployed Strategies</h3>
+            </div>
+            <button class="btn btn-primary" onclick="alert('Feature coming in v2.1')">
+                Deploy New
+            </button>
+        </div>
+
+        <div class="risk-presets-grid" id="strategiesContainer">
+            <!-- Loaded via JS -->
+            <div style="text-align: center; width: 100%; padding: 40px; color: var(--text-secondary);">
+                <i class="fas fa-circle-notch fa-spin fa-2x"></i>
+                <p style="margin-top: 10px;">Loading Matrix...</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Reusing Styles from Risk Presets for exact consistency -->
+<style>
+    .risk-presets-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .risk-preset-card {
+        position: relative;
+        padding: 1.5rem;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        /* var(--radius-xl) approximation if var not global */
+        background: rgba(255, 255, 255, 0.02);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .risk-preset-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--primary);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+    }
+
+    .active-strategy-border {
+        border-color: var(--success);
+        background: rgba(16, 185, 129, 0.02);
+    }
+
+    .preset-icon {
+        font-size: 2.5rem;
+        text-align: center;
+        margin-bottom: 1rem;
+        background: var(--bg-tertiary);
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .preset-name {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .preset-description {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .preset-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        /* Changed to 2 for strategies */
+        gap: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-label {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+        display: block;
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .preset-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.25rem 0.75rem;
+        background: var(--bg-tertiary);
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        font-weight: 700;
+        border-radius: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .risk-metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .risk-metric {
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        /* var(--radius-md) */
+        border: 1px solid var(--border-color);
+    }
+
+    .metric-label {
+        display: block;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+        display: block;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .metric-subtitle {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+    }
+</style>
+
+<script>
+    async function loadStrategies() {
+        try {
+            const response = await fetch('/api/monitor/strategies');
+            const data = await response.json();
+
+            if (data.success) {
+                renderStrategies(data.strategies);
+                updateStats(data.strategies);
+            } else {
+                // Simulation for Demo
+                const demoStrats = [
+                    { id: '1', name: 'Bitcoin Alpha', symbol: 'BTCUSDT', type: 'ML_ENSEMBLE', enabled: true, win_rate: 68.5, pnl: 1245.50 },
+                    { id: '2', name: 'ETH Scalper', symbol: 'ETHUSDT', type: 'HIGH_FREQ', enabled: true, win_rate: 55.2, pnl: 432.10 },
+                    { id: '3', name: 'Solana Trend', symbol: 'SOLUSDT', type: 'MOMENTUM', enabled: false, win_rate: 48.0, pnl: -120.00 }
+                ];
+                renderStrategies(demoStrats);
+                updateStats(demoStrats);
+            }
+        } catch (error) {
+            console.error('Error loading strategies:', error);
+        }
+    }
+
+    function updateStats(strategies) {
+        const active = strategies.filter(s => s.enabled).length;
+        const totalPnl = strategies.reduce((acc, s) => acc + (s.pnl || 0), 0);
+        const avgWin = strategies.length ? (strategies.reduce((acc, s) => acc + (s.win_rate || 0), 0) / strategies.length) : 0;
+
+        document.getElementById('total-active').textContent = active;
+        document.getElementById('total-pnl').textContent = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalPnl);
+
+        if (totalPnl >= 0) {
+            document.getElementById('total-pnl').style.color = 'var(--success)';
+        } else {
+            document.getElementById('total-pnl').style.color = 'var(--danger)';
+        }
+
+        document.getElementById('avg-winrate').textContent = avgWin.toFixed(1) + "%";
+    }
+
+    function renderStrategies(strategies) {
+        const container = document.getElementById('strategiesContainer');
+        if (!strategies || strategies.length === 0) {
+            container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">No active strategies found.</div>`;
+            return;
+        }
+
+        container.innerHTML = strategies.map(strategy => `
+        <div class="risk-preset-card ${strategy.enabled ? 'active-strategy-border' : ''}">
+            <div class="preset-badge" style="background: ${strategy.enabled ? 'var(--success)' : 'var(--text-muted)'}; color: white;">
+                ${strategy.enabled ? 'ACTIVE' : 'PAUSED'}
+            </div>
+            
+            <div class="preset-icon">
+                 ${strategy.symbol.includes('BTC') ? '₿' : '⚡'}
+            </div>
+            
+            <h4 class="preset-name">${strategy.name}</h4>
+            <p class="preset-description">${strategy.symbol} • ${strategy.type}</p>
+            
+            <div class="preset-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Win Rate</span>
+                    <span class="stat-value text-default">${strategy.win_rate}%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">PnL</span>
+                    <span class="stat-value" style="color: ${strategy.pnl >= 0 ? 'var(--success)' : 'var(--danger)'}">
+                        ${strategy.pnl >= 0 ? '+' : ''}${strategy.pnl}
+                    </span>
+                </div>
+            </div>
+            
+            <button class="btn btn-outline-secondary w-100 mt-3 btn-sm" onclick="viewDetails('${strategy.id}')">
+                Configure
+            </button>
+        </div>
+    `).join('');
+    }
+
+    function viewDetails(id) {
+        alert("Opening configuration for " + id);
+    }
+
+    loadStrategies();
+    setInterval(loadStrategies, 10000);
+</script>
+{% endblock %}

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="description" content="Self-improving AI trading bot with ML telemetry and RIBS optimization">
+    <meta name="theme-color" content="#00d4aa">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AI Trader">
+
+    <title>{% block title %}ULTIMATE PROFESSIONAL AI TRADING BOT{% endblock %}</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet"
+        href="{{ asset_url('dashboard.css') }}?v={{ version_label or '1.0' }}&t={{ (current_time or 0) * 1000 }}">
+    <link rel="stylesheet" href="/static/css/responsive-enhanced.css?v=1.0">
+    <link rel="stylesheet" href="/static/css/training_control_center.css?v=1.0">
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <!-- Immediate Loading State -->
+    <div id="app-loader"
+        style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0f172a;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity 0.5s ease-out;">
+        <div
+            style="width:50px;height:50px;border:3px solid rgba(255,255,255,0.1);border-top-color:#3b82f6;border-radius:50%;animation:spin 1s linear infinite;">
+        </div>
+        <div style="margin-top:20px;color:#94a3b8;font-family:sans-serif;font-size:14px;letter-spacing:1px;">
+            LOADING...</div>
+        <style>
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+    </div>
+
+    <script>
+        // AGGRESSIVE FAILSAFE: Remove loader after 1500ms max
+        // This ensures the site is accessible even if an asset hangs
+        setTimeout(() => {
+            const loader = document.getElementById('app-loader');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 500);
+            }
+        }, 1500);
+
+        // Also remove if window loads normally before timeout
+        window.addEventListener('load', function () {
+            const loader = document.getElementById('app-loader');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 500);
+            }
+        });
+    </script>
+
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>🚀 AI TRADER</h1>
+                <p class="sidebar-subtitle">Professional Trading Bot</p>
+                <p class="sidebar-version">Version {{ version_label or 'Ultimate AI Bot' }}</p>
+            </div>
+
+            <nav class="sidebar-nav">
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                <div class="nav-section">
+                    <div class="nav-section-title" style="color:#f59e0b;font-weight:700;">Admin</div>
+                    <a href="{{ url_for('admin_dashboard.admin_dashboard') }}"
+                        class="nav-item {% if active_page == 'admin-dashboard' %}active{% endif %}">
+                        <span class="nav-icon">🛡️</span>
+                        <span class="nav-text">Overview</span>
+                    </a>
+                    <a href="{{ url_for('admin_dashboard.user_management') }}"
+                        class="nav-item {% if active_page == 'user-management' %}active{% endif %}">
+                        <span class="nav-icon">👥</span>
+                        <span class="nav-text">Users</span>
+                    </a>
+                    <a href="{{ url_for('admin_dashboard.saas_plans') }}"
+                        class="nav-item {% if active_page == 'subscription-management' %}active{% endif %}">
+                        <span class="nav-icon">💳</span>
+                        <span class="nav-text">SaaS Plans</span>
+                    </a>
+                    <a href="{{ url_for('admin_dashboard.symbol_management') }}"
+                        class="nav-item {% if active_page == 'symbols' %}active{% endif %}">
+                        <span class="nav-icon">🪙</span>
+                        <span class="nav-text">Symbols</span>
+                    </a>
+                    <a href="{{ url_for('admin_dashboard.trade_history') }}"
+                        class="nav-item {% if active_page == 'trade-history' %}active{% endif %}">
+                        <span class="nav-icon">📜</span>
+                        <span class="nav-text">Trade Logs</span>
+                    </a>
+                    <a href="{{ url_for('admin_resellers.resellers_dashboard') }}"
+                        class="nav-item {% if active_page == 'resellers' %}active{% endif %}">
+                        <span class="nav-icon">🤝</span>
+                        <span class="nav-text">Resellers</span>
+                    </a>
+                    <a href="{{ url_for('admin_views.admin_brain_dashboard') }}"
+                        class="nav-item {% if active_page == 'brain-dashboard' %}active{% endif %}">
+                        <span class="nav-icon">🧠</span>
+                        <span class="nav-text">Brain Dashboard</span>
+                    </a>
+                    <a href="{{ url_for('dashboard_bp.ribs_dashboard') }}"
+                        class="nav-item {% if active_page == 'ribs' %}active{% endif %}">
+                        <span class="nav-icon">🧬</span>
+                        <span class="nav-text">RIBS Evolution</span>
+                    </a>
+                    <a href="{{ url_for('admin_dashboard.admin_settings') }}"
+                        class="nav-item {% if active_page == 'admin-settings' %}active{% endif %}">
+                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-text">System Config</span>
+                    </a>
+                </div>
+                {% endif %}
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Home</div>
+                    <a href="{{ url_for('dashboard_bp.dashboard') }}"
+                        class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                    <a href="{{ url_for('marketplace.index') }}"
+                        class="nav-item {% if active_page == 'marketplace' %}active{% endif %}">
+                        <span class="nav-icon">🛍️</span>
+                        <span class="nav-text">Marketplace</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Trading</div>
+                    <a href="{{ url_for('dashboard_bp.spot_trading') }}"
+                        class="nav-item {% if active_page == 'spot-trading' %}active{% endif %}">
+                        <span class="nav-icon">💻</span>
+                        <span class="nav-text">Terminal</span>
+                    </a>
+                    <a href="{{ url_for('dashboard_bp.futures_trading') }}"
+                        class="nav-item {% if active_page == 'futures-trading' %}active{% endif %}">
+                        <span class="nav-icon">⚡</span>
+                        <span class="nav-text">Futures</span>
+                    </a>
+                    <a href="{{ url_for('strategies.grid_bot_ui') }}"
+                        class="nav-item {% if active_page == 'grid' %}active{% endif %}">
+                        <span class="nav-icon">🌊</span>
+                        <span class="nav-text">Grid Bot</span>
+                    </a>
+                    <a href="{{ url_for('dashboard_bp.strategies') }}"
+                        class="nav-item {% if active_page == 'strategies' %}active{% endif %}">
+                        <span class="nav-icon">🎯</span>
+                        <span class="nav-text">Strategies</span>
+                    </a>
+                    <a href="{{ url_for('arbitrage.dashboard') }}"
+                        class="nav-item {% if active_page == 'arbitrage' %}active{% endif %}">
+                        <span class="nav-icon">⚖️</span>
+                        <span class="nav-text">Arbitrage</span>
+                    </a>
+                    <a href="{{ url_for('copy_trading.leaderboard') }}"
+                        class="nav-item {% if active_page == 'copy-trading' %}active{% endif %}">
+                        <span class="nav-icon">👯</span>
+                        <span class="nav-text">Copy Trading</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Analytics</div>
+                    <a href="{{ url_for('dashboard_bp.trade_history') }}"
+                        class="nav-item {% if active_page == 'trade-history' %}active{% endif %}">
+                        <span class="nav-icon">📋</span>
+                        <span class="nav-text">Trade History</span>
+                    </a>
+                    <a href="{{ url_for('dashboard_bp.statistics') }}"
+                        class="nav-item {% if active_page == 'statistics' %}active{% endif %}">
+                        <span class="nav-icon">💹</span>
+                        <span class="nav-text">Performance</span>
+                    </a>
+                    <a href="{{ url_for('dashboard_bp.trade_journal') }}"
+                        class="nav-item {% if active_page == 'trade-journal' %}active{% endif %}">
+                        <span class="nav-icon">📝</span>
+                        <span class="nav-text">Journal</span>
+                    </a>
+                    <a href="{{ url_for('dashboard_bp.backtesting') }}"
+                        class="nav-item {% if active_page == 'backtesting' %}active{% endif %}">
+                        <span class="nav-icon">🧪</span>
+                        <span class="nav-text">Backtesting</span>
+                    </a>
+                    <a href="{{ url_for('dashboard_bp.health_monitor') }}"
+                        class="nav-item {% if active_page == 'health' %}active{% endif %}">
+                        <span class="nav-icon">💊</span>
+                        <span class="nav-text">System Health</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Settings</div>
+                    <a href="{{ url_for('exchange.exchange_settings_ui') }}"
+                        class="nav-item {% if active_page == 'settings' %}active{% endif %}">
+                        <span class="nav-icon">🔌</span>
+                        <span class="nav-text">Connect Exchanges</span>
+                    </a>
+                    <a href="/settings/notifications"
+                        class="nav-item {% if active_page == 'notifications' %}active{% endif %}">
+                        <span class="nav-icon">🔔</span>
+                        <span class="nav-text">Notifications</span>
+                    </a>
+                    <a href="{{ url_for('dashboard_bp.safety_settings') }}"
+                        class="nav-item {% if active_page == 'safety' %}active{% endif %}">
+                        <span class="nav-icon">🛡️</span>
+                        <span class="nav-text">Safety & Risk</span>
+                    </a>
+                    <a href="{{ url_for('dashboard_bp.persistence_dashboard') }}"
+                        class="nav-item {% if active_page == 'persistence' %}active{% endif %}">
+                        <span class="nav-icon">💾</span>
+                        <span class="nav-text">Persistence</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Mobile overlay/backdrop -->
+        <div class="mobile-overlay" id="mobile-overlay" onclick="toggleSidebar()"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <button id="mobile-menu-toggle-btn" class="mobile-menu-toggle" aria-label="Toggle menu"
+                        onclick="toggleSidebar()">
+                        <span>☰</span>
+                    </button>
+                </div>
+                <div class="header-titles">
+                    <h1 id="page-title">{% block header_title %}Dashboard{% endblock %}</h1>
+                    <p id="page-subtitle">{% block header_subtitle %}Overview{% endblock %}</p>
+                </div>
+                <div class="header-actions">
+                    <span id="current-user-info" style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+                        Logged in as: <span id="current-username">{{ current_user.username if
+                            current_user.is_authenticated else '' }}</span>
+                    </span>
+                    <a href="{{ url_for('auth.logout') }}" id="logout-btn" class="btn btn-secondary"
+                        style="text-decoration:none;">
+                        <span style="margin-right: 4px;">🚪</span>
+                        Logout
+                    </a>
+                </div>
+            </header>
+
+            <div class="content-body">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.mobile-overlay');
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+
+            // Prevent body scroll when sidebar is open on mobile
+            if (window.innerWidth <= 1024) {
+                document.body.classList.toggle('sidebar-active');
+            }
+        }
+    </script>
+
+    <!-- Bootstrap JS if needed -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- PWA Install Banner -->
+    <div id="pwa-install-banner" class="pwa-install-banner">
+        <div class="pwa-install-content">
+            <div class="pwa-install-title">📱 Install AI Trading Bot</div>
+            <div class="pwa-install-subtitle">Add to your home screen for quick access</div>
+        </div>
+        <div class="pwa-install-actions">
+            <button class="btn btn-primary" id="pwa-install-btn">Install</button>
+            <button class="btn btn-secondary" id="pwa-dismiss-btn">Not Now</button>
+        </div>
+    </div>
+
+    <!-- Service Worker Registration -->
+    <script>
+        // Register service worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+
+        // PWA Install Prompt
+        let deferredPrompt;
+        const installBanner = document.getElementById('pwa-install-banner');
+        const installBtn = document.getElementById('pwa-install-btn');
+        const dismissBtn = document.getElementById('pwa-dismiss-btn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+
+            // Show install banner if not dismissed before
+            if (!localStorage.getItem('pwa-install-dismissed')) {
+                installBanner.classList.add('show');
+            }
+        });
+
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                if (!deferredPrompt) return;
+
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+
+                console.log(`PWA install outcome: ${outcome}`);
+                deferredPrompt = null;
+                installBanner.classList.remove('show');
+            });
+        }
+
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', () => {
+                installBanner.classList.remove('show');
+                localStorage.setItem('pwa-install-dismissed', 'true');
+            });
+        }
+
+        // Hide banner if already installed
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ PWA installed successfully');
+            installBanner.classList.remove('show');
+        });
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

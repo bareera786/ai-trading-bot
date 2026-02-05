@@ -31,7 +31,7 @@ export function initEventHandlers() {
           // Server asked to redirect (common behavior) — follow it in the browser
           console.info('[logout] Server redirected to', resp.url);
           // clear any client-side ephemeral state, then redirect to /login
-          try { sessionStorage.clear(); localStorage.clear(); } catch (e) {}
+          try { sessionStorage.clear(); localStorage.clear(); } catch (e) { }
           window.location.href = '/login';
           return;
         }
@@ -39,14 +39,14 @@ export function initEventHandlers() {
         // If server returned OK (200/204/202), navigate to login page
         if (resp.ok) {
           console.info('[logout] Logout successful, navigating to /login');
-          try { sessionStorage.clear(); localStorage.clear(); } catch (e) {}
+          try { sessionStorage.clear(); localStorage.clear(); } catch (e) { }
           window.location.href = '/login';
           return;
         }
 
         // Otherwise, show error and still navigate to login to clear client state
         console.warn('[logout] Unexpected logout response, forcing navigation to /login');
-        try { sessionStorage.clear(); localStorage.clear(); } catch (e) {}
+        try { sessionStorage.clear(); localStorage.clear(); } catch (e) { }
         window.location.href = '/login';
       } catch (err) {
         console.error('[logout] Error during logout fetch', err);
@@ -168,15 +168,7 @@ export const handlers = {
     if (sidebar) sidebar.classList.toggle('open');
   },
   logout: () => {
-    // Prefer the fetch-based logout flow to capture server responses
-    if (typeof window !== 'undefined' && window.document) {
-      const btn = document.getElementById('logout-btn');
-      if (btn) {
-        btn.click();
-        return;
-      }
-    }
-    // Last-resort: direct navigation
+    // Direct navigation is safer and avoids recursive loops
     window.location.href = '/logout';
   },
 };

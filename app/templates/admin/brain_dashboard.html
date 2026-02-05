@@ -1,0 +1,2055 @@
+{% extends "base.html" %}
+
+{% block header_title %}BRAIN DASHBOARD{% endblock %}
+{% block header_subtitle %}Admin Control Center for AI Training & Model Management{% endblock %}
+
+{% block content %}
+<section class="page-section active">
+
+    <!-- Top Status Grid -->
+    <div class="dashboard-grid">
+        <!-- Active Model -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🧠</span>
+                <h3 class="card-title">Strategy Portfolio</h3>
+                <button id="rollbackBtn" onclick="rollbackModel()" class="btn btn-danger btn-sm"
+                    style="display:none; font-size: 0.7rem; margin-left: auto;">
+                    🛑 EMERGENCY ROLLBACK
+                </button>
+            </div>
+            <div class="card-value text-info" id="activeModel">Loading...</div>
+            <p class="card-subtitle" id="activeDetail">Active Brains</p>
+        </div>
+
+        <!-- Inference Heartbeat -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">💓</span>
+                <h3 class="card-title">Heartbeat</h3>
+            </div>
+            <div class="card-value text-success" id="heartbeat">---</div>
+            <p class="card-subtitle">Inference Latency</p>
+        </div>
+
+        <!-- Risk Controller (Phase 5) -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">�️</span>
+                <h3 class="card-title">Risk Controller</h3>
+            </div>
+            <div class="card-value text-success" id="riskStatus">ACTIVE</div>
+            <p class="card-subtitle" id="riskDetail">Exposure: 0%</p>
+        </div>
+
+        <!-- System Status -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <span class="card-icon">🛡️</span>
+                <h3 class="card-title">System Status</h3>
+            </div>
+            <div class="status-indicator status-success" id="systemStatusIndicator" style="margin-top: 10px;">
+                <span id="systemStatus">---</span>
+            </div>
+            <!-- Kill Switch Toggle -->
+            <div style="margin-top: 15px; display: flex; align-items: center; justify-content: space-between;">
+                <span class="text-secondary small">Emergency Stop:</span>
+                <label class="switch">
+                    <input type="checkbox" id="killSwitch" onchange="togglePause()">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- TRAINING CONTROL CENTER - Removed in favor of integrated panel -->
+    <div class="training-control-center" id="trainingControlCenter" style="display:none !important;">
+        <div class="control-center-header">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span class="status-pulse" id="statusPulse"></span>
+                <div>
+                    <h4 style="margin: 0; font-size: 1rem; color: var(--text-primary);">Training Job Monitor</h4>
+                    <p style="margin: 0; font-size: 0.75rem; color: var(--text-secondary);" id="jobSummary">No active
+                        jobs</p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <span class="badge" id="jobStatusBadge">IDLE</span>
+                <button onclick="toggleControlCenter()" class="btn-icon" title="Collapse">
+                    <span id="collapseIcon">−</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="control-center-body" id="controlCenterBody">
+            <!-- Progress Section -->
+            <div class="progress-section">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span class="text-secondary small">Progress</span>
+                    <span class="text-primary font-bold" id="progressPercent">0%</span>
+                </div>
+                <div class="premium-progress">
+                    <div class="premium-progress-bar" id="mainProgressBar" style="width: 0%;"></div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
+                    <div class="metric-mini">
+                        <span class="metric-mini-label">Job ID</span>
+                        <span class="metric-mini-value" id="currentJobId">—</span>
+                    </div>
+                    <div class="metric-mini">
+                        <span class="metric-mini-label">Symbol</span>
+                        <span class="metric-mini-value" id="currentSymbol">—</span>
+                    </div>
+                    <div class="metric-mini">
+                        <span class="metric-mini-label">Elapsed</span>
+                        <span class="metric-mini-value" id="elapsedTime">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Logs Mini Console -->
+            <div class="mini-console-wrapper">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <span class="text-secondary small">Live Training Logs</span>
+                    <button onclick="scrollLogsToBottom()" class="btn-sm btn-outline-secondary"
+                        style="padding: 2px 8px; font-size: 0.7rem;">
+                        ↓ Scroll to Bottom
+                    </button>
+                </div>
+                <div class="premium-console" id="miniConsole"
+                    style="height: 200px; font-size: 0.75rem; overflow-y: auto;">
+                    <div class="console-entry">
+                        <span class="console-time">--:--:--</span>
+                        <span class="console-tag console-tag-info">SYSTEM</span>
+                        <span class="console-message">Waiting for training job...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase 7: Multi-Strategy Engine Monitor -->
+    <div class="dashboard-grid" style="margin-top: 1rem; margin-bottom: 2rem;">
+        <!-- Governor Stream -->
+        <div class="dashboard-card premium-card" style="grid-column: span 3; min-height: 300px;">
+            <div class="card-header">
+                <span class="card-icon">🏛️</span>
+                <h3 class="card-title">Governor Decision Stream</h3>
+                <span class="badge" style="margin-left: auto; background: var(--bg-tertiary);">LIVE</span>
+            </div>
+            <div id="governorStream"
+                style="height: 250px; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 0.85rem;">
+                <div class="text-secondary" style="text-align: center; padding-top: 100px;">Waiting for decisions...
+                </div>
+            </div>
+        </div>
+
+        <!-- Oracle Insight -->
+        <div class="dashboard-card premium-card">
+            <div class="card-header">
+                <span class="card-icon">🔮</span>
+                <h3 class="card-title">Model Oracle</h3>
+            </div>
+            <div
+                style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px;">
+                <div style="font-size: 2rem; margin-bottom: 10px;" id="oracleRegime">---</div>
+                <div style="font-size: 1rem; color: var(--text-secondary);">Market Regime</div>
+                <div class="premium-progress" style="width: 80%; margin-top: 20px;">
+                    <div class="premium-progress-bar" id="oracleConfidenceBar"
+                        style="width: 0%; background: var(--info);"></div>
+                </div>
+                <div style="margin-top: 5px; font-size: 0.8rem;" id="oracleConfidenceText">Confidence: 0%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area: Training & Registry -->
+    <div class="dashboard-grid"
+        style="grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); margin-top: 0rem; gap: 2rem;">
+
+
+        <!-- Training Panel -->
+        <div class="dashboard-card premium-card glow-effect" style="min-height: 600px;">
+            <div class="card-header">
+                <span class="card-icon">🎓</span>
+                <h3 class="card-title">Train New Model</h3>
+            </div>
+            <div style="padding: 1.5rem;">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="text-secondary small" style="margin-bottom: 0.5rem; display: block;">Target
+                        Strategy</label>
+                    <div style="display: flex; gap: 5px;">
+                        <select id="trainStrategy" class="premium-select">
+                            <option value="">Loading...</option>
+                        </select>
+                        <button onclick="openCreateStrategyModal()" class="btn btn-sm btn-outline-primary"
+                            style="padding: 0 10px;">+</button>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="text-secondary small" style="margin-bottom: 0.5rem; display: block;">Trading
+                        Symbol</label>
+                    <input type="text" id="trainSymbol" class="premium-input" value="BTCUSDT">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="text-secondary small" style="margin-bottom: 0.5rem; display: block;">
+                        Timeframe (Candle Interval)
+                        <span class="text-muted" style="font-size: 0.7rem;">⚡ Recommended: 1h or 30m</span>
+                    </label>
+                    <select id="trainTimeframe" class="premium-select">
+                        <option value="1m">1 Minute</option>
+                        <option value="5m">5 Minutes</option>
+                        <option value="15m">15 Minutes</option>
+                        <option value="30m">30 Minutes</option>
+                        <option value="1h" selected>1 Hour ⭐ Recommended</option>
+                        <option value="4h">4 Hours</option>
+                        <option value="1d">1 Day</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="text-secondary small" style="margin-bottom: 0.5rem; display: block;">
+                        Lookback Period (Historical Data)
+                        <span class="text-muted" style="font-size: 0.7rem;">⚡ Recommended: 1 year</span>
+                    </label>
+                    <select id="trainLookback" class="premium-select">
+                        <option value="7">1 Week (Fast Test)</option>
+                        <option value="30">1 Month</option>
+                        <option value="90">3 Months</option>
+                        <option value="180">6 Months</option>
+                        <option value="365" selected>1 Year ⭐ Recommended</option>
+                        <option value="730">2 Years (Slow)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label class="text-secondary small" style="margin-bottom: 0.5rem; display: block;">Model
+                        Architecture</label>
+                    <select id="modelType" class="premium-select">
+                        <option value="LSTM">Deep LSTM (Sequencing)</option>
+                        <option value="XGBoost">XGBoost (Gradient Boost)</option>
+                        <option value="Transformer">Time-Transformer (Beta)</option>
+                        <option value="Ensemble" selected>Ultimate Ensemble (Best)</option>
+                    </select>
+                </div>
+
+                <button onclick="spawnJob()" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                    <i class="fas fa-rocket me-2"></i> SPAWN TRAINING JOB
+                </button>
+
+                <div style="margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 10px;">
+                    <label class="text-secondary small" style="margin-bottom: 0.5rem; display: block;">
+                        AutoML Grid Search (New)
+                        <span class="badge" style="background: var(--purple, #6c5ce7); font-size: 0.6rem;">SMART</span>
+                    </label>
+                    <button onclick="spawnAutoJob()" class="btn btn-outline-light"
+                        style="width: 100%; justify-content: center; border: 1px dashed var(--purple, #6c5ce7); color: var(--purple, #a29bfe);">
+                        <i class="fas fa-brain me-2"></i> AUTO-SELECT BEST STRATEGY
+                    </button>
+                    <small class="text-muted"
+                        style="display:block; text-align:center; font-size: 0.7rem; margin-top:5px;">
+                        Tests 15m/1h/4h timeframes & selects winner. (Takes ~15 mins)
+                    </small>
+                </div>
+
+                <!-- Integrated Training Status -->
+                <div id="integratedTrainingStatus" style="display:none; margin-top: 1.5rem; margin-bottom: 1rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; margin-bottom: 5px; align-items: center;">
+                        <span id="integratedStatusText" class="badge"
+                            style="background: var(--info); color: white;">INITIALIZING</span>
+                        <span id="integratedProgressText" style="font-weight: 700; color: var(--primary);">0%</span>
+                    </div>
+                    <div class="premium-progress">
+                        <div id="integratedProgressBar" class="premium-progress-bar" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <!-- Job Log -->
+                <div class="premium-console" id="jobLogs" style="margin-top: 0.5rem; height: 400px; overflow-y: auto;">
+                    <div class="console-entry">
+                        <span class="console-time">--:--:--</span>
+                        <span class="console-tag console-tag-info">INFO</span>
+                        <span class="console-message">Training logs will appear here...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PHASE 6: MODEL HEALTH MONITOR -->
+        <!-- Insert this section BEFORE the "Model Registry" section in brain_dashboard.html -->
+
+        <div class="dashboard-card premium-card" id="healthMonitor" style="margin-top: 2rem;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <span class="card-icon">🏥</span>
+                    <h3 class="card-title">Model Health Monitor</h3>
+                </div>
+                <span class="health-badge" id="healthBadge">UNKNOWN</span>
+            </div>
+            <div style="padding: 1.5rem;">
+                <!-- Auto-Pause Warning Banner -->
+                <div class="alert alert-danger" id="autoPauseWarning"
+                    style="display:none; margin-bottom: 1rem; padding: 1rem; background: rgba(225, 112, 85, 0.1); border: 1px solid var(--danger); border-radius: 8px;">
+                    <strong>⚠️ AUTOMATIC PAUSE ACTIVE</strong>
+                    <p id="autoPauseReason" style="margin: 0.5rem 0; color: var(--text-primary);"></p>
+                    <button onclick="manualResume()" class="btn btn-warning btn-sm" style="margin-top: 0.5rem;">
+                        Manual Override (Requires Confirmation)
+                    </button>
+                </div>
+
+                <!-- Performance Metrics Grid -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                    <div class="metric-card"
+                        style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <span class="metric-label"
+                            style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Win
+                            Rate (7D)</span>
+                        <span class="metric-value" id="winRate7d"
+                            style="display: block; font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</span>
+                    </div>
+                    <div class="metric-card"
+                        style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <span class="metric-label"
+                            style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Avg
+                            Confidence</span>
+                        <span class="metric-value" id="avgConfidence"
+                            style="display: block; font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</span>
+                    </div>
+                    <div class="metric-card"
+                        style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <span class="metric-label"
+                            style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Current
+                            Drawdown</span>
+                        <span class="metric-value" id="currentDrawdown"
+                            style="display: block; font-size: 1.5rem; font-weight: 700; color: var(--danger);">—</span>
+                    </div>
+                    <div class="metric-card"
+                        style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <span class="metric-label"
+                            style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Loss
+                            Streak</span>
+                        <span class="metric-value" id="lossStreak"
+                            style="display: block; font-size: 1.5rem; font-weight: 700; color: var(--warning);">—</span>
+                    </div>
+                    <div class="metric-card"
+                        style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <span class="metric-label"
+                            style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Health
+                            Score</span>
+                        <span class="metric-value" id="healthScore"
+                            style="display: block; font-size: 1.5rem; font-weight: 700; color: var(--success);">—</span>
+                    </div>
+                    <div class="metric-card"
+                        style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <span class="metric-label"
+                            style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Last
+                            Check</span>
+                        <span class="metric-value small" id="lastCheck"
+                            style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-secondary);">—</span>
+                    </div>
+                </div>
+
+                <!-- Signal Bias Chart -->
+                <div style="margin-top: 1.5rem;">
+                    <label class="text-secondary small"
+                        style="display: block; margin-bottom: 0.5rem; font-size: 0.75rem;">Signal Bias
+                        Distribution</label>
+                    <div style="display: flex; gap: 2px; height: 40px; border-radius: 8px; overflow: hidden;">
+                        <div id="biasLong"
+                            style="background: rgba(0, 212, 170, 0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 700; transition: all 0.3s ease;">
+                            LONG
+                        </div>
+                        <div id="biasShort"
+                            style="background: rgba(225, 112, 85, 0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 700; transition: all 0.3s ease;">
+                            SHORT
+                        </div>
+                        <div id="biasFlat"
+                            style="background: rgba(255, 193, 7, 0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 700; transition: all 0.3s ease;">
+                            FLAT
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Registry -->
+        <div class="dashboard-card" style="grid-column: 1 / -1;">
+            <div class="card-header">
+                <span class="card-icon">📂</span>
+                <h3 class="card-title">Model Registry</h3>
+            </div>
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Version</th>
+                            <th>Symbol</th>
+                            <th>Strategy</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Accuracy</th>
+                            <th>Max DD%</th>
+                            <th>Profit Factor</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modelTable">
+                        <!-- Populated by JS -->
+                        <tr>
+                            <td colspan="7" class="text-muted text-center py-4">Loading models...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Capital Allocation (Phase 5.3) -->
+    <div class="dashboard-grid" style="margin-top: 2rem;">
+        <div class="dashboard-card" style="grid-column: span 2;">
+            <div class="card-header">
+                <span class="card-icon">⚖️</span>
+                <h3 class="card-title">Capital Allocation</h3>
+            </div>
+            <div style="padding: 1.5rem;" id="allocationContainer">
+                <div class="text-center text-muted">Loading strategies...</div>
+            </div>
+        </div>
+
+        <!-- Portfolio Laboratory (Phase 5.5) -->
+        <div class="dashboard-card" style="grid-column: span 2;">
+            <div class="card-header">
+                <span class="card-icon">🧪</span>
+                <h3 class="card-title">Portfolio Laboratory</h3>
+                <button class="btn btn-sm btn-outline-primary" onclick="runSimulation()" style="margin-left: auto;">
+                    ▶ Run Simulation
+                </button>
+            </div>
+            <div class="row" style="padding: 1.5rem;">
+                <div class="col-md-12">
+                    <h5 class="text-secondary small mb-3">Projected Equity Curve (30 Day)</h5>
+                    <div style="background: rgba(0,0,0,0.2); padding: 5px; border-radius: 4px;">
+                        <canvas id="simChart" height="150" style="width: 100%;"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="row" style="padding: 0 1.5rem 1.5rem 1.5rem;">
+                <div class="col-md-12">
+                    <h5 class="text-secondary small mb-3">Correlation Matrix</h5>
+                    <div id="corrMatrix" style="display: grid; gap: 2px;">
+                        <!-- Generated by JS -->
+                        <div class="text-muted small">Run simulation to view correlations.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid" style="margin-top: 2rem;">
+        <div class="dashboard-card" style="grid-column: span 4;">
+            <div class="card-header">
+                <span class="card-icon">👻</span>
+                <h3 class="card-title">Shadow Governance (24H Analysis)</h3>
+            </div>
+            <div style="padding: 1.5rem;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Model Version</th>
+                            <th>Inference Count</th>
+                            <th>Avg Confidence</th>
+                            <th>Bias (L/S/F)</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shadowTable">
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">Loading analysis...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audit Log Panel (New for Phase 4.1) -->
+    <div class="dashboard-grid" style="margin-top: 2rem;">
+        <div class="dashboard-card" style="grid-column: span 4;">
+            <div class="card-header">
+                <span class="card-icon">📜</span>
+                <h3 class="card-title">Immutable Audit Log</h3>
+            </div>
+            <div class="data-table-container" style="max-height: 400px; overflow-y: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Action</th>
+                            <th>User (ID)</th>
+                            <th>IP</th>
+                            <th>Status</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTable">
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">Loading logs...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Promotion Safety Modal -->
+    <div class="modal fade" id="promotionModal" tabindex="-1" aria-hidden="true" style="backdrop-filter: blur(5px);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content"
+                style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);">
+                <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                    <h5 class="modal-title" id="promotionTitle">⚠️ Deploy to Production</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="padding: 2rem;">
+
+                    <!-- Step 1: Comparison -->
+                    <div id="step1" class="step-content">
+                        <div class="alert alert-info"
+                            style="background: rgba(9, 132, 227, 0.1); border-color: var(--secondary);">
+                            <strong>Step 1/3:</strong> Verify model replacement details.
+                        </div>
+                        <table class="table table-dark table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Active (Current)</th>
+                                    <th>Candidate (New)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Version</td>
+                                    <td id="compareActiveVer">v1.0</td>
+                                    <td id="compareNewVer" class="text-warning">v2.0</td>
+                                </tr>
+                                <tr>
+                                    <td>Type</td>
+                                    <td id="compareActiveType">LSTM</td>
+                                    <td id="compareNewType">XGBoost</td>
+                                </tr>
+                                <tr>
+                                    <td>Win Rate</td>
+                                    <td id="compareActiveWR">65%</td>
+                                    <td id="compareNewWR" class="text-success">68%</td>
+                                </tr>
+                                <tr>
+                                    <td>Max DD</td>
+                                    <td id="compareActiveDD" class="text-danger">-</td>
+                                    <td id="compareNewDD" class="text-danger">-</td>
+                                </tr>
+                                <tr>
+                                    <td>Profit Factor</td>
+                                    <td id="compareActivePF">-</td>
+                                    <td id="compareNewPF">-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="text-end mt-4">
+                            <button class="btn btn-primary" onclick="goToStep(2)">Next: Risk Check &xrarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Risk Warning -->
+                    <div id="step2" class="step-content" style="display:none;">
+                        <div class="alert alert-danger"
+                            style="background: rgba(225, 112, 85, 0.15); border-color: var(--danger);">
+                            <h4 class="alert-heading">🛑 RISK WARNING 🛑</h4>
+                            <p>You are about to modify the <strong>LIVE TRADING BRAIN</strong>. This action will:</p>
+                            <ul>
+                                <li>Immediately affect real-time decision making.</li>
+                                <li>Potentially close existing positions logic differs.</li>
+                                <li>Risk real capital based on new model inference.</li>
+                            </ul>
+                        </div>
+                        <div class="text-center mt-4">
+                            <button class="btn btn-secondary me-2" onclick="goToStep(1)">&xlarr; Back</button>
+                            <button class="btn btn-danger" onclick="goToStep(3)">I Understand the Risks &xrarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Authorization -->
+                    <div id="step3" class="step-content" style="display:none;">
+                        <div class="form-group text-center">
+                            <label class="mb-2">Type the following phrase to confirm:</label>
+                            <div class="alert alert-secondary font-mono user-select-all" style="font-weight: bold;">
+                                DEPLOY</div>
+                            <input type="text" id="confirmPhrase" class="premium-input text-center"
+                                placeholder="Type phrase here..." autocomplete="off">
+                            <small class="text-danger d-block mt-2" id="phraseError"></small>
+                        </div>
+                        <div class="text-center mt-4">
+                            <button class="btn btn-secondary me-2" onclick="goToStep(2)">&xlarr; Back</button>
+                            <button class="btn btn-success" id="finalDeployBtn" disabled onclick="executePromotion()">🚀
+                                DEPLOY MODEL</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <!-- Create Strategy Modal (Phase 5) -->
+        <div class="modal fade" id="createStrategyModal" tabindex="-1" aria-hidden="true"
+            style="backdrop-filter: blur(5px);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content"
+                    style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Create New Strategy</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group mb-3">
+                            <label>Strategy Name</label>
+                            <input type="text" id="newStratName" class="premium-input"
+                                placeholder="e.g. ETH Mean Reversion">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label>Type</label>
+                            <select id="newStratType" class="premium-select">
+                                <option value="directional">Directional Trend</option>
+                                <option value="mean_reversion">Mean Reversion</option>
+                                <option value="arbitrage">Arbitrage</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label>Risk Profile</label>
+                            <select id="newStratRisk" class="premium-select">
+                                <option value="aggressive">Aggressive</option>
+                                <option value="balanced" selected>Balanced</option>
+                                <option value="conservative">Conservative</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" onclick="createStrategy()">Create Strategy</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const API_BASE = '/api/brain';
+            let selectedModelId = null;
+            let selectedModelVer = null;
+            let activeModelData = {};
+
+            // Training Control Center State
+            let currentTrainingJobId = null;
+            let trainingJobStartTime = null;
+            let elapsedTimeInterval = null;
+            let controlCenterCollapsed = false;
+
+            // ===== TRAINING CONTROL CENTER FUNCTIONS =====
+
+            function toggleControlCenter() {
+                const body = document.getElementById('controlCenterBody');
+                const icon = document.getElementById('collapseIcon');
+                controlCenterCollapsed = !controlCenterCollapsed;
+
+                if (controlCenterCollapsed) {
+                    body.classList.add('collapsed');
+                    icon.textContent = '+';
+                } else {
+                    body.classList.remove('collapsed');
+                    icon.textContent = '−';
+                }
+            }
+
+            function scrollLogsToBottom() {
+                const console = document.getElementById('miniConsole');
+                console.scrollTop = console.scrollHeight;
+            }
+
+            function showControlCenter(jobId, symbol = 'BTCUSDT') {
+                const center = document.getElementById('trainingControlCenter');
+                center.style.display = 'block';
+
+                currentTrainingJobId = jobId;
+                trainingJobStartTime = Date.now();
+
+                // Store in localStorage for persistence
+                localStorage.setItem('activeTrainingJob', jobId);
+                localStorage.setItem('trainingStartTime', trainingJobStartTime);
+
+                // Update UI
+                document.getElementById('currentJobId').textContent = jobId.substring(0, 8);
+                document.getElementById('currentSymbol').textContent = symbol;
+                document.getElementById('jobSummary').textContent = `Training ${symbol} - Job #${jobId.substring(0, 8)}`;
+
+                // Start elapsed time counter
+                startElapsedTimeCounter();
+
+                // Update status
+                updateControlCenterStatus('running');
+            }
+
+            function hideControlCenter(delay = 10000) {
+                setTimeout(() => {
+                    const center = document.getElementById('trainingControlCenter');
+                    center.style.display = 'none';
+
+                    currentTrainingJobId = null;
+                    localStorage.removeItem('activeTrainingJob');
+                    localStorage.removeItem('trainingStartTime');
+
+                    if (elapsedTimeInterval) {
+                        clearInterval(elapsedTimeInterval);
+                    }
+                }, delay);
+            }
+
+            function updateControlCenterStatus(status) {
+                const badge = document.getElementById('jobStatusBadge');
+                const pulse = document.getElementById('statusPulse');
+
+                badge.className = 'badge ' + status;
+                pulse.className = 'status-pulse ' + status;
+
+                badge.textContent = status.toUpperCase();
+            }
+
+            function updateControlCenterProgress(progress) {
+                const bar = document.getElementById('mainProgressBar');
+                const percent = document.getElementById('progressPercent');
+
+                bar.style.width = progress + '%';
+                percent.textContent = progress + '%';
+            }
+
+            function updateControlCenterLogs(logs) {
+                const miniConsole = document.getElementById('miniConsole');
+
+                // Parse logs and format
+                const logLines = logs.split('\n').filter(line => line.trim());
+                let formattedHTML = '';
+
+                logLines.slice(-10).forEach(line => {  // Show last 10 lines
+                    const time = new Date().toLocaleTimeString();
+                    let tag = 'INFO';
+                    let tagClass = 'console-tag-info';
+
+                    if (line.includes('ERROR') || line.includes('❌') || line.includes('FATAL')) {
+                        tag = 'ERROR';
+                        tagClass = 'console-tag-error';
+                    } else if (line.includes('SUCCESS') || line.includes('✅')) {
+                        tag = 'OK';
+                        tagClass = 'console-tag-success';
+                    } else if (line.includes('WARNING') || line.includes('⚠️')) {
+                        tag = 'WARN';
+                        tagClass = 'console-tag-warning';
+                    }
+
+                    formattedHTML += `<div class="console-entry">
+                        <span class="console-time">${time}</span>
+                        <span class="console-tag ${tagClass}">${tag}</span>
+                        <span class="console-message">${line}</span>
+                    </div>`;
+                });
+
+                miniConsole.innerHTML = formattedHTML;
+                scrollLogsToBottom();
+            }
+
+            function startElapsedTimeCounter() {
+                if (elapsedTimeInterval) clearInterval(elapsedTimeInterval);
+
+                elapsedTimeInterval = setInterval(() => {
+                    if (!trainingJobStartTime) return;
+
+                    const elapsed = Date.now() - trainingJobStartTime;
+                    const seconds = Math.floor(elapsed / 1000);
+                    const minutes = Math.floor(seconds / 60);
+                    const hours = Math.floor(minutes / 60);
+
+                    const display = hours > 0
+                        ? `${hours}h ${minutes % 60}m ${seconds % 60}s`
+                        : minutes > 0
+                            ? `${minutes}m ${seconds % 60}s`
+                            : `${seconds}s`;
+
+                    document.getElementById('elapsedTime').textContent = display;
+                }, 1000);
+            }
+
+            async function checkAndResumeActiveJobs() {
+                try {
+                    // Check localStorage first
+                    const savedJobId = localStorage.getItem('activeTrainingJob');
+                    const savedStartTime = localStorage.getItem('trainingStartTime');
+
+                    if (savedJobId) {
+                        // Verify job is still active via API
+                        const res = await fetch(`${API_BASE}/jobs/active`);
+                        const data = await res.json();
+
+                        const targetJob = data.active_jobs.find(j => j.job_id === savedJobId);
+
+                        if (targetJob) {
+                            if (targetJob.status === 'running' || targetJob.status === 'pending') {
+                                // Resume monitoring this job
+                                trainingJobStartTime = parseInt(savedStartTime) || Date.now();
+                                showControlCenter(targetJob.job_id, 'BTCUSDT');
+
+                                // Start polling
+                                if (trainingPollInterval) clearInterval(trainingPollInterval);
+                                trainingPollInterval = setInterval(() => pollJobStatus(targetJob.job_id), 2000);
+
+                                console.log('✅ Resumed monitoring job:', targetJob.job_id);
+                            } else if (targetJob.status === 'completed') {
+                                // Job finished while we were away
+                                showControlCenter(targetJob.job_id, 'BTCUSDT');
+                                document.getElementById('integratedTrainingStatus').style.display = 'block';
+                                document.getElementById('integratedStatusText').textContent = 'COMPLETED';
+                                document.getElementById('integratedStatusText').className = 'badge bg-success text-white';
+                                document.getElementById('integratedProgressBar').style.width = '100%';
+                                document.getElementById('integratedProgressText').textContent = '100%';
+
+                                // Clean up storage since it's done
+                                localStorage.removeItem('activeTrainingJob');
+                                localStorage.removeItem('trainingStartTime');
+                            } else if (targetJob.status === 'failed') {
+                                // Job failed while we were away
+                                showControlCenter(targetJob.job_id, 'BTCUSDT');
+                                document.getElementById('integratedTrainingStatus').style.display = 'block';
+                                document.getElementById('integratedStatusText').textContent = 'FAILED';
+                                document.getElementById('integratedStatusText').className = 'badge bg-danger text-white';
+
+                                // Clean up storage
+                                localStorage.removeItem('activeTrainingJob');
+                                localStorage.removeItem('trainingStartTime');
+                            }
+                        } else {
+                            // Job aged out or vanished, clean up
+                            localStorage.removeItem('activeTrainingJob');
+                            localStorage.removeItem('trainingStartTime');
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to resume active jobs:', e);
+                }
+            }
+
+            // ===== END TRAINING CONTROL CENTER =====
+
+
+            async function fetchAuditLogs() {
+                try {
+                    const res = await fetch(`${API_BASE}/audit-logs`);
+                    const logs = await res.json();
+                    const tbody = document.getElementById('auditTable');
+                    tbody.innerHTML = '';
+
+                    logs.forEach(log => {
+                        const tr = document.createElement('tr');
+                        const statusColor = log.status === 'success' ? 'text-success' : 'text-danger';
+                        tr.innerHTML = `
+                    <td class="text-secondary small">${new Date(log.timestamp).toLocaleString()}</td>
+                    <td class="font-bold">${log.action}</td>
+                    <td>${log.user_id}</td>
+                    <td class="font-mono small">${log.ip_address || '-'}</td>
+                    <td class="${statusColor}">${log.status.toUpperCase()}</td>
+                    <td class="small text-muted" style="max-width: 300px; white-space: normal;">${log.details || ''}</td>
+                `;
+                        tbody.appendChild(tr);
+                    });
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            // 1. Fetch Status with Cache Busting
+            async function fetchStatus() {
+                try {
+                    const res = await fetch(`${API_BASE}/status?_=${Date.now()}`);
+                    const data = await res.json();
+
+                    // Update Cards
+                    document.getElementById('activeModel').innerText = data.active_model || "None";
+                    document.getElementById('heartbeat').innerText = data.inference_heartbeat || "---";
+                    document.getElementById('regime').innerText = data.market_regime || "Scanning...";
+
+                    // Store for comparison
+                    activeModelData.version = data.active_model;
+
+                    // Update System Status
+                    const sysStatus = document.getElementById('systemStatus');
+                    const indicator = document.getElementById('systemStatusIndicator');
+                    const killSwitch = document.getElementById('killSwitch');
+
+                    sysStatus.innerText = data.status;
+
+                    // Rollback Button Visibility
+                    const rbBtn = document.getElementById('rollbackBtn');
+                    if (data.can_rollback) {
+                        rbBtn.style.display = 'block';
+                    } else {
+                        rbBtn.style.display = 'none';
+                    }
+
+                    if (data.status === "PAUSED") {
+                        indicator.className = "status-indicator status-danger blink";
+                        killSwitch.checked = true;
+                    } else {
+                        indicator.className = "status-indicator status-success";
+                        killSwitch.checked = false;
+                    }
+
+                } catch (e) {
+                    console.error("Status Poll Failed", e);
+                }
+            }
+
+            // 2. Fetch Models with Cache Busting
+            async function fetchModels() {
+                try {
+                    const res = await fetch(`${API_BASE}/models?_=${Date.now()}`);
+                    const models = await res.json();
+                    const tbody = document.getElementById('modelTable');
+                    tbody.innerHTML = '';
+
+                    // Capture active model full details if needed
+                    const active = models.find(m => m.status === 'active');
+                    if (active) {
+                        activeModelData = active;
+                    }
+
+                    models.forEach(m => {
+                        const tr = document.createElement('tr');
+
+                        let statusClass = "text-secondary";
+                        let statusText = m.status.toUpperCase();
+                        let rowStyle = "";
+
+                        if (m.status === 'active') {
+                            statusClass = "text-success font-bold";
+                            statusText = "✅ ACTIVE";
+                        } else if (m.status === 'shadow') {
+                            statusClass = "text-warning";
+                            statusText = "👻 SHADOW";
+                        } else if (m.status === 'deprecated') {
+                            statusClass = "text-muted";
+                            statusText = "⛔ DEPRECATED";
+                            rowStyle = "opacity: 0.6;";
+                        }
+
+                        tr.style = rowStyle;
+                        tr.innerHTML = `
+                    <td class="font-mono text-info">${m.version}</td>
+                    <td class="font-bold text-white">${m.symbol || 'ALL'}</td>
+                    <td>${m.strategy_name || 'Legacy'}</td>
+                    <td>${m.type}</td>
+                    <td class="${statusClass}">${statusText}</td>
+                    <td>${(m.metrics.win_rate || m.metrics.accuracy * 100 || 0).toFixed(1)}%</td>
+                    <td class="text-danger">${m.metrics.max_drawdown ? m.metrics.max_drawdown + '%' : '-'}</td>
+                    <td class="text-success">${m.metrics.profit_factor || '-'}</td>
+                    <td>
+                        ${m.status === 'active' ?
+                                `<span class="text-success small">Current</span>
+                                 <button onclick="deactivateModel(${m.id})" class="btn btn-sm btn-outline-danger ms-2" style="padding: 2px 8px; font-size: 0.7rem;">STOP</button>` : ''}
+                        ${(m.status === 'shadow' || m.status === 'archived') ?
+                                `<button onclick='initiatePromotion(${JSON.stringify(m)})' class="btn btn-sm btn-secondary" style="padding: 2px 8px; font-size: 0.7rem;">ACTIVATE</button>` : ''}
+                        ${(m.status !== 'active' && m.status !== 'deprecated') ?
+                                `<button onclick="deprecateModel(${m.id})" class="btn btn-sm btn-outline-danger" style="padding: 2px 8px; font-size: 0.7rem; margin-left: 5px;">Archive</button>` : ''}
+                        ${(m.status === 'deprecated') ?
+                                `<button onclick="deleteModel(${m.id})" class="btn btn-sm btn-danger" style="padding: 2px 8px; font-size: 0.7rem; margin-left: 5px;">DELETE</button>` : ''}
+                    </td>
+                `;
+                        tbody.appendChild(tr);
+                    });
+                } catch (e) {
+                    console.error("Failed to load models", e);
+                }
+            }
+
+            // 3. Check Active Jobs with Cache Busting
+            async function checkAndResumeActiveJobs() {
+                try {
+                    const savedJobId = localStorage.getItem('activeTrainingJob');
+                    const savedStartTime = localStorage.getItem('trainingStartTime');
+
+                    if (savedJobId) {
+                        const res = await fetch(`${API_BASE}/jobs/active?_=${Date.now()}`);
+                        const data = await res.json();
+
+                        const targetJob = data.active_jobs.find(j => j.job_id === savedJobId);
+
+                        if (targetJob) {
+                            if (targetJob.status === 'running' || targetJob.status === 'pending') {
+                                trainingJobStartTime = parseInt(savedStartTime) || Date.now();
+                                showControlCenter(targetJob.job_id, 'BTCUSDT'); // Defaulting symbol for now as API might not return it in list
+                                if (trainingPollInterval) clearInterval(trainingPollInterval);
+                                trainingPollInterval = setInterval(() => pollJobStatus(targetJob.job_id), 2000);
+                            } else if (targetJob.status === 'completed') {
+                                showControlCenter(targetJob.job_id, 'BTCUSDT');
+                                document.getElementById('integratedTrainingStatus').style.display = 'block';
+                                document.getElementById('integratedStatusText').textContent = 'COMPLETED';
+                                document.getElementById('integratedStatusText').className = 'badge bg-success text-white';
+                                document.getElementById('integratedProgressBar').style.width = '100%';
+                                document.getElementById('integratedProgressText').textContent = '100%';
+                                localStorage.removeItem('activeTrainingJob');
+                                localStorage.removeItem('trainingStartTime');
+                            }
+                        } else {
+                            localStorage.removeItem('activeTrainingJob');
+                            localStorage.removeItem('trainingStartTime');
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to resume active jobs:', e);
+                }
+            }
+
+            // --- PROMOTION WIZARD LOGIC ---
+            let promotionCandidate = null;
+
+            function initiatePromotion(model) {
+                promotionCandidate = model;
+                selectedModelId = model.id;
+
+                // Populate Step 1
+                document.getElementById('compareActiveVer').innerText = activeModelData.version || "None";
+                document.getElementById('compareNewVer').innerText = model.version;
+
+                document.getElementById('compareActiveType').innerText = activeModelData.type || "-";
+                document.getElementById('compareNewType').innerText = model.type;
+
+                const activeWR = activeModelData.metrics ? (activeModelData.metrics.win_rate || activeModelData.metrics.accuracy * 100 || 0) : 0;
+                const newWR = model.metrics.win_rate || model.metrics.accuracy * 100 || 0;
+                document.getElementById('compareActiveWR').innerText = activeWR.toFixed(1) + "%";
+                document.getElementById('compareNewWR').innerText = newWR.toFixed(1) + "%";
+
+                const activeDD = activeModelData.metrics ? (activeModelData.metrics.max_drawdown || 0) : 0;
+                const newDD = model.metrics.max_drawdown || 0;
+                document.getElementById('compareActiveDD').innerText = activeDD + "%";
+                document.getElementById('compareNewDD').innerText = newDD + "%";
+
+                const activePF = activeModelData.metrics ? (activeModelData.metrics.profit_factor || 0) : 0;
+                const newPF = model.metrics.profit_factor || 0;
+                document.getElementById('compareActivePF').innerText = activePF;
+                document.getElementById('compareNewPF').innerText = newPF;
+
+                // Reset Wizard
+                goToStep(1);
+                document.getElementById('confirmPhrase').value = "";
+                document.getElementById('finalDeployBtn').disabled = true;
+
+                // Show Modal
+                const modal = new bootstrap.Modal(document.getElementById('promotionModal'));
+                modal.show();
+            }
+
+            function goToStep(step) {
+                document.querySelectorAll('.step-content').forEach(el => el.style.display = 'none');
+                document.getElementById(`step${step}`).style.display = 'block';
+            }
+
+            // Phrase Check
+            document.getElementById('confirmPhrase').addEventListener('input', function (e) {
+                const val = e.target.value;
+                const btn = document.getElementById('finalDeployBtn');
+                if (val === "DEPLOY") {
+                    btn.disabled = false;
+                    e.target.classList.add('is-valid');
+                } else {
+                    btn.disabled = true;
+                    e.target.classList.remove('is-valid');
+                }
+            });
+
+            async function executePromotion() {
+                const btn = document.getElementById('finalDeployBtn');
+                btn.innerHTML = "⏳ Deploying...";
+                btn.disabled = true;
+
+                const phrase = document.getElementById('confirmPhrase').value;
+
+                try {
+                    const res = await fetch(`${API_BASE}/models/activate/${selectedModelId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ confirmation_phrase: phrase })
+                    });
+
+                    if (res.ok) {
+                        // Success
+                        bootstrap.Modal.getInstance(document.getElementById('promotionModal')).hide();
+                        fetchModels();
+                        fetchStatus();
+                        fetchAuditLogs();
+                        // Toast
+                        alert("✅ Deployment Successful! New model is live.");
+                    } else {
+                        const err = await res.json();
+                        document.getElementById('phraseError').innerText = err.error || "Deployment failed";
+                        btn.innerHTML = "Retry";
+                        btn.disabled = false;
+                    }
+                } catch (e) {
+                    alert("Error connecting to server.");
+                    btn.innerHTML = "Retry";
+                    btn.disabled = false;
+                }
+            }
+
+            // --- LIFECYCLE CONTROLS (Phase 4.3) ---
+            async function rollbackModel() {
+                if (!confirm("🛑 URGENT: Are you sure you want to ROLLBACK to the previous model? This is an emergency action.")) return;
+
+                try {
+                    const res = await fetch(`${API_BASE}/models/rollback`, { method: 'POST' });
+                    if (res.ok) {
+                        alert("✅ Rolled back successfully.");
+                        fetchStatus();
+                        fetchModels();
+                        fetchAuditLogs();
+                    } else {
+                        const err = await res.json();
+                        alert("❌ Rollback failed: " + err.error);
+                    }
+                } catch (e) {
+                    alert("Network error during rollback");
+                }
+            }
+
+            async function deprecateModel(id) {
+                if (!confirm("Mark this model as DEPRECATED? It will be locked from future activation.")) return;
+                try {
+                    const res = await fetch(`${API_BASE}/models/${id}/status`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'deprecated' })
+                    });
+                    if (res.ok) {
+                        fetchModels();
+                        fetchAuditLogs();
+                    } else {
+                        alert("Failed to deprecate.");
+                    }
+                } catch (e) { console.error(e); }
+            }
+
+            async function deleteModel(id) {
+                if (!confirm("PERMANENTLY DELETE this model file? This cannot be undone.")) return;
+                try {
+                    const res = await fetch(`${API_BASE}/models/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        fetchModels();
+                        alert("Model deleted.");
+                    } else {
+                        alert("Failed to delete.");
+                    }
+                } catch (e) { console.error(e); }
+            }
+
+            async function deactivateModel(id) {
+                if (!confirm("🛑 STOP TRADING? This will deactivate the model. No signals will be generated for this symbol until you activate another model.")) return;
+                try {
+                    const res = await fetch(`${API_BASE}/models/deactivate/${id}`, { method: 'POST' });
+                    const data = await res.json();
+                    if (res.ok) {
+                        fetchModels();
+                        fetchStatus();
+                        alert("✅ Model Stopped (Deactivated).");
+                    } else {
+                        alert("Failed to deactivate: " + (data.error || "Unknown"));
+                    }
+                } catch (e) { alert("Network error"); }
+            }
+            // --- END LIFECYCLE ---
+
+            // --- END WIZARD ---
+
+            // async function activateModel(id) { 
+            //     if (!confirm("⚠️ CAUTION: You are about to hot-swap the live AI model. This will affect real-time trading decisions. Continue?")) return;
+
+            //     try {
+            //         const res = await fetch(`${API_BASE}/models/activate/${id}`, { method: 'POST' });
+            //         if (res.ok) {
+            //             // Show success toast or feedback
+            //             const btn = document.activeElement;
+            //             if (btn) {
+            //                 btn.innerText = "ACTIVATING...";
+            //                 btn.disabled = true;
+            //             }
+            //             setTimeout(() => {
+            //                 fetchModels();
+            //                 fetchStatus();
+            //             }, 1000);
+            //         } else {
+            //             alert("Failed to activate model.");
+            //         }
+            //     } catch (e) {
+            //         alert("Error connecting to server.");
+            //     }
+            // }
+
+            let trainingPollInterval = null;
+
+            async function spawnAutoJob() {
+                const symbol = document.getElementById('trainSymbol').value.toUpperCase();
+                const logs = document.getElementById('jobLogs');
+
+                if (!symbol) {
+                    alert("Please enter a symbol (e.g. BTCUSDT)");
+                    return;
+                }
+
+                if (!confirm(`Start AutoML Grid Search for ${symbol}?\n\nThis will test 9 configurations:\n- Timeframes: 15m, 1h, 4h\n- Durations: 6mo, 1yr, 2yr\n\nEstimated time: 10-20 minutes.`)) {
+                    return;
+                }
+
+                // Reset Logs
+                logs.innerHTML = `<div class="console-entry">
+                    <span class="console-time">${new Date().toLocaleTimeString()}</span>
+                    <span class="console-tag console-tag-info" style="background:#6c5ce7">AUTOML</span>
+                    <span class="console-message">🧠 Initializing Grid Search for ${symbol}...</span>
+                </div>`;
+
+                // Show integrated status
+                document.getElementById('integratedTrainingStatus').style.display = 'block';
+                document.getElementById('integratedStatusText').textContent = 'QUEUED';
+                document.getElementById('integratedStatusText').className = 'badge bg-warning text-dark';
+                document.getElementById('integratedProgressText').textContent = '0%';
+                document.getElementById('integratedProgressBar').style.width = '0%';
+
+                // Clear previous poll
+                if (trainingPollInterval) clearInterval(trainingPollInterval);
+
+                try {
+                    const res = await fetch(`${API_BASE}/train_auto`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ symbol })
+                    });
+                    const data = await res.json();
+
+                    if (data.job_id) {
+                        logs.innerHTML += `<div class="console-entry">
+                            <span class="console-time">${new Date().toLocaleTimeString()}</span>
+                            <span class="console-tag console-tag-success">SUCCESS</span>
+                            <span class="console-message">✅ AutoML Job Started: ${data.job_id}</span>
+                        </div>`;
+
+                        // Start Polling
+                        trainingPollInterval = setInterval(() => pollJobStatus(data.job_id), 2000);
+
+                    } else {
+                        alert(data.error || "Failed to start job");
+                        logs.innerHTML += `<div class="console-entry text-danger">❌ Error: ${data.error}</div>`;
+                    }
+                } catch (e) {
+                    alert("Request failed: " + e);
+                    console.error(e);
+                }
+            }
+
+            async function spawnJob() {
+                const symbol = document.getElementById('trainSymbol').value.toUpperCase();
+                const type = document.getElementById('modelType').value;
+                const timeframe = document.getElementById('trainTimeframe').value;
+                const lookback_days = parseInt(document.getElementById('trainLookback').value);
+                const logs = document.getElementById('jobLogs');
+
+                if (!symbol) {
+                    alert("Please enter a symbol (e.g. BTCUSDT)");
+                    return;
+                }
+
+                // Reset Logs
+                logs.innerHTML = `<div class="console-entry">
+                    <span class="console-time">${new Date().toLocaleTimeString()}</span>
+                    <span class="console-tag console-tag-info">SPAWN</span>
+                    <span class="console-message">🚀 Spawning training job: ${symbol} | ${timeframe} | ${lookback_days} days...</span>
+                </div>`;
+
+                // Clear previous poll
+                if (trainingPollInterval) clearInterval(trainingPollInterval);
+
+                try {
+                    const res = await fetch(`${API_BASE}/train`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            symbol,
+                            type,
+                            epochs: 10,
+                            timeframe,
+                            lookback_days
+                        })
+                    });
+                    const data = await res.json();
+
+                    if (data.job_id) {
+                        logs.innerHTML += `<div class="console-entry">
+                            <span class="console-time">${new Date().toLocaleTimeString()}</span>
+                            <span class="console-tag console-tag-success">SUCCESS</span>
+                            <span class="console-message">✅ Job Started: ${data.job_id}</span>
+                        </div>`;
+                        logs.innerHTML += `<div class="console-entry">
+                            <span class="console-time">${new Date().toLocaleTimeString()}</span>
+                            <span class="console-tag console-tag-info">WORKER</span>
+                            <span class="console-message">Initializing training worker...</span>
+                        </div>`;
+
+                        // Show Integrated Status
+                        document.getElementById('integratedTrainingStatus').style.display = 'block';
+                        document.getElementById('integratedStatusText').textContent = 'STARTING';
+                        document.getElementById('integratedStatusText').className = 'badge bg-info text-white';
+                        document.getElementById('integratedProgressBar').style.width = '0%';
+                        document.getElementById('integratedProgressText').textContent = '0%';
+
+                        // Start Polling
+                        trainingPollInterval = setInterval(() => pollJobStatus(data.job_id), 2000);
+
+                    } else {
+                        logs.innerHTML += `<div class="console-entry">
+                            <span class="console-time">${new Date().toLocaleTimeString()}</span>
+                            <span class="console-tag console-tag-error">ERROR</span>
+                            <span class="console-message">❌ Failed to spawn job: ${data.error || 'Unknown error'}</span>
+                        </div>`;
+                    }
+                } catch (e) {
+                    logs.innerHTML += `<div class="console-entry">
+                        <span class="console-time">${new Date().toLocaleTimeString()}</span>
+                        <span class="console-tag console-tag-error">ERROR</span>
+                        <span class="console-message">❌ Network Error</span>
+                    </div>`;
+                }
+            }
+
+            async function pollJobStatus(jobId) {
+                try {
+                    const logsDiv = document.getElementById('jobLogs');
+                    const res = await fetch(`${API_BASE}/train/status/${jobId}`);
+                    if (!res.ok) return;
+
+                    const job = await res.json();
+
+                    // Update Integrated Status
+                    const prog = job.progress || 0;
+                    document.getElementById('integratedProgressBar').style.width = prog + '%';
+                    document.getElementById('integratedProgressText').textContent = prog + '%';
+
+                    if (job.status === 'running') {
+                        const badger = document.getElementById('integratedStatusText');
+                        badger.textContent = 'RUNNING';
+                        badger.className = 'badge bg-primary text-white';
+                    }
+
+                    // Parse and format logs line by line
+                    const logLines = (job.logs || "").split('\n').filter(line => line.trim());
+                    let formattedHTML = '';
+
+                    logLines.forEach(line => {
+                        const time = new Date().toLocaleTimeString();
+                        let tag = 'INFO';
+                        let tagClass = 'console-tag-info';
+
+                        if (line.includes('ERROR') || line.includes('❌') || line.includes('FATAL')) {
+                            tag = 'ERROR';
+                            tagClass = 'console-tag-error';
+                        } else if (line.includes('SUCCESS') || line.includes('✅') || line.includes('COMPLETED')) {
+                            tag = 'SUCCESS';
+                            tagClass = 'console-tag-success';
+                        } else if (line.includes('WARNING') || line.includes('⚠️')) {
+                            tag = 'WARN';
+                            tagClass = 'console-tag-warning';
+                        }
+
+                        formattedHTML += `<div class="console-entry">
+                            <span class="console-time">${time}</span>
+                            <span class="console-tag ${tagClass}">${tag}</span>
+                            <span class="console-message">${line}</span>
+                        </div>`;
+                    });
+
+                    logsDiv.innerHTML = formattedHTML;
+
+                    // Add status indicator
+                    if (job.status === 'running') {
+                        logsDiv.innerHTML += `<div class="console-entry">
+                            <span class="console-time">${new Date().toLocaleTimeString()}</span>
+                            <span class="console-tag console-tag-info">STATUS</span>
+                            <span class="console-message">🔄 Running... (${job.progress}%)</span>
+                        </div>`;
+                        // Auto scroll
+                        logsDiv.scrollTop = logsDiv.scrollHeight;
+                    } else if (job.status === 'completed') {
+                        logsDiv.innerHTML += `<div class="console-entry">
+                            <span class="console-time">${new Date().toLocaleTimeString()}</span>
+                            <span class="console-tag console-tag-success">DONE</span>
+                            <span class="console-message">✅ COMPLETED</span>
+                        </div>`;
+                        clearInterval(trainingPollInterval);
+                        fetchModels(); // Refresh registry
+
+                        // Update Integrated Status
+                        const badger = document.getElementById('integratedStatusText');
+                        badger.textContent = 'COMPLETED';
+                        badger.className = 'badge bg-success text-white';
+                        document.getElementById('integratedProgressBar').style.width = '100%';
+                        document.getElementById('integratedProgressText').textContent = '100%';
+                    } else if (job.status === 'failed') {
+                        logsDiv.innerHTML += `<div class="console-entry">
+                            <span class="console-time">${new Date().toLocaleTimeString()}</span>
+                            <span class="console-tag console-tag-error">FAIL</span>
+                            <span class="console-message">❌ FAILED</span>
+                        </div>`;
+                        clearInterval(trainingPollInterval);
+
+                        document.getElementById('integratedStatusText').textContent = 'FAILED';
+                        document.getElementById('integratedStatusText').className = 'badge bg-danger text-white';
+                    }
+
+                } catch (e) { console.error("Poll Error", e); }
+            }
+
+            // Styles for the switch customized for this dashboard if needed
+            // Assuming base CSS has .switch, but verifying visual alignment
+
+            async function fetchShadowStats() {
+                try {
+                    const res = await fetch(`${API_BASE}/shadow/stats`);
+                    const stats = await res.json();
+                    const tbody = document.getElementById('shadowTable');
+                    tbody.innerHTML = '';
+
+                    if (Object.keys(stats).length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No shadow predictions recorded in last 24h.</td></tr>';
+                        return;
+                    }
+
+                    Object.keys(stats).forEach(ver => {
+                        const s = stats[ver];
+                        const tr = document.createElement('tr');
+
+                        const long = s.signals.LONG || 0;
+                        const short = s.signals.SHORT || 0;
+                        const flat = s.signals.FLAT || 0;
+                        async function resumeStrategy(id) {
+                            if (!confirm("Are you sure you want to RESET the circuit breaker and RESUME this strategy?")) return;
+                            try {
+                                const res = await fetch(`${API_BASE}/strategies/${id}/resume`, { method: 'POST' });
+                                if (res.ok) {
+                                    fetchStrategies();
+                                    fetchAuditLogs();
+                                } else {
+                                    alert("Failed to resume.");
+                                }
+                            } catch (e) { console.error(e); }
+                        }
+
+                        // --- Phase 5.3: Capital Allocation Controls ---
+                        async function updateAllocation(id, val) {
+                            try {
+                                const res = await fetch(`${API_BASE}/strategies/${id}/allocation`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ weight: val })
+                                });
+                                if (!res.ok) alert("Failed to update weight");
+                            } catch (e) { console.error(e); }
+                        }
+
+                        // --- Phase 5.5: Simulation Logic ---
+                        let simChart = null;
+                        async function runSimulation() {
+                            const btn = event.target;
+                            const originalText = btn.innerText;
+                            btn.innerText = "Running...";
+                            btn.disabled = true;
+
+                            try {
+                                const res = await fetch(`${API_BASE}/simulate/portfolio`, { method: 'POST' });
+                                const data = await res.json();
+
+                                if (data.error) throw new Error(data.error);
+
+                                renderSimChart(data.equity_curve);
+                                renderCorrelationMatrix(data.correlation_matrix);
+
+                            } catch (e) {
+                                alert("Simulation failed: " + e.message);
+                            } finally {
+                                btn.innerText = originalText;
+                                btn.disabled = false;
+                            }
+                        }
+
+                        function renderSimChart(curveData) {
+                            const ctx = document.getElementById('simChart').getContext('2d');
+                            const labels = curveData.map(d => `Day ${d.day}`);
+                            const values = curveData.map(d => d.equity);
+
+                            if (simChart) simChart.destroy();
+
+                            simChart = new Chart(ctx, {
+                                type: 'line',
+                                data: {
+                                    labels: labels,
+                                    datasets: [{
+                                        label: 'Projected Equity ($)',
+                                        data: values,
+                                        borderColor: '#00d2d3',
+                                        backgroundColor: 'rgba(0, 210, 211, 0.1)',
+                                        fill: true,
+                                        tension: 0.4
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { legend: { display: false } },
+                                    scales: {
+                                        y: { grid: { color: '#333' } },
+                                        x: { grid: { display: false } }
+                                    }
+                                }
+                            });
+                        }
+
+                        function renderCorrelationMatrix(data) {
+                            const container = document.getElementById('corrMatrix');
+                            container.innerHTML = '';
+                            const size = data.labels.length;
+
+                            container.style.gridTemplateColumns = `repeat(${size + 1}, 1fr)`;
+
+                            // Header
+                            container.appendChild(document.createElement('div'));
+                            data.labels.forEach(l => {
+                                const el = document.createElement('div');
+                                el.className = "small font-bold text-center text-truncate";
+                                el.title = l;
+                                el.innerText = l.substring(0, 4);
+                                container.appendChild(el);
+                            });
+
+                            // Rows
+                            data.matrix.forEach((row, i) => {
+                                const label = document.createElement('div');
+                                label.className = "small font-bold text-truncate";
+                                label.title = data.labels[i];
+                                label.innerText = data.labels[i].substring(0, 4);
+                                container.appendChild(label);
+
+                                row.forEach(val => {
+                                    const cell = document.createElement('div');
+                                    cell.className = "text-center small p-1";
+                                    cell.innerText = val.toFixed(1);
+                                    if (val > 0.7) cell.style.background = 'rgba(239, 68, 68, 0.5)';
+                                    else if (val < 0) cell.style.background = 'rgba(0, 210, 211, 0.3)';
+                                    else cell.style.background = 'rgba(255, 255, 255, 0.1)';
+                                    container.appendChild(cell);
+                                });
+                            });
+                        }
+                        // Promote Button (Requires ID? But stats is keyed by version. We need ID for activate endpoint.)
+                        // Current stats API only returns version as key.
+                        // We logic: Retrieve ID from local 'models' array if available? 
+                        // Alternatively, API should return ID.
+                        // For MVP, we can't promote easily from here without ID.
+                        // Let's rely on Model Registry for "Activate" action, this is for Analysis.
+
+                        tr.innerHTML = `
+                    <td class="font-mono text-warning">${ver}</td>
+                    <td>${s.count}</td>
+                    <td>${(s.avg_confidence * 100).toFixed(1)}%</td>
+                    <td>
+                        <span class="text-success">L:${long}</span> / 
+                        <span class="text-danger">S:${short}</span> / 
+                        <span class="text-secondary">F:${flat}</span>
+                    </td>
+                    <td>
+                        <span class="text-secondary small">See Registry to Promote</span>
+                    </td>
+                `;
+                        tbody.appendChild(tr);
+                    });
+
+                } catch (e) {
+                    console.error("Failed to load shadow stats", e);
+                }
+            }
+            async function fetchStrategies() {
+                try {
+                    const res = await fetch(`${API_BASE}/strategies`);
+                    const strategies = await res.json();
+
+                    // Populate Dropdown
+                    const select = document.getElementById('trainStrategy');
+                    select.innerHTML = '<option value="">-- Legacy (No Strategy) --</option>';
+
+                    strategies.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s.id;
+                        opt.innerText = `${s.name} (${s.type})`;
+                        select.appendChild(opt);
+                    });
+
+                    // Render Allocation Panel (if it exists)
+                    const allocDiv = document.getElementById('allocationContainer');
+                    if (allocDiv) {
+                        allocDiv.innerHTML = '';
+
+                        strategies.forEach(s => {
+                            const row = document.createElement('div');
+                            row.className = "mb-3";
+
+                            let controls = `
+                            <div class="d-flex align-items-center">
+                                <input type="range" class="premium-slider flex-grow-1 me-2" 
+                                       min="0" max="2" step="0.1" value="${s.capital_weight}"
+                                       onchange="updateAllocation(${s.id}, this.value)"
+                                       oninput="document.getElementById('weightVal_${s.id}').innerText = (this.value * 100).toFixed(0) + '%'">
+                                <span class="text-muted small" style="width: 40px; text-align: right;">Max</span>
+                            </div>`;
+
+                            if (s.status === 'paused_risk') {
+                                controls = `
+                                <div class="alert alert-danger p-1 small mb-0 d-flex justify-content-between align-items-center">
+                                    <span>🛑 <b>CIRCUIT BREAKER: ${s.consecutive_losses} LOSSES</b></span>
+                                    <button class="btn btn-sm btn-outline-light" onclick="resumeStrategy(${s.id})" style="font-size: 0.7rem;">RESUME</button>
+                                </div>
+                            `;
+                            }
+
+                            row.innerHTML = `
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small font-bold">${s.name}</span>
+                                <span class="small text-info" id="weightVal_${s.id}">${(s.capital_weight * 100).toFixed(0)}%</span>
+                            </div>
+                            ${controls}
+                        `;
+                            allocDiv.appendChild(row);
+                        });
+                    }
+
+                } catch (e) { console.error("Failed to load strategies", e); }
+            }
+        </script>
+
+        <style>
+            /* Custom overrides for the Brain Dashboard specific elements */
+            .logs-container::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            .logs-container::-webkit-scrollbar-thumb {
+                background: #333;
+                border-radius: 4px;
+            }
+
+            .logs-container::-webkit-scrollbar-track {
+                background: #000;
+            }
+
+            /* Fix for grid card alignment */
+            .dashboard-grid {
+                align-items: stretch;
+            }
+
+            .dashboard-card {
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .card-body,
+            .data-table-container,
+            .premium-console {
+                flex-grow: 1;
+            }
+
+            /* Toggle Switch Style (if not global) */
+            .switch {
+                position: relative;
+                display: inline-block;
+                width: 40px;
+                height: 22px;
+            }
+
+            .switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+
+            .slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: #ccc;
+                transition: .4s;
+            }
+
+            .slider:before {
+                position: absolute;
+                content: "";
+                height: 16px;
+                width: 16px;
+                left: 3px;
+                bottom: 3px;
+                background-color: white;
+                transition: .4s;
+            }
+
+            input:checked+.slider {
+                background-color: #ef4444;
+                /* Red for kill switch active */
+            }
+
+            input:focus+.slider {
+                box-shadow: 0 0 1px #ef4444;
+            }
+
+            input:checked+.slider:before {
+                transform: translateX(18px);
+            }
+
+            .slider.round {
+                border-radius: 34px;
+            }
+
+            .slider.round:before {
+                border-radius: 50%;
+            }
+
+            .blink {
+                animation: blinker 1s linear infinite;
+            }
+
+            @keyframes blinker {
+                50% {
+                    opacity: 0;
+                }
+            }
+
+            .premium-input,
+            .premium-select {
+                width: 100%;
+                padding: 10px;
+                background: rgba(0, 0, 0, 0.3);
+                border: 1px solid var(--border-color);
+                color: var(--text-primary);
+                border-radius: 8px;
+                font-family: var(--font-family);
+                transition: border 0.3s ease, box-shadow 0.3s ease;
+            }
+
+            .premium-input:focus,
+            .premium-select:focus {
+                outline: none;
+                border-color: var(--primary);
+                box-shadow: 0 0 10px rgba(0, 212, 170, 0.2);
+            }
+
+            .premium-input {
+                font-family: monospace;
+                /* For symbols */
+            }
+
+            /* Phase 5 Premium Slider */
+            .premium-slider {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 100%;
+                height: 6px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 3px;
+                outline: none;
+                opacity: 0.8;
+                transition: opacity .2s;
+            }
+
+            .premium-slider:hover {
+                opacity: 1;
+            }
+
+            .premium-slider::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 16px;
+                height: 16px;
+                background: var(--primary);
+                /* Teal */
+                border-radius: 50%;
+                cursor: pointer;
+                box-shadow: 0 0 10px rgba(0, 212, 170, 0.5);
+                transition: transform 0.1s;
+            }
+
+            .premium-slider::-webkit-slider-thumb:hover {
+                transform: scale(1.1);
+            }
+
+            .premium-slider::-moz-range-thumb {
+                width: 16px;
+                height: 16px;
+                background: var(--primary);
+                border-radius: 50%;
+                cursor: pointer;
+                box-shadow: 0 0 10px rgba(0, 212, 170, 0.5);
+            }
+        </style>
+
+        <script>
+            // Init
+            document.addEventListener('DOMContentLoaded', () => {
+                fetchStatus();
+                fetchModels();
+                fetchAuditLogs();
+                fetchStrategies(); // Added Phase 5
+                fetchShadowStats();
+
+                // Auto-resume active training jobs
+                checkAndResumeActiveJobs();
+
+                setInterval(fetchStatus, 3000);
+                setInterval(fetchAuditLogs, 5000); // Poll logs
+                setInterval(fetchShadowStats, 10000); // Poll slower
+            });
+
+            // PHASE 6: MODEL HEALTH MONITOR JAVASCRIPT
+            // Add these functions to the <script> section in brain_dashboard.html
+
+            // ===== HEALTH MONITORING FUNCTIONS =====
+
+            async function fetchHealthMetrics() {
+                try {
+                    const res = await fetch(`${API_BASE}/performance/active`);
+                    if (!res.ok) {
+                        console.log('No active model or health data not available yet');
+                        return;
+                    }
+
+                    const data = await res.json();
+
+                    // Update health badge
+                    const badge = document.getElementById('healthBadge');
+                    if (badge) {
+                        badge.textContent = data.health_state;
+                        badge.style.padding = '4px 12px';
+                        badge.style.borderRadius = '12px';
+                        badge.style.fontSize = '0.75rem';
+                        badge.style.fontWeight = '700';
+                        badge.style.textTransform = 'uppercase';
+                        badge.style.letterSpacing = '0.5px';
+
+                        if (data.health_state === 'HEALTHY') {
+                            badge.style.background = 'rgba(0, 212, 170, 0.2)';
+                            badge.style.color = '#00d4aa';
+                            badge.style.border = '1px solid #00d4aa';
+                        } else if (data.health_state === 'DEGRADING') {
+                            badge.style.background = 'rgba(255, 193, 7, 0.2)';
+                            badge.style.color = '#ffc107';
+                            badge.style.border = '1px solid #ffc107';
+                        } else if (data.health_state === 'FAILING') {
+                            badge.style.background = 'rgba(225, 112, 85, 0.2)';
+                            badge.style.color = '#e17055';
+                            badge.style.border = '1px solid #e17055';
+                        } else {
+                            badge.style.background = 'rgba(108, 117, 125, 0.2)';
+                            badge.style.color = '#6c757d';
+                            badge.style.border = '1px solid #6c757d';
+                        }
+                    }
+
+                    // Update metrics
+                    if (data.metrics) {
+                        const winRate = document.getElementById('winRate7d');
+                        if (winRate) {
+                            winRate.textContent = ((data.metrics.win_rate_7d || 0) * 100).toFixed(1) + '%';
+                        }
+
+                        const avgConf = document.getElementById('avgConfidence');
+                        if (avgConf) {
+                            avgConf.textContent = ((data.metrics.avg_confidence_7d || 0) * 100).toFixed(1) + '%';
+                        }
+
+                        const drawdown = document.getElementById('currentDrawdown');
+                        if (drawdown) {
+                            drawdown.textContent = (data.metrics.current_drawdown_pct || 0).toFixed(1) + '%';
+                        }
+
+                        const streak = document.getElementById('lossStreak');
+                        if (streak) {
+                            streak.textContent = data.metrics.consecutive_losses || 0;
+                        }
+
+                        const score = document.getElementById('healthScore');
+                        if (score) {
+                            score.textContent = ((data.health_score || 0) * 100).toFixed(0) + '/100';
+                        }
+
+                        // Update bias chart
+                        const biasLong = document.getElementById('biasLong');
+                        const biasShort = document.getElementById('biasShort');
+                        const biasFlat = document.getElementById('biasFlat');
+
+                        if (biasLong && biasShort && biasFlat && data.metrics.signal_bias) {
+                            const longPct = (data.metrics.signal_bias.long || 0.33) * 100;
+                            const shortPct = (data.metrics.signal_bias.short || 0.33) * 100;
+                            const flatPct = (data.metrics.signal_bias.flat || 0.34) * 100;
+
+                            biasLong.style.width = longPct + '%';
+                            biasShort.style.width = shortPct + '%';
+                            biasFlat.style.width = flatPct + '%';
+                        }
+                    }
+
+                    // Update last check time
+                    if (data.last_check) {
+                        const lastCheck = document.getElementById('lastCheck');
+                        if (lastCheck) {
+                            lastCheck.textContent = new Date(data.last_check).toLocaleTimeString();
+                        }
+                    }
+
+                    // Show auto-pause warning if active
+                    const warning = document.getElementById('autoPauseWarning');
+                    if (data.auto_paused && warning) {
+                        warning.style.display = 'block';
+                        const reason = document.getElementById('autoPauseReason');
+                        if (reason) {
+                            reason.textContent = data.auto_pause_reason;
+                        }
+                    } else if (warning) {
+                        warning.style.display = 'none';
+                    }
+
+                } catch (e) {
+                    console.error('Failed to fetch health metrics:', e);
+                }
+            }
+
+            async function manualResume() {
+                const confirmed = confirm(
+                    '⚠️ MANUAL OVERRIDE WARNING\n\n' +
+                    'You are about to manually resume signals after an automatic pause.\n\n' +
+                    'The watchdog detected a problem with the model and paused signals for your protection.\n\n' +
+                    'Are you ABSOLUTELY SURE you want to override this safety measure?\n\n' +
+                    'You will need to monitor the system very closely after resuming.'
+                );
+
+                if (!confirmed) return;
+
+                const phrase = prompt('Enter confirmation phrase exactly as shown:\n\nMANUAL OVERRIDE CONFIRMED');
+                if (phrase !== 'MANUAL OVERRIDE CONFIRMED') {
+                    alert('❌ Incorrect confirmation phrase. Override cancelled.');
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`${API_BASE}/watchdog/resume`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ confirmation_phrase: phrase })
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        alert('✅ ' + data.message + '\n\nSignals have been resumed. Monitor the system closely!');
+                        fetchHealthMetrics();
+                        fetchStatus();
+                    } else {
+                        alert('❌ Error: ' + (data.error || 'Unknown error'));
+                    }
+                } catch (e) {
+                    alert('❌ Network error: ' + e.message);
+                }
+            }
+
+            // ===== INITIALIZATION =====
+
+            // Add to existing DOMContentLoaded event
+            document.addEventListener('DOMContentLoaded', () => {
+                // ... existing initialization code ...
+
+                // Phase 6: Start health monitoring
+                fetchHealthMetrics();
+                setInterval(fetchHealthMetrics, 10000);  // Poll every 10 seconds
+            });
+
+
+            async function updateGovernorStream() {
+                try {
+                    const response = await fetch('/api/governor/activity');
+                    const data = await response.json();
+
+                    const stream = document.getElementById('governorStream');
+                    if (!data.decisions || data.decisions.length === 0) {
+                        // Keep placebo if empty
+                        return;
+                    }
+
+                    // Clear placeholder if exists
+                    if (stream.innerHTML.includes("Waiting for decisions")) {
+                        stream.innerHTML = "";
+                    }
+
+                    // Render decisions (append any new ones? simpler to re-render sorted for now)
+                    // Ideally we prepend new ones.
+                    // Let's just re-render last 20 reversed (Newest First)
+                    stream.innerHTML = data.decisions.map(d => {
+                        let color = 'var(--text-secondary)';
+                        if (d.action === 'BUY') color = 'var(--success)';
+                        if (d.action === 'SELL') color = 'var(--danger)';
+                        if (d.action === 'HOLD') color = 'var(--warning)';
+
+                        const timeStr = new Date(d.timestamp * 1000).toLocaleTimeString();
+
+                        return `<div style="border-bottom: 1px solid var(--border-color); padding: 8px 0; display: flex; justify-content: space-between;">
+                    <span><span style="color: var(--text-muted); margin-right: 10px;">[${timeStr}]</span> 
+                    <b>${d.symbol}</b>: <span style="color: ${color}; font-weight: bold;">${d.action}</span> 
+                    <span style="font-size: 0.8em; margin-left: 10px;">(Conf: ${d.confidence.toFixed(2)})</span></span>
+                    <span style="color: var(--text-secondary); font-size: 0.8em;">${d.reason}</span>
+                </div>`;
+                    }).join('');
+
+                    // Update Oracle Widget (using first available symbol for demo)
+                    const symbols = Object.keys(data.oracle_advice);
+                    if (symbols.length > 0) {
+                        const advice = data.oracle_advice[symbols[0]];
+                        const regime = advice.regime.toUpperCase();
+                        document.getElementById('oracleRegime').textContent = regime;
+
+                        if (regime.includes('BULL')) document.getElementById('oracleRegime').style.color = 'var(--success)';
+                        else if (regime.includes('BEAR')) document.getElementById('oracleRegime').style.color = 'var(--danger)';
+                        else document.getElementById('oracleRegime').style.color = 'var(--warning)';
+
+                        const confPct = (advice.confidence * 100).toFixed(0);
+                        document.getElementById('oracleConfidenceBar').style.width = `${confPct}%`;
+                        document.getElementById('oracleConfidenceText').textContent = `Confidence: ${confPct}%`;
+                    }
+
+                } catch (e) {
+                    console.error("Governor stream error", e);
+                }
+            }
+
+            // Start Polling
+            setInterval(updateGovernorStream, 3000); // Fast 3s poll
+            updateGovernorStream();
+
+        </script>
+        {% endblock %}

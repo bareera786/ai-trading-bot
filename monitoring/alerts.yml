@@ -1,0 +1,20 @@
+groups:
+- name: brain_alerts
+  rules:
+  - alert: BrainKillSwitchActive
+    expr: brain_signals_paused > 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Brain Kill Switch is ACTIVE"
+      description: "Trading signals have been PAUSED globally. Check logs for safety triggers."
+
+  - alert: TrainingJobFailures
+    expr: rate(training_job_failures_total[5m]) > 0
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Training Jobs are failing"
+      description: "One or more training jobs failed to enqueue or execute in the last 5 minutes."

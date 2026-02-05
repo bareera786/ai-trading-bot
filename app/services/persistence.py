@@ -204,88 +204,15 @@ class ProfessionalPersistence:
         *,
         profile: str | None = None,
     ) -> bool:
-        """Persist the full bot state to disk."""
-        # Ensure directories exist first
-        persist_dir = ensure_persistence_dirs(profile)
-
-        # Update file paths to use the ensured directory
-        state_file = persist_dir / "bot_state.json"
-        backup_dir = persist_dir / "backups"
-
-        # Lightweight debug logging to help diagnose state mismatches
-        try:
-            # Print to stdout so container logs always show this regardless
-            # of logging configuration. This is intentionally concise.
-            print(
-                f"[PERSIST DEBUG] saving trader flags: id(trader)={id(trader)}, trading_enabled={getattr(trader, 'trading_enabled', None)}, paper_trading={getattr(trader, 'paper_trading', None)}, futures_trading_enabled={getattr(trader, 'futures_trading_enabled', None)}"
-            )
-        except Exception:
-            pass
-        try:
-            # Debug: log key trader flags at save time to diagnose mismatch
-            try:
-                t_enabled = getattr(trader, "trading_enabled", None)
-                t_paper = getattr(trader, "paper_trading", None)
-            except Exception:
-                t_enabled = None
-                t_paper = None
-            logger.info(
-                "Persistence.save_complete_state called - id(trader)=%s, trading_enabled=%s, paper_trading=%s",
-                id(trader),
-                t_enabled,
-                t_paper,
-            )
-            state = {
-                "version": self.current_version,
-                "timestamp": datetime.now().isoformat(),
-                "trader_state": self._get_trader_state(trader),
-                "ml_system_state": self._get_ml_system_state(ml_system),
-                "configuration": {
-                    "TRADING_CONFIG": config,
-                    "TOP_SYMBOLS": symbols,
-                    "MARKET_CAP_WEIGHTS": self._market_cap_weights_provider(),
-                },
-                "historical_data_summary": self._summarize_historical_data(
-                    historical_data
-                ),
-                "futures_manual_settings": self._futures_settings_getter() or {},
-                "system_metrics": {
-                    "total_uptime": self._calculate_uptime(),
-                    "save_count": self._get_save_count(profile),
-                    "last_trade_time": trader.trade_history.get_trade_history()[-1][
-                        "timestamp"
-                    ]
-                    if trader.trade_history.get_trade_history()
-                    else None,
-                },
-            }
-
-            # Validate pnl before persisting state
-            def validate_pnl(trade):
-                if trade.get("status") == "CLOSED" and _to_float(trade.get("pnl", 0)) == 0:
-                    raise ValueError("Invalid pnl for CLOSED trade")
-
-            # Create backup directory if it doesn't exist
-            backup_dir.mkdir(exist_ok=True)
-
-            # Compress and save the state
-            backup_file = backup_dir / f"state_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json.zst"
-            self.compressor.compress_json(state, backup_file)
-
-            with _bot_state_file_lock(state_file):
-                _atomic_write_json(state_file, {
-                    **state,
-                    "trades": [
-                        validate_pnl(trade) or trade for trade in state.get("trades", [])
-                    ],
-                })
-
-            self._save_critical_components(trader, ml_system)
-            self._update_save_count(profile)
-            return True
-        except Exception as exc:  # pragma: no cover - defensive logging
-            print(f"❌ Error saving bot state: {exc}")
-            return False
+        """
+        [DEPRECATED] Persist the full bot state to disk.
+        
+        PHASE 5 REFACTOR: File-based persistence is DISABLED for SaaS safety.
+        All state is now presumed to be in the Postgres Database (User/UserTrade models).
+        This function remains as a stub to prevent interface breakage but does NOT write to disk.
+        """
+        # logger.debug("Filesystem persistence is disabled. Relying on DB.")
+        return True
 
     def load_complete_state(
         self,
@@ -306,14 +233,14 @@ class ProfessionalPersistence:
         state_file = persist_dir / "bot_state.json"
 
         if not state_file.exists():
-            print("💾 No previous state found - starting fresh")
+            logger.info("No previous state found - starting fresh")
             return False
         try:
             with open(state_file, "r") as handle:
                 state = json.load(handle)
 
             if not self._check_version_compatibility(state.get("version", "1.0")):
-                print("⚠️ State version mismatch - some data may not load correctly")
+                logger.warning("State version mismatch - some data may not load correctly")
 
             self._restore_trader_state(trader, state.get("trader_state", {}))
             if restore_ml_state:
@@ -321,11 +248,11 @@ class ProfessionalPersistence:
                 self._restore_configuration(state.get("configuration", {}))
             if restore_futures_settings and "futures_manual_settings" in state:
                 self._futures_settings_setter(state["futures_manual_settings"])
-                print("💾 Futures manual settings restored")
-            print("💾 Bot state restored successfully from persistence")
+                logger.info("Futures manual settings restored")
+            logger.info("Bot state restored successfully from persistence")
             return True
         except Exception as exc:  # pragma: no cover
-            print(f"❌ Error loading bot state: {exc}")
+            logger.exception("Error loading bot state")
             return self._emergency_recovery(trader, ml_system, profile=profile)
 
     def _get_trader_state(self, trader) -> Dict[str, Any]:
@@ -381,25 +308,116 @@ class ProfessionalPersistence:
         return summary
 
     def _save_critical_components(self, trader, ml_system) -> None:
-        try:
-            critical_state = {
-                "positions": trader.positions,
-                "balance": trader.balance,
-                "trading_enabled": trader.trading_enabled,
-                "models_loaded": list(ml_system.models.keys()),
-                "futures_manual_settings": self._futures_settings_getter() or {},
-            }
-            persist_dir = ensure_persistence_dirs()
-            critical_file = persist_dir / "critical_state.json"
-            with open(critical_file, "w") as handle:
-                json.dump(critical_state, handle, indent=2, default=str)
-        except Exception as exc:  # pragma: no cover
-            print(f"⚠️ Warning: Could not save critical components: {exc}")
+        # DEPRECATED: Critical state is in DB.
+        pass
 
     def _restore_trader_state(self, trader, state: Dict[str, Any]) -> None:
         trader.balance = state.get("balance", trader.initial_balance)
         trader.positions = state.get("positions", {})
-        trader.trading_enabled = state.get("trading_enabled", False)
+
+        # --- DB State Reconciliation ---
+        try:
+            # Attempt to reconcile with database if user_id is injected
+            real_trader = getattr(trader, "real_trader", None)
+            user_id = getattr(real_trader, "user_id", None) if real_trader else None
+            
+            if user_id:
+                # Import here to avoid circular dependencies
+                from app.extensions import db
+                from app.models import UserTrade
+                
+                # Check for active application context
+                has_context = False
+                try:
+                    _ = db.session.bind
+                    has_context = True
+                except Exception:
+                    pass
+                
+                if has_context:
+                    open_trades = UserTrade.query.filter_by(user_id=user_id, status="open").all()
+                    
+                    # If we found open trades, rebuild the positions map
+                    if open_trades:
+                        logger.info(
+                            "Reconciling state from DB: Found %s open trades for User %s",
+                            len(open_trades),
+                            user_id,
+                        )
+                        db_positions = {}
+                        for trade in open_trades:
+                            sym = trade.symbol
+                            qty = float(trade.quantity)
+                            price = float(trade.entry_price)
+                            
+                            if sym in db_positions:
+                                # Aggregate existing position
+                                existing = db_positions[sym]
+                                total_qty = existing["quantity"] + qty
+                                avg_price = ((existing["avg_price"] * existing["quantity"]) + (price * qty)) / total_qty
+                                existing["quantity"] = total_qty
+                                existing["avg_price"] = avg_price
+                            else:
+                                db_positions[sym] = {
+                                    "symbol": sym,
+                                    "quantity": qty,
+                                    "avg_price": price,
+                                    "entry_price": price,
+                                    "current_price": price, 
+                                    "pnl": 0.0,
+                                    "timestamp": trade.timestamp.isoformat() if trade.timestamp else None,
+                                    "side": trade.side
+                                }
+                        
+                        trader.positions = db_positions
+                        logger.info("Reconciled %s active positions from Database", len(db_positions))
+                    
+                    # If real trading is enabled but DB has no positions, clear JSON ghosts
+                    elif getattr(trader, "real_trading_enabled", False):
+                        if trader.positions:
+                            logger.info(
+                                "DB has 0 open trades. Clearing %s stale positions from JSON.",
+                                len(trader.positions),
+                            )
+                            trader.positions = {}
+        except Exception as db_exc:
+            print(f"⚠️ State reconciliation warning: {db_exc}")
+        # -------------------------------
+        # PHASE 5 REFACTOR: DB IS SOURCE OF TRUTH
+        # -------------------------------
+        try:
+            from app.models import UserPortfolio
+            
+            # If we have a user_id, fetch their portfolio state
+            real_trader = getattr(trader, "real_trader", None)
+            user_id = getattr(real_trader, "user_id", None) if real_trader else None
+            
+            if user_id:
+                pf = UserPortfolio.query.filter_by(user_id=user_id).first()
+                if pf:
+                    trader.balance = pf.available_balance
+                    trader.trading_enabled = pf.auto_trade_enabled
+                    
+                    # Also restore risk settings from portfolio if they exist
+                    if hasattr(pf, "risk_level"):
+                         trader.risk_manager.current_risk_profile = pf.risk_level
+                         
+                    logger.info(f"Using DB Portfolio for User {user_id}: Bal=${pf.available_balance}, Trade={pf.auto_trade_enabled}")
+                else:
+                    logger.warning(f"No UserPortfolio found for {user_id} - using defaults")
+            else:
+                 # Fallback for legacy/testing without user_id
+                 trader.trading_enabled = state.get("trading_enabled", False)
+                 trader.balance = state.get("balance", trader.initial_balance)
+
+        except Exception as e:
+            logger.error(f"Failed to hydrate state from DB: {e}")
+            # Last resort fallback
+            trader.trading_enabled = state.get("trading_enabled", False)
+        
+        trader.paper_trading = state.get("paper_trading", True)
+        
+        # -------------------------------
         trader.paper_trading = state.get("paper_trading", True)
         # Don't override futures_trading_enabled if it was already enabled (e.g., by auto-enabling logic)
         if not getattr(trader, "futures_trading_enabled", False):
@@ -424,8 +442,12 @@ class ProfessionalPersistence:
         trader.ensemble_system.market_regime = ensemble_state.get(
             "market_regime", "NEUTRAL"
         )
-        print(
-            f"💾 Trader state restored: Balance ${trader.balance:.2f}, Positions: {len(trader.positions)}, Trading: {trader.trading_enabled}, Futures: {trader.futures_trading_enabled}"
+        logger.info(
+            "Trader state restored: Balance $%0.2f, Positions: %s, Trading: %s, Futures: %s",
+            trader.balance,
+            len(trader.positions),
+            trader.trading_enabled,
+            trader.futures_trading_enabled,
         )
 
     def _restore_ml_system_state(self, ml_system, state: Dict[str, Any]) -> None:
@@ -434,12 +456,13 @@ class ProfessionalPersistence:
             if symbol not in ml_system.models:
                 ml_system.load_models(symbol)
         ml_system.training_progress = state.get("training_progress", {})
-        print(f"💾 ML system state restored: {len(models_to_load)} models")
+        logger.info("ML system state restored: %s models", len(models_to_load))
 
     def _restore_configuration(self, config: Dict[str, Any]) -> None:
         if config:
-            print(
-                f"💾 Configuration backup available: {len(config.get('TOP_SYMBOLS', []))} symbols"
+            logger.info(
+                "Configuration backup available: %s symbols",
+                len(config.get("TOP_SYMBOLS", [])),
             )
 
     def _emergency_recovery(self, trader, ml_system, *, profile: str | None = None) -> bool:
@@ -458,17 +481,19 @@ class ProfessionalPersistence:
                     self._futures_settings_setter(
                         critical_state["futures_manual_settings"]
                     )
-                    print("💾 Futures manual settings restored from emergency backup")
+                    logger.info("Futures manual settings restored from emergency backup")
 
                 for symbol in critical_state.get("models_loaded", []):
                     ml_system.load_models(symbol)
 
-                print(
-                    f"🚨 Emergency recovery completed: ${trader.balance:.2f}, {len(trader.positions)} positions"
+                logger.critical(
+                    "Emergency recovery completed: $%0.2f, %s positions",
+                    trader.balance,
+                    len(trader.positions),
                 )
                 return True
         except Exception as exc:  # pragma: no cover
-            print(f"❌ Emergency recovery failed: {exc}")
+            logger.exception("Emergency recovery failed")
         return False
 
     def _create_backup(self, *, profile: str | None = None) -> None:
@@ -484,7 +509,7 @@ class ProfessionalPersistence:
             shutil.copy2(state_file, backup_file)
             self._cleanup_old_backups(profile=profile)
         except Exception as exc:  # pragma: no cover
-            print(f"⚠️ Backup creation failed: {exc}")
+            logger.warning("Backup creation failed: %s", exc)
 
     def _cleanup_old_backups(self, *, profile: str | None = None) -> None:
         try:
@@ -503,7 +528,7 @@ class ProfessionalPersistence:
                 oldest_file, _ = backup_files.pop(0)
                 os.remove(oldest_file)
         except Exception as exc:  # pragma: no cover
-            print(f"⚠️ Backup cleanup failed: {exc}")
+            logger.warning("Backup cleanup failed: %s", exc)
 
     def _check_version_compatibility(self, saved_version: str) -> bool:
         return saved_version == self.current_version
@@ -621,7 +646,7 @@ class PersistenceScheduler:
                             )
                         self.last_save_time = current_time
                 except Exception as exc:  # pragma: no cover
-                    print(f"❌ Automatic save error: {exc}")
+                    logger.exception("Automatic save error")
                     self._log_event(
                         "PERSISTENCE",
                         f"Automatic state save error: {exc}",
@@ -630,11 +655,8 @@ class PersistenceScheduler:
                     if self._bot_logger:
                         self._bot_logger.exception("Automatic state save error")
                 time.sleep(60)
-
         threading.Thread(target=save_loop, daemon=True).start()
-        print(
-            f"💾 Automatic state saving started (every {self.save_interval//60} minutes)"
-        )
+        logger.info("Automatic state saving started (every %s minutes)", self.save_interval // 60)
         self._log_event(
             "PERSISTENCE",
             "Automatic state saving thread started",
@@ -644,7 +666,7 @@ class PersistenceScheduler:
 
     def stop_automatic_saving(self) -> None:
         self.is_running = False
-        print("💾 Automatic state saving stopped")
+        logger.info("Automatic state saving stopped")
         self._log_event(
             "PERSISTENCE", "Automatic state saving stopped", level=logging.INFO
         )

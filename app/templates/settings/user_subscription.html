@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% set active_page = "settings" %}
+
+{% block header_title %}Subscription Management{% endblock %}
+{% block header_subtitle %}Manage your plan and billing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- settings sidebar -->
+    <div class="col-md-3">
+        <div class="list-group">
+            <a href="{{ url_for('dashboard_bp.api_keys') }}" class="list-group-item list-group-item-action">
+                API Keys & Exchange
+            </a>
+            <a href="{{ url_for('dashboard_bp.safety_settings') }}" class="list-group-item list-group-item-action">
+                Safety Settings
+            </a>
+            <a href="{{ url_for('dashboard_bp.notification_settings') }}"
+                class="list-group-item list-group-item-action">
+                Notifications
+            </a>
+            <a href="{{ url_for('dashboard_bp.risk_presets_settings') }}"
+                class="list-group-item list-group-item-action">
+                Risk Presets
+            </a>
+            <a href="{{ url_for('dashboard_bp.user_subscription') }}"
+                class="list-group-item list-group-item-action active">
+                Subscription
+            </a>
+        </div>
+    </div>
+
+    <!-- main content -->
+    <div class="col-md-9">
+        <!-- Active Plan Card -->
+        <div class="dashboard-card mb-4" style="text-align: left;">
+            <div class="card-header d-flex justify-content-between align-items-center mb-3">
+                <h3 class="card-title mb-0">Current Plan</h3>
+                {% if subscription.status == 'active' %}
+                <span class="status-indicator status-success">ACTIVE</span>
+                {% elif subscription.status == 'trialing' %}
+                <span class="status-indicator status-warning">TRIAL</span>
+                {% else %}
+                <span class="status-indicator status-error">{{ subscription.status|upper }}</span>
+                {% endif %}
+            </div>
+
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    {% if plan %}
+                    <h2 class="text-primary mb-1">{{ plan.name }}</h2>
+                    <p class="text-secondary mb-3">{{ plan.description }}</p>
+                    <h4 class="mb-0">${{ plan.price_usd }} <span class="text-sm text-secondary">/ {{ plan.plan_type
+                            }}</span></h4>
+                    {% else %}
+                    <h2 class="text-secondary mb-1">Free Tier</h2>
+                    <p class="text-secondary">Basic access with limited features.</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                    <a href="{{ url_for('marketing.pricing') }}" class="btn btn-primary">
+                        {{ 'Switch Plan' if plan else 'Upgrade to Pro' }}
+                    </a>
+                </div>
+            </div>
+
+            {% if subscription.next_billing_date %}
+            <div class="mt-4 pt-3 border-top border-secondary">
+                <p class="text-sm text-secondary mb-0">
+                    Next billing date: <span class="text-light">{{ subscription.next_billing_date|replace('T', '
+                        ')|truncate(10, True, '') }}</span>
+                </p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Usage Limits -->
+        <div class="dashboard-card mb-4" style="text-align: left;">
+            <div class="card-header mb-3">
+                <h3 class="card-title">Plan Limits & Usage</h3>
+            </div>
+
+            {% set bot_width = (usage.active_bots / limits.max_bots * 100) if limits.max_bots > 0 else 0 %}
+            {% set trade_width = (usage.daily_trades / limits.max_trades * 100) if limits.max_trades > 0 else 0 %}
+            <div class="row g-4">
+                <!-- Max Bots -->
+                <div class="col-md-6">
+                    <div class="p-3 bg-dark rounded border border-secondary">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-secondary">Active Bots</span>
+                            <span class="fw-bold">{{ usage.active_bots }} / {{ limits.max_bots }}</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-primary" role="progressbar" data-width="{{ bot_width }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Daily Trades -->
+                <div class="col-md-6">
+                    <div class="p-3 bg-dark rounded border border-secondary">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-secondary">Active Trades</span>
+                            <span class="fw-bold">{{ usage.daily_trades }} / {{ limits.max_trades }}</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-info" role="progressbar" data-width="{{ trade_width }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                document.querySelectorAll('.progress-bar[data-width]').forEach(function (bar) {
+                    bar.style.width = bar.dataset.width + '%';
+                });
+            });
+        </script>
+
+        <!-- Features List -->
+        {% if plan and plan.features %}
+        <div class="dashboard-card" style="text-align: left;">
+            <div class="card-header mb-3">
+                <h3 class="card-title">Included Features</h3>
+            </div>
+            <div class="row">
+                {% for key, enabled in plan.features.items() %}
+                {% if enabled %}
+                <div class="col-md-6 mb-2">
+                    <div class="d-flex align-items-center">
+                        <span class="text-success me-2">✓</span>
+                        <span class="text-light" style="text-transform: capitalize;">{{
+                            key|replace('_', ' ') }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Danger Zone -->
+        {% if plan %}
+        <div class="mt-5 pt-4 border-top border-secondary">
+            <h5 class="text-danger mb-3">Danger Zone</h5>
+            <button class="btn btn-outline-danger btn-sm" onclick="confirmCancelSubscription()">
+                Cancel Subscription
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function confirmCancelSubscription() {
+        if (confirm("Are you sure you want to cancel your subscription? You will lose access to premium features at the end of the billing period.")) {
+            fetch('/api/users/{{ current_user.username }}/subscription', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ reason: 'User initiated cancellation' })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to cancel'));
+                    }
+                });
+        }
+    }
+</script>
+{% endblock %}

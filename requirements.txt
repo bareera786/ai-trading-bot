@@ -108,4 +108,4 @@ dash>=2.14.0
 concurrent-executor>=0.2.0
 
 # Optional: GPU acceleration (uncomment if using neural emitters)
-# torch>=2.0.0
+torch>=2.0.0

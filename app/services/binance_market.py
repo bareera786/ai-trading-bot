@@ -150,11 +150,20 @@ class BinanceMarketDataHelper:
                 symbol or "ALL",
                 last_error,
             )
-            self._log_rest_failure(
-                f"24hr ticker failed for {symbol or 'ALL'}: {last_error}"
-            )
-            raise last_error
-        return None
+        return {}
+
+    def fetch_order_book(self, symbol: str, limit: int = 100) -> dict[str, Any]:
+        """Fetch symbol order book depth."""
+        for base_url in self._resolve_rest_hosts():
+            try:
+                url = f"{base_url}/api/v3/depth"
+                params = {"symbol": symbol, "limit": limit}
+                response = self._request_client.get(url, params=params, timeout=10)
+                if response.status_code == 200:
+                    return response.json()
+            except Exception:
+                continue
+        return {}
 
     def get_trending_pairs(self) -> list[dict[str, Any]]:
         try:

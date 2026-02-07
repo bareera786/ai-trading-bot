@@ -65,16 +65,58 @@ window.refreshDashboardData = async function () {
                 active_trades: 3,
                 win_rate: 68
             });
-            return;
+        } else {
+            const data = await response.json();
+            updateDashboardUI(data);
         }
 
-        const data = await response.json();
-        updateDashboardUI(data);
+        // Fetch World Class Intel
+        fetchMarketIntel();
+        fetchLiquidations();
 
     } catch (err) {
         console.error('Failed to fetch dashboard data:', err);
     }
 };
+
+async function fetchMarketIntel() {
+    try {
+        const resp = await fetch('/api/market-intelligence');
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data.success && data.intelligence) {
+                const fng = data.intelligence.sentiment.fear_greed || 50;
+                const label = fng > 60 ? 'Greed' : (fng < 40 ? 'Fear' : 'Neutral');
+                const color = fng > 60 ? 'var(--success)' : (fng < 40 ? 'var(--danger)' : 'var(--warning)');
+
+                const valEl = document.getElementById('fng-value');
+                const lblEl = document.getElementById('fng-label');
+                if (valEl) valEl.innerHTML = `<span style="color:${color}">${fng}</span>`;
+                if (lblEl) lblEl.textContent = label;
+            }
+        }
+    } catch (e) { console.error("F&G fetch failed", e); }
+}
+
+async function fetchLiquidations() {
+    try {
+        const resp = await fetch('/api/liquidations-live');
+        if (resp.ok) {
+            const data = await resp.json();
+            const statusEl = document.getElementById('liq-status');
+            const totalEl = document.getElementById('liq-total');
+
+            if (statusEl) {
+                const total = data.total_value || 0;
+                statusEl.textContent = total > 100000 ? 'HIGH' : 'LOW';
+                statusEl.style.color = total > 100000 ? 'var(--danger)' : 'var(--success)';
+            }
+            if (totalEl) {
+                totalEl.textContent = `$${(data.total_value || 0).toLocaleString()} monitored`;
+            }
+        }
+    } catch (e) { console.error("Liq fetch failed", e); }
+}
 
 function updateDashboardUI(data) {
     if (portfolioValueEl) portfolioValueEl.textContent = `$${data.portfolio_value.toLocaleString()}`;

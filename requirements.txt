@@ -37,6 +37,7 @@ colorama>=0.4.4
 
 # Web framework and API (Flask ecosystem)
 Flask==2.3.3
+Werkzeug==2.3.7
 flask-cors==4.0.0
 gunicorn==21.2.0
 Flask-Assets==2.1

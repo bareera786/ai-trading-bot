@@ -29,8 +29,9 @@ from .qfm import QuantumFusionMomentumEngine
 class StrategyManager:
     """Manages multiple trading strategies with QFM enhancement."""
 
-    def __init__(self, user_id=None):
+    def __init__(self, user_id=None, world_class_data=None):
         self.user_id = user_id
+        self.world_class_data = world_class_data
         self.strategies: Dict[str, BaseStrategy] = {}
         self.active_strategies: Dict[str, bool] = {}
         self.strategy_performance: Dict[str, dict] = {}
@@ -62,12 +63,20 @@ class StrategyManager:
 
         # 2. Update individual active strategies
         for name, strategy in self.strategies.items():
+            # Check for strategy-specific parameter block (e.g., "momentum_parameters")
+            strat_specific_key = f"{name}_parameters"
+            if strat_specific_key in new_params:
+                if hasattr(strategy, "update_parameters"):
+                    strategy.update_parameters(new_params[strat_specific_key])
+                else:
+                    for k, v in new_params[strat_specific_key].items():
+                        if hasattr(strategy, k):
+                            setattr(strategy, k, v)
+            
+            # Also apply general parameters that might be relevant
             if hasattr(strategy, "update_parameters"):
-                # Pass only relevant params if we had a mapping, 
-                # but for now pass all and let strategy filter
                 strategy.update_parameters(new_params)
             else:
-                # Direct attribute injection fallback
                 for key, value in new_params.items():
                     if hasattr(strategy, key):
                         setattr(strategy, key, value)
@@ -1212,9 +1221,54 @@ class StrategyManager:
         }
 
         self.active_strategies = {name: True for name in self.strategies}
-        for strategy in self.strategies.values():
-            strategy.set_qfm_engine(self.qfm_engine)
-            strategy.active = True
+        
+        # Load configurations from DB (Phase 7 Persistence)
+        try:
+            from app.models import Strategy, db
+            with db.session.no_autoflush:
+                for name, strategy in self.strategies.items():
+                    strategy.set_qfm_engine(self.qfm_engine)
+                    
+                    strat_record = Strategy.query.filter_by(name=name).first()
+                    if strat_record:
+                        # FIX 3: Load active state from DB status column
+                        if strat_record.status == "paused":
+                            strategy.active = False
+                            self.active_strategies[name] = False
+                        else:
+                            strategy.active = True
+                            self.active_strategies[name] = True
+                        
+                        # Load parameters if available
+                        if hasattr(strat_record, 'parameters') and strat_record.parameters:
+                            try:
+                                # Ensure config is dict
+                                config = strat_record.parameters
+                                if isinstance(config, str):
+                                    import json
+                                    config = json.loads(config)
+                                
+                                # Use strategy's update_parameters to sync attributes
+                                strategy.update_parameters(config)
+                            except Exception as e:
+                                print(f"Error loading config for {name}: {e}")
+                    else:
+                        # Create default record
+                        try:
+                            new_record = Strategy(name=name, parameters=strategy.parameters)
+                            db.session.add(new_record)
+                            db.session.commit()
+                        except Exception as e:
+                             print(f"Error creating default strategy record: {e}")
+                             db.session.rollback()
+                        strategy.active = True
+                        self.active_strategies[name] = True
+        except Exception as e:
+            print(f"Database unavailable for strategy init: {e}")
+            # Fallback
+            for strategy in self.strategies.values():
+                strategy.set_qfm_engine(self.qfm_engine)
+                strategy.active = True
 
         for strategy_name in self.strategies:
             self.strategy_performance[strategy_name] = {
@@ -1224,6 +1278,46 @@ class StrategyManager:
                 "win_rate": 0.0,
                 "last_updated": time.time(),
             }
+
+    def get_strategy_config(self, strategy_name: str) -> dict:
+        """Get processed configuration for a strategy."""
+        strategy = self.strategies.get(strategy_name)
+        if not strategy:
+            return {}
+        
+        # Return current parameters which include execution_mode etc.
+        return strategy.parameters
+
+    def update_strategy_config(self, strategy_name: str, new_config: dict) -> bool:
+        """Update and persist strategy configuration."""
+        strategy = self.strategies.get(strategy_name)
+        if not strategy:
+            return False
+            
+        try:
+            # 1. Update in-memory instance
+            strategy.update_parameters(new_config)
+            
+            # 2. Persist to DB
+            from app.models import Strategy, db
+            strat_record = Strategy.query.filter_by(name=strategy_name).first()
+            if not strat_record:
+                strat_record = Strategy(name=strategy_name)
+                db.session.add(strat_record)
+            
+            # Update config field
+            # Merge with existing if needed, but here we likely want to save the full current state
+            strat_record.config = strategy.parameters
+            db.session.commit()
+            
+            return True
+        except Exception as e:
+            print(f"Error updating strategy config: {e}")
+            return False
+
+    def configure_strategy(self, strategy_name: str, config: dict) -> bool:
+        """Alias for update_strategy_config to match API route usage."""
+        return self.update_strategy_config(strategy_name, config)
 
     def get_strategy(self, strategy_name):
         """Get a strategy instance."""
@@ -1243,6 +1337,96 @@ class StrategyManager:
                 }
             )
         return strategies
+
+    def get_signal(self, symbol, market_data, indicators=None):
+        """
+        Aggregate signals from all active strategies into a single technical signal.
+        Used by the bot to feed the EnsembleGovernor.
+        """
+        votes = {"BUY": 0.0, "SELL": 0.0, "HOLD": 0.0}
+        reasons = []
+        
+        # Get active strategies
+        active_strats = []
+        for name, strategy in self.strategies.items():
+            is_active = self.active_strategies.get(name, getattr(strategy, 'active', True))
+            if is_active:
+                active_strats.append(strategy)
+        
+        if not active_strats:
+             return {"signal": "HOLD", "confidence": 0.0, "reason": "No active strategies"}
+
+        # Collect votes
+        for strategy in active_strats:
+            try:
+                # Run analysis
+                if hasattr(strategy, "analyze_market"):
+                    result = strategy.analyze_market(symbol, market_data, indicators)
+                else:
+                    continue
+                    
+                sig = result.get("signal", "HOLD").upper()
+                conf = float(result.get("confidence", 0.0))
+                
+                # Filter weak signals
+                if conf < 0.2:
+                    sig = "HOLD"
+                    
+                # Add strict vote
+                if sig in votes:
+                    votes[sig] += conf
+                
+                if conf > 0.5 and sig != "HOLD":
+                    reasons.append(f"{strategy.name}: {sig} ({conf:.2f})")
+                    
+            except Exception as e:
+                print(f"Error in strategy {strategy.name}: {e}")
+
+        # Determine winner
+        best_signal = "HOLD"
+        best_score = 0.0
+        total_strategies = len(active_strats)
+        
+        buy_score = votes["BUY"]
+        sell_score = votes["SELL"]
+        
+        # Simple Logic: Highest score wins if significant
+        if buy_score > sell_score and buy_score > 0.5:
+             best_signal = "BUY"
+             best_score = buy_score
+        elif sell_score > buy_score and sell_score > 0.5:
+             best_signal = "SELL"
+             best_score = sell_score
+        else:
+             best_signal = "HOLD"
+             best_score = 0.0
+             
+        # Normalize confidence (average across active strategies)
+        # E.g. 3 active strategies, 1 BUY (0.9), 2 HOLD.
+        # Score = 0.9. Avg = 0.3. This is conservative.
+        # Let's cap at 0.95.
+        
+        # FIX: Do not dilute confidence by dividing by ALL strategies
+        # This allows single specialized strategies (e.g. Breakout) to trigger trades
+        # even if others are neutral.
+        final_confidence = min(0.95, best_score)
+        
+        # Add Debug Logging for Transparency
+        if best_signal != "HOLD":
+             print(f"DEBUG: Consensus Signal: {best_signal} | Score: {best_score:.2f} | Final Conf: {final_confidence:.2f}")
+
+        if best_signal != "HOLD" and final_confidence < 0.25:
+             print(f"DEBUG: Signal suppressed by low confidence (<0.25). Raw: {best_score}")
+             best_signal = "HOLD"
+             final_confidence = 0.0
+             reasons.append("Insufficient consensus (Low Confidence)")
+
+        return {
+            "signal": best_signal,
+            "confidence": final_confidence,
+            "reason": "; ".join(reasons) if reasons else "Consensus: Neutral",
+            "votes": votes
+        }
 
     def analyze_with_strategy(
         self, strategy_name, symbol, market_data, indicators=None
@@ -1709,6 +1893,18 @@ class StrategyManager:
 
         self.active_strategies[strategy_name] = bool(enable)
         self.strategies[strategy_name].active = bool(enable)
+        
+        # CRITICAL FIX: Persist toggle state to database
+        try:
+            from app.models import Strategy, db
+            strat_record = Strategy.query.filter_by(name=strategy_name).first()
+            if strat_record:
+                strat_record.status = "active" if enable else "paused"
+                db.session.commit()
+        except Exception as e:
+            print(f"Error persisting strategy toggle: {e}")
+            # In-memory state still updated, but warn about DB failure
+        
         return True
 
     def configure_strategy(self, strategy_name, config):
@@ -1716,7 +1912,7 @@ class StrategyManager:
         return self.update_strategy_config(strategy_name, config)
 
     def update_strategy_config(self, strategy_name, config):
-        """Update the stored configuration for a strategy."""
+        """Update the stored configuration for a strategy with DB persistence."""
         if strategy_name not in self.strategies or not isinstance(config, dict):
             return False
 
@@ -1734,6 +1930,16 @@ class StrategyManager:
         else:
             for key, value in param_updates.items():
                 strategy.parameters[key] = value
+
+        # FIX 2: Persist config to DB
+        try:
+            from app.models import Strategy, db
+            strat_record = Strategy.query.filter_by(name=strategy_name).first()
+            if strat_record:
+                strat_record.parameters = strategy.parameters
+                db.session.commit()
+        except Exception as e:
+            print(f"Error persisting strategy config: {e}")
 
         return True
 
